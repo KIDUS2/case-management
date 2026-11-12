@@ -3,8 +3,8 @@ import { api } from '../api.js'
 import { t as tt, locale } from '../i18n.js'
 import { STATUS, CATEGORY, fmtDate, initial, fmtCode, names } from '../ui.js'
 
-const STATUS_COLOR = { OPEN: '#2f6fd6', REFERRED: '#e5a23b', COURT: '#e07a52', RESOLVED: '#3fb585' }
-const CAT_COLOR = { HR: '#2f6fd6', FINANCE: '#3fb585', MANAGEMENT: '#4f9fe0', COURT: '#e07a52', UNCLEAR: '#9a97a8' }
+const STATUS_COLOR = { OPEN: '#1b7f7a', REFERRED: '#c99a2e', COURT: '#b23a2a', RESOLVED: '#2d7a3e' }
+const CAT_COLOR = { HR: '#2d7a3e', FINANCE: '#c99a2e', MANAGEMENT: '#1b7f7a', COURT: '#b23a2a', UNCLEAR: '#8a8099' }
 
 function greeting() {
   const h = new Date().getHours()
@@ -32,10 +32,10 @@ function AreaChart({ data }) {
   const label = d => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' })
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="area" role="img" aria-label="Cases per day, last 30 days">
-      <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2f6fd6" stopOpacity=".45" /><stop offset="100%" stopColor="#2f6fd6" stopOpacity="0" /></linearGradient></defs>
+      <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2d7a3e" stopOpacity=".4" /><stop offset="100%" stopColor="#2d7a3e" stopOpacity="0" /></linearGradient></defs>
       {ticks.map(t => <g key={t}><line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className="grid" /><text x={L - 6} y={y(t) + 4} textAnchor="end" className="axis">{t}</text></g>)}
       <path d={area} fill="url(#ag)" />
-      <path d={line} fill="none" stroke="#2f6fd6" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+      <path d={line} fill="none" stroke="#2d7a3e" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
       {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={data[i].count ? 4 : 2} className={data[i].count ? 'dot' : 'dot0'}><title>{tt('{x}: {n} cases', { x: label(data[i].date), n: data[i].count })}</title></circle>)}
       <text x={L} y={H - 6} className="axis">{label(data[0].date)}</text>
       <text x={x(Math.floor(data.length / 2))} y={H - 6} textAnchor="middle" className="axis">{label(data[Math.floor(data.length / 2)].date)}</text>
@@ -108,7 +108,8 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
   return (
     <>
       <div className="dash-hero">
-        <div>
+        <img className="seal" src="/logo.png" alt="" />
+        <div style={{ flex: 1 }}>
           <h1>{tt(greeting()) + ', ' + first + ' 👋'}</h1>
           <p>{t.cases === 0 ? tt('Welcome! Register the first case to see your reports come alive.') : tt('{a} new cases this week · {b} still being handled.', { a: week, b: active })}</p>
         </div>
@@ -147,11 +148,11 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
           <div className="bars">
             {d.byDepartment.map(x => { const tot = Math.max(1, x.pending + x.resolved); return (
               <div key={x.name}><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.9rem' }}><b>{x.name}</b><span className="muted">{tt('{a} waiting · {b} resolved', { a: x.pending, b: x.resolved })}</span></div>
-                <div className="stack"><i style={{ width: (x.resolved / tot) * 100 + '%', background: '#23915f' }} /><i style={{ width: (x.pending / tot) * 100 + '%', background: '#f2b705' }} /></div></div>) })}
+                <div className="stack"><i style={{ width: (x.resolved / tot) * 100 + '%', background: '#2d7a3e' }} /><i style={{ width: (x.pending / tot) * 100 + '%', background: '#c99a2e' }} /></div></div>) })}
           </div>
           <div className="legend row2"><span>🟩 resolved</span><span>🟨 waiting</span></div>
         </div>
-        <div className="card"><h2>Busiest churches</h2><Bars items={d.topChurches.map(c => ({ name: c.name, count: c.count }))} color="#2f6fd6" /></div>
+        <div className="card"><h2>Busiest churches</h2><Bars items={d.topChurches.map(c => ({ name: c.name, count: c.count }))} color="#2d7a3e" /></div>
         <div className="card"><h2>Latest cases</h2>
           {recent.length === 0 && <p className="muted">No cases yet.</p>}
           {recent.map(c => (

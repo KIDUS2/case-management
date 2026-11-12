@@ -104,7 +104,7 @@ export default function App() {
     <div className="shell">
       <aside>
         <div className="topline">
-          <div className="brand"><img src="/logo.png" alt="Addis Ababa Diocese" /></div>
+          <div className="brand"><img src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church" /><div className="bt">{t("Case Desk")}<small>{t("Addis Ababa Diocese")}</small></div></div>
           <div className="aside-foot">
             <div className="me"><b>{user.fullName}</b><small>{ROLES[user.role]}{user.departmentName ? ' · ' + user.departmentName : ''}</small></div>
             <button className="nav" onClick={logout}>↩️ Log out</button>
