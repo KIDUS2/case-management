@@ -50,7 +50,7 @@ public final class CaseDtos {
 
     /** totalCases counts every case the person is in; complaintsAgainst counts cases where they are the one reported on. */
     public record PersonInfo(Long id, String fullName, String phone, Long churchId, String churchName,
-                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement, String employeeId) {}
+                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement, String employeeId, String profession, String position) {}
 
     public record CaseDetail(Long id, String code, CaseStatus status, String discussionNotes, boolean letterIssued,
                              String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,

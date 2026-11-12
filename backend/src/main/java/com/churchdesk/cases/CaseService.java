@@ -261,7 +261,7 @@ public class CaseService {
     private PersonInfo toPerson(Person p, String involvement) {
         return new PersonInfo(p.getId(), p.getFullName(), p.getPhone(), p.getChurch().getId(), p.getChurch().getName(),
                 p.getWorkingStatus(), partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), ACTIVE),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId());
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId(), p.getProfession(), p.getPosition());
     }
 
     /** Calls another person into a case that is already open (a witness, the accountant, another employee...). */

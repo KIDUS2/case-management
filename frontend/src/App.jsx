@@ -6,6 +6,7 @@ import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
 import NewCase from './pages/NewCase.jsx'
 import Churches from './pages/Churches.jsx'
+import Employees from './pages/Employees.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Queue from './pages/Queue.jsx'
 import Inbox from './pages/Inbox.jsx'
@@ -25,6 +26,7 @@ const NAV = [
   { key: 'new', icon: '➕', label: 'Register case', roles: DESK },
   { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
+  { key: 'employees', icon: '🪪', label: 'Employees', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
@@ -123,6 +125,7 @@ export default function App() {
         {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches />}
+        {current === 'employees' && <Employees me={user} />}
         {current === 'departments' && <Departments />}
         {current === 'users' && <Users me={user} />}
         {current === 'account' && <Account me={user} onUser={setUser} />}
