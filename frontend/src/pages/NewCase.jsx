@@ -4,7 +4,7 @@ import { t } from '../i18n.js'
 import { CATEGORY, WORKING, addDays, todayStr, fmtSize } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
-const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ fullName: '', churchName: '', phone: '', workingStatus: status })
+const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', workingStatus: status })
 
 function Chips({ options, value, onChange }) {
   return <div className="chips">{Object.entries(options).map(([k, v]) =>
@@ -21,12 +21,32 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
     return () => clearTimeout(t)
   }, [party.fullName])
 
+  const [found, setFound] = useState(null)
+  const [idMsg, setIdMsg] = useState('')
+  const findById = async () => {
+    const id = party.employeeId.trim(); setFound(null); setIdMsg('')
+    if (!id) return
+    try {
+      const m = await api('/persons/by-employee-id?id=' + encodeURIComponent(id))
+      setFound(m); set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
+    } catch { setIdMsg(t('No one with this ID yet. Fill in the details below and they will be saved with this ID.')) }
+  }
+
   const exact = matches.filter(m => m.fullName.toLowerCase() === party.fullName.trim().toLowerCase())
   const use = m => set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
 
   return (
     <div className="issue">
       <div className="top"><b>{title}</b>{onRemove && <button type="button" className="btn x" onClick={onRemove}>Remove</button>}</div>
+      <label>{t('Employee ID (given by the church)')}</label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="e.g. EMP-0123" autoCapitalize="characters" />
+        <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
+      </div>
+      {found && <div className="banner"><b>✅ {t('Employee found')}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: found.fullName, b: found.churchName, c: found.totalCases, d: found.openCases })}
+        {found.complaintsAgainst > 0 && <div className="warn">⚠️ {t('{n} earlier cases are about this person', { n: found.complaintsAgainst })}</div>}</div>}
+      {idMsg && <small className="muted">{idMsg}</small>}
       <label>Full name</label>
       <input value={party.fullName} onChange={e => set({ fullName: e.target.value })} maxLength={160} autoFocus={autoFocus} />
       {exact.map(m => (
@@ -71,7 +91,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const toPayload = (p, label) => {
     const church = findChurch(p.churchName)
     if (!church) throw new Error(t('{x}: please choose the church from the list (start typing its name).', { x: label }))
-    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone, workingStatus: p.workingStatus }
+    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone, workingStatus: p.workingStatus, employeeId: p.employeeId.trim() || null }
   }
 
   const submit = async e => {

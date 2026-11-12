@@ -98,7 +98,15 @@ public class CaseService {
         Church church = churches.findById(in.churchId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a church from the list for " + in.fullName().trim()));
         String name = in.fullName().trim();
-        Person person = persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId()).orElseGet(Person::new);
+        String empId = blankToNull(in.employeeId());
+        Person person = (empId == null ? java.util.Optional.<Person>empty() : persons.findFirstByEmployeeIdIgnoreCase(empId))
+                .or(() -> persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId())).orElseGet(Person::new);
+        if (empId != null) {
+            persons.findFirstByEmployeeIdIgnoreCase(empId).filter(o -> person.getId() != null && !o.getId().equals(person.getId())).ifPresent(o -> {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee ID " + empId + " already belongs to " + o.getFullName());
+            });
+            person.setEmployeeId(empId);
+        }
         person.setFullName(name);
         person.setChurch(church);
         person.setWorkingStatus(in.workingStatus());
@@ -226,6 +234,11 @@ public class CaseService {
         return persons.search(pattern, PageRequest.of(0, 5)).stream().map(this::toPerson).toList();
     }
 
+    /** The church gave each employee an ID; typing it brings back everything we know about that person. */
+    public PersonInfo byEmployeeId(String id) {
+        return id == null || id.isBlank() ? null : persons.findFirstByEmployeeIdIgnoreCase(id.trim()).map(this::toPerson).orElse(null);
+    }
+
     private static String normalizeCode(String s) { return s == null ? "" : s.toUpperCase().replaceAll("[^A-Z0-9]", ""); }
 
     private List<Person> peopleIn(ChurchCase c, PartyRole role) {
@@ -248,7 +261,7 @@ public class CaseService {
     private PersonInfo toPerson(Person p, String involvement) {
         return new PersonInfo(p.getId(), p.getFullName(), p.getPhone(), p.getChurch().getId(), p.getChurch().getName(),
                 p.getWorkingStatus(), partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), ACTIVE),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement);
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId());
     }
 
     /** Calls another person into a case that is already open (a witness, the accountant, another employee...). */

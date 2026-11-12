@@ -49,6 +49,13 @@ public class CaseController {
     @GetMapping("/persons/lookup") @PreAuthorize(STAFF)
     public List<PersonInfo> lookup(@RequestParam String name) { return service.lookup(name); }
 
+    @GetMapping("/persons/by-employee-id") @PreAuthorize(STAFF)
+    public PersonInfo byEmployeeId(@RequestParam String id) {
+        PersonInfo p = service.byEmployeeId(id);
+        if (p == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No employee with ID " + id.trim());
+        return p;
+    }
+
     // ---- moving a case forward ----
 
     @PostMapping("/cases/{id}/issues/{issueId}/refer") @PreAuthorize(STAFF)

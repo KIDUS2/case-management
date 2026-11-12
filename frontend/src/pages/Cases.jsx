@@ -86,7 +86,7 @@ function PersonRow({ p }) {
       <div className="avatar">{initial(p.fullName)}</div>
       <div className="grow">
         <b>{p.fullName}</b>
-        <small>⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
+        <small>{p.employeeId ? '🪪 ' + p.employeeId + ' · ' : ''}⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
         {p.involvement && <small className="about">📌 {p.involvement}</small>}
         {p.complaintsAgainst > 1 && <small className="warn">⚠️ {t('{n} cases are about this person', { n: p.complaintsAgainst })}</small>}
         {p.totalCases > 1 && p.complaintsAgainst <= 1 && <small>{t('In {n} cases on record', { n: p.totalCases })}</small>}

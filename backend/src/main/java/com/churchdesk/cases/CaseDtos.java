@@ -20,7 +20,8 @@ public final class CaseDtos {
                           @NotNull Long churchId,
                           @Size(max = 40) String phone,
                           @NotNull WorkingStatus workingStatus,
-                          @Size(max = 1000) String involvement) {}
+                          @Size(max = 1000) String involvement,
+                          @Size(max = 40) String employeeId) {}
 
     /** Add someone to a case that already exists. role is COMPLAINANT, SUBJECT or INVOLVED. */
     public record AddPartyRequest(@NotNull PartyRole role, @NotNull @Valid PartyIn person) {}
@@ -49,7 +50,7 @@ public final class CaseDtos {
 
     /** totalCases counts every case the person is in; complaintsAgainst counts cases where they are the one reported on. */
     public record PersonInfo(Long id, String fullName, String phone, Long churchId, String churchName,
-                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement) {}
+                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement, String employeeId) {}
 
     public record CaseDetail(Long id, String code, CaseStatus status, String discussionNotes, boolean letterIssued,
                              String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,
