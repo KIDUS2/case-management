@@ -4,21 +4,20 @@ import { t, locale } from '../i18n.js'
 import { WORKING, initial, fmtId, fmtSize } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 import { askConfirm, notify } from '../dialog.js'
+import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
 
 const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
 const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
 const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
 
-/** Reads pasted CSV/TSV text; the first line holds the column names (any order). */
-function parseRows(text) {
-  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-  if (lines.length < 2) return []
-  const sep = lines[0].includes('\t') ? '\t' : ','
-  const head = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/[\s_-]/g, ''))
+/** Turns rows of cells (first row = column names, any order) into employee records. */
+function parseRows(grid) {
+  if (grid.length < 2) return []
+  const head = grid[0].map(h => h.trim().toLowerCase().replace(/[\s_-]/g, ''))
   const alias = { churchRef: ['churchref', 'employeeid', 'id', 'idnumber'], motherName: ['mothername', 'mother'], fatherConfessor: ['fatherconfessor', 'confessor'], christianName: ['christianname', 'baptismalname'] }
   const idx = Object.fromEntries(COLS.map(c => [c, Math.max(...(alias[c] || [c.toLowerCase()]).map(a => head.indexOf(a)))]))
-  return lines.slice(1).map(l => { const v = l.split(sep).map(x => x.trim()); return Object.fromEntries(COLS.map(c => [c, idx[c] >= 0 ? v[idx[c]] || '' : ''])) })
+  return grid.slice(1).map(v => Object.fromEntries(COLS.map(c => [c, idx[c] >= 0 ? (v[idx[c]] || '').trim() : ''])))
 }
 
 /** A picture that needs the login header to load. */
@@ -315,10 +314,15 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
     setPhoto(null); setView(null); window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const doImport = async () => {
+  const pickFile = async ev => {
+    const file = ev.target.files[0]; ev.target.value = ''
+    if (!file) return
+    try { await runImport(parseRows(await readSheetFile(file))) } catch (x) { setErr(x.message) }
+  }
+  const doImport = () => runImport(parseRows(gridFromText(bulk)))
+  const runImport = async rows => {
     setErr(''); setOk('')
-    const rows = parseRows(bulk)
-    if (!rows.length) return setErr(t('Paste the list with a first line of column names, then one employee per line.'))
+    if (!rows.length) return setErr(t('The list is empty. The first line must hold the column names, then one employee per line.'))
     const byName = new Map(churches.map(c => [c.name.toLowerCase(), c.id]))
     const unknown = [...new Set(rows.filter(r => !byName.has(r.church.toLowerCase())).map(r => r.church || '(empty)'))]
     const good = rows.filter(r => byName.has(r.church.toLowerCase()) && r.firstName)
@@ -361,7 +365,11 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
       {showBulk && canWrite && !form && (
         <div className="card">
           <h2>Import the church’s employee list</h2>
-          <p className="hint">Paste from Excel or a CSV file. First line = column names: <code>churchRef, firstName, middleName, lastName, motherName, church, phone, email, profession, position, gender, birthDate, hireDate, address, christianName, fatherConfessor</code>. Everyone gets a new 12-digit employee ID automatically. People already on the list (same ID or church number) are updated. Photos and documents are added afterwards on each profile.</p>
+          <div className="filepick">
+            <label className="drop">📂 {t('Choose an Excel (.xlsx) or CSV file')}<input type="file" accept={SHEET_ACCEPT} onChange={pickFile} /></label>
+            <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={() => downloadCsv('employees-template.csv', COLS, ['EMP-0001', 'Abebe', 'Kebede', 'Tadesse', 'Almaz', 'Kidist Selassie Church', '0911000000', '', 'Accountant', 'Cashier', 'M', '1990-04-12', '2018-09-01', 'Addis Ababa', 'Gebre Mariam', ''])}>⬇ {t('Download the template')}</button>
+          </div>
+          <p className="hint">{t('Or paste')} Paste from Excel or a CSV file. First line = column names: <code>churchRef, firstName, middleName, lastName, motherName, church, phone, email, profession, position, gender, birthDate, hireDate, address, christianName, fatherConfessor</code>. Everyone gets a new 12-digit employee ID automatically. People already on the list (same ID or church number) are updated. Photos and documents are added afterwards on each profile.</p>
           <textarea rows={6} value={bulk} onChange={e => setBulk(e.target.value)} placeholder={'churchRef,firstName,middleName,lastName,motherName,church,profession\nEMP-0001,Abebe,Kebede,Tadesse,Almaz,Kidist Selassie Church,Accountant'} />
           <button className="btn" onClick={doImport}>📥 Import</button>
         </div>
