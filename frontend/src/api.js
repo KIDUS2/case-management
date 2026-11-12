@@ -18,9 +18,10 @@ export async function api(path, { method = 'GET', body } = {}) {
 }
 
 /** Send one file as multipart/form-data. */
-export async function upload(path, file) {
+export async function upload(path, file, fields = {}) {
   const form = new FormData()
   form.append('file', file)
+  Object.entries(fields).forEach(([k, v]) => { if (v) form.append(k, v) })
   const res = await check(await fetch('/api' + path, { method: 'POST', headers: headers(false), body: form }))
   return res.json()
 }
@@ -29,6 +30,20 @@ export async function upload(path, file) {
 export async function download(id, name) {
   const res = await check(await fetch('/api/files/' + id, { headers: headers(false) }))
   const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url; a.download = name
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+/** Fetch any protected file (photo, document) as a Blob. */
+export async function blob(path) {
+  const res = await check(await fetch('/api' + path, { headers: headers(false) }))
+  return res.blob()
+}
+
+export async function downloadPath(path, name) {
+  const url = URL.createObjectURL(await blob(path))
   const a = document.createElement('a')
   a.href = url; a.download = name
   document.body.appendChild(a); a.click(); a.remove()

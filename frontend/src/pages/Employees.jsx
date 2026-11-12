@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
-import { t } from '../i18n.js'
-import { locale } from '../i18n.js'
-import { WORKING, initial, fmtId } from '../ui.js'
-const fmtDay = d => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' })
+import { api, upload, blob, downloadPath } from '../api.js'
+import { t, locale } from '../i18n.js'
+import { WORKING, initial, fmtId, fmtSize } from '../ui.js'
+import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 
-const blank = { churchRef: '', fullName: '', churchName: '', phone: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', workingStatus: 'ACTIVE_EMPLOYEE' }
-const COLS = ['churchRef', 'fullName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address']
+const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
+const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
+const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
+const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
 
 /** Reads pasted CSV/TSV text; the first line holds the column names (any order). */
 function parseRows(text) {
@@ -14,37 +15,139 @@ function parseRows(text) {
   if (lines.length < 2) return []
   const sep = lines[0].includes('\t') ? '\t' : ','
   const head = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/[\s_-]/g, ''))
-  const alias = { churchRef: ['churchref', 'employeeid', 'id', 'idnumber'] }
+  const alias = { churchRef: ['churchref', 'employeeid', 'id', 'idnumber'], motherName: ['mothername', 'mother'], fatherConfessor: ['fatherconfessor', 'confessor'], christianName: ['christianname', 'baptismalname'] }
   const idx = Object.fromEntries(COLS.map(c => [c, Math.max(...(alias[c] || [c.toLowerCase()]).map(a => head.indexOf(a)))]))
-  return lines.slice(1).map(l => { const v = l.split(sep).map(x => x.trim()); const g = c => (idx[c] >= 0 ? v[idx[c]] || '' : ''); return Object.fromEntries(COLS.map(c => [c, g(c)])) })
+  return lines.slice(1).map(l => { const v = l.split(sep).map(x => x.trim()); return Object.fromEntries(COLS.map(c => [c, idx[c] >= 0 ? v[idx[c]] || '' : ''])) })
 }
 
-function printCard(e) {
-  const w = window.open('', '_blank', 'width=520,height=360'); if (!w) return
-  const esc = x => String(x || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-  w.document.write(`<!doctype html><meta charset="utf-8"><title>${esc(e.fullName)}</title><style>
-  body{margin:0;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;background:#eef2f9}
-  .c{width:86mm;height:54mm;border-radius:10px;background:linear-gradient(135deg,#1f4fa8,#2f6fd6);color:#fff;padding:14px 16px;box-sizing:border-box;position:relative;box-shadow:0 4px 18px #0003}
-  .c:after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;background:#f2b705;border-radius:0 0 10px 10px}
-  .h{display:flex;gap:8px;align-items:center;font-size:9px;letter-spacing:.04em;text-transform:uppercase;opacity:.95}.h img{width:34px;height:34px;background:#fff;border-radius:6px;padding:2px;object-fit:contain}
-  .n{font-size:17px;font-weight:700;margin-top:10px}.s{font-size:10px;opacity:.9;margin-top:2px}
-  .id{position:absolute;left:16px;bottom:20px;font:700 20px ui-monospace,monospace;letter-spacing:.08em}
-  @media print{body{background:#fff}.c{box-shadow:none}}</style>
-  <div class="c"><div class="h"><img src="${location.origin}/logo.png"><div>Addis Ababa Diocese<br>የአዲስ አበባ ሀገረ ስብከት</div></div>
-  <div class="n">${esc(e.fullName)}</div><div class="s">${esc([e.profession, e.position].filter(Boolean).join(' · '))}<br>⛪ ${esc(e.churchName)}</div>
-  <div class="id">${esc(fmtId(e.employeeId))}</div></div><script>setTimeout(()=>print(),400)</script>`)
-  w.document.close()
+/** A picture that needs the login header to load. */
+function AuthImg({ path, alt, fallback, version }) {
+  const [src, setSrc] = useState(null)
+  useEffect(() => {
+    let url, dead = false
+    blob(path).then(b => { if (!dead) { url = URL.createObjectURL(b); setSrc(url) } }).catch(() => setSrc(null))
+    return () => { dead = true; if (url) URL.revokeObjectURL(url) }
+  }, [path, version])
+  return src ? <img src={src} alt={alt} /> : fallback
 }
 
-export default function Employees({ me }) {
+function Docs({ e, setErr }) {
+  const [list, setList] = useState(null)
+  const [title, setTitle] = useState('')
+  const [kind, setKind] = useState(DOC_KINDS[0])
+  const [busy, setBusy] = useState(false)
+  const load = () => api(`/employees/${e.id}/documents`).then(setList).catch(x => setErr(x.message))
+  useEffect(() => { load() }, [e.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const add = async ev => {
+    const f = ev.target.files[0]; ev.target.value = ''
+    if (!f) return
+    setBusy(true); setErr('')
+    try { await upload(`/employees/${e.id}/documents`, f, { title, kind }); setTitle(''); load() } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const remove = async d => { if (!confirm(t('Remove this document?'))) return; try { await api('/employee-files/' + d.id, { method: 'DELETE' }); load() } catch (x) { setErr(x.message) } }
+  if (!list) return null
+  return (
+    <div className="card">
+      <h2>Documents <span className="count">{list.length}</span> <small className="inl">kept in this employee’s file</small></h2>
+      {list.map(d => (
+        <div className="filerow" key={d.id}><span className="iicon">📄</span>
+          <div className="grow"><div className="fname">{d.title}</div><small>{d.kind ? d.kind + ' · ' : ''}{fmtSize(d.sizeBytes)} · @{d.uploadedBy}</small></div>
+          <button className="btn x" onClick={() => downloadPath('/employee-files/' + d.id, d.originalName).catch(x => setErr(x.message))}>⬇️</button>
+          <button className="btn x" onClick={() => remove(d)}>🗑️</button></div>
+      ))}
+      {list.length === 0 && <p className="muted">No documents yet.</p>}
+      <div className="grid" style={{ marginTop: 10 }}>
+        <div><label>Document name (optional)</label><input value={title} onChange={x => setTitle(x.target.value)} maxLength={160} /></div>
+        <div><label>Type</label><select value={kind} onChange={x => setKind(x.target.value)}>{DOC_KINDS.map(k => <option key={k}>{k}</option>)}</select></div>
+      </div>
+      <label className="drop">{busy ? 'Uploading…' : '📎 Add a document (PDF, image, Word, Excel · up to 10 MB)'}
+        <input type="file" disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={add} /></label>
+    </div>
+  )
+}
+
+function Row({ k, v }) { return v ? <div className="kv"><span>{k}</span><b>{v}</b></div> : null }
+
+function Profile({ e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases, setErr, setOk }) {
+  const [e, setE] = useState(e0)
+  const [ver, setVer] = useState(0)
+  useEffect(() => setE(e0), [e0])
+  const age = e.birthDate ? Math.floor((Date.now() - new Date(e.birthDate + 'T00:00:00')) / 31557600000) : null
+  const setPhoto = async ev => {
+    const f = ev.target.files[0]; ev.target.value = ''
+    if (!f) return
+    try { await upload(`/employees/${e.id}/photo`, f); setE({ ...e, hasPhoto: true }); setVer(v => v + 1); onChanged() } catch (x) { setErr(x.message) }
+  }
+  const renew = async () => {
+    if (!confirm(t('Renew the card for five more years?'))) return
+    try { const n = await api(`/employees/${e.id}/renew`, { method: 'POST' }); setE(n); onChanged(); setOk(t('Card renewed ✅')) } catch (x) { setErr(x.message) }
+  }
+  const print = async () => { setErr(''); try { if (!(await printIdCard(e))) setErr(t('Please allow pop-ups to print the card.')) } catch (x) { setErr(x.message || String(x)) } }
+  return (
+    <>
+      <button className="btn ghost sm" onClick={onBack}>← Employees</button>
+      <div className="dossier">
+        <div className="phbox">
+          <div className="photo"><AuthImg path={`/employees/${e.id}/photo`} version={ver} alt={e.fullName} fallback={<span className="ph">{initial(e.fullName)}</span>} /></div>
+          {canWrite && <label className="btn ghost sm" style={{ margin: '8px 0 0' }}>📷 {e.hasPhoto ? 'Change photo' : 'Add photo'}<input type="file" hidden accept=".jpg,.jpeg,.png,.webp" onChange={setPhoto} /></label>}
+        </div>
+        <div className="dhead">
+          <h1 style={{ margin: 0 }}>{e.fullName}</h1>
+          <div className="muted">{[e.profession, e.position].filter(Boolean).join(' · ') || WORKING[e.workingStatus]}</div>
+          {e.employeeId ? <>
+            <div className="idnum">🪪 {fmtId(e.employeeId)}</div>
+            <span className={'badge ' + (e.idExpired ? 's-court' : 's-ok')}>{e.idExpired ? t('Card expired {d}', { d: fmtDay(e.idExpiresOn) }) : t('Valid until {d}', { d: fmtDay(e.idExpiresOn) })}</span>
+          </> : <div className="muted">No employee ID (not an employee).</div>}
+          <div className="iact" style={{ marginTop: 12 }}>
+            {e.employeeId && <button className="btn sm" onClick={print}>🖨️ {t('Print ID card')}</button>}
+            {canWrite && e.employeeId && <button className="btn ghost sm" onClick={renew}>🔄 Renew card</button>}
+            {canWrite && <button className="btn ghost sm" onClick={() => onEdit(e)}>✏️ Edit</button>}
+            <button className="btn ghost sm" onClick={() => onSeeCases(e.fullName)}>📁 See cases ({e.totalCases})</button>
+          </div>
+        </div>
+      </div>
+      <div className="cols">
+        <div>
+          <div className="card"><h2>Personal</h2>
+            <Row k="First name" v={e.firstName} /><Row k="Middle name" v={e.middleName} /><Row k="Last name" v={e.lastName} />
+            <Row k="Mother’s name" v={e.motherName} />
+            <Row k="Gender" v={e.gender ? (e.gender === 'MALE' ? 'Male' : 'Female') : ''} />
+            <Row k="Date of birth" v={e.birthDate ? fmtDay(e.birthDate) + (age != null ? ` (${age})` : '') : ''} />
+            <Row k="Phone" v={e.phone} /><Row k="Email" v={e.email} /><Row k="Address" v={e.address} />
+          </div>
+          <div className="card"><h2>Spiritual life</h2>
+            <Row k="Christian name" v={e.christianName} /><Row k="Father confessor" v={e.fatherConfessor} />
+            <Row k="Service" v={SPIRITUAL_RANK[e.spiritualRank] ? t(SPIRITUAL_RANK[e.spiritualRank]) : ''} /><Row k="Ordained on" v={e.ordainedOn ? fmtDay(e.ordainedOn) : ''} />
+            {!e.christianName && !e.fatherConfessor && !e.spiritualRank && <p className="muted">Nothing recorded yet.</p>}
+          </div>
+          <div className="card"><h2>Work</h2>
+            <Row k="Church" v={e.churchName} /><Row k="Working status" v={WORKING[e.workingStatus]} />
+            <Row k="Profession" v={e.profession} /><Row k="Position at the church" v={e.position} />
+            <Row k="Hired on" v={e.hireDate ? fmtDay(e.hireDate) : ''} /><Row k="Church’s own number" v={e.churchRef} />
+          </div>
+        </div>
+        <div>
+          <div className="card"><h2>Cases</h2>
+            <p>{t('{a} cases in total · {b} still active · {c} about this person', { a: e.totalCases, b: e.openCases, c: e.complaintsAgainst })}</p>
+            {e.notes && <><h2 style={{ marginTop: 14 }}>Notes</h2><p className="notes">{e.notes}</p></>}
+          </div>
+          {canDocs && <Docs e={e} setErr={setErr} />}
+        </div>
+      </div>
+    </>
+  )
+}
+
+export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
   const canWrite = ['ADMIN', 'OFFICER'].includes(me.role)
   const [data, setData] = useState({ items: [], total: 0, size: 20 })
   const [churches, setChurches] = useState([])
   const [q, setQ] = useState('')
   const [church, setChurch] = useState('')
   const [page, setPage] = useState(0)
-  const [form, setForm] = useState(null) // { id?, ...fields }
-  const [open, setOpen] = useState(null)
+  const [form, setForm] = useState(null)
+  const [photo, setPhoto] = useState(null)
+  const [view, setView] = useState(null) // the employee whose file is open
   const [bulk, setBulk] = useState('')
   const [showBulk, setShowBulk] = useState(false)
   const [err, setErr] = useState('')
@@ -56,31 +159,43 @@ export default function Employees({ me }) {
   }
   useEffect(() => { api('/churches').then(setChurches).catch(() => {}) }, [])
   useEffect(() => { const h = setTimeout(load, 250); return () => clearTimeout(h) }, [q, church, page]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { // opened from the QR code on a card
+    if (!focus) return
+    api('/employees/by-id/' + encodeURIComponent(focus)).then(setView).catch(e => setErr(e.message)).finally(() => onFocusDone && onFocusDone())
+  }, [focus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toBody = f => {
     const ch = churches.find(c => c.name.toLowerCase() === f.churchName.trim().toLowerCase())
     if (!ch) throw new Error(t('Please choose the church from the list (start typing its name).'))
     const { churchName, ...rest } = f
-    return { ...rest, churchId: ch.id, birthDate: f.birthDate || null, hireDate: f.hireDate || null }
+    const nul = v => v || null
+    return { ...rest, churchId: ch.id, birthDate: nul(f.birthDate), hireDate: nul(f.hireDate), ordainedOn: nul(f.ordainedOn), idExpiresOn: nul(f.idExpiresOn) }
   }
   const save = async e => {
     e.preventDefault(); setErr(''); setOk('')
     try {
       const body = toBody(form)
-      if (form.id) await api('/employees/' + form.id, { method: 'PUT', body }); else await api('/employees', { method: 'POST', body })
-      setForm(null); setOk(t('Employee saved ✅')); load()
+      const saved = form.id ? await api('/employees/' + form.id, { method: 'PUT', body }) : await api('/employees', { method: 'POST', body })
+      let note = ''
+      if (photo) { try { await upload(`/employees/${saved.id}/photo`, photo); saved.hasPhoto = true } catch (x) { note = ' · ' + x.message } }
+      setForm(null); setPhoto(null); setOk(t('Employee saved ✅') + note); load()
+      setView(await api('/employees/' + saved.id))
+      window.scrollTo({ top: 0 })
     } catch (x) { setErr(x.message) }
   }
-  const edit = e => setForm({ id: e.id, churchRef: e.churchRef || '', fullName: e.fullName, churchName: e.churchName, phone: e.phone || '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', workingStatus: e.workingStatus })
+  const edit = e => {
+    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
+    setPhoto(null); setView(null); window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const doImport = async () => {
     setErr(''); setOk('')
     const rows = parseRows(bulk)
     if (!rows.length) return setErr(t('Paste the list with a first line of column names, then one employee per line.'))
     const byName = new Map(churches.map(c => [c.name.toLowerCase(), c.id]))
     const unknown = [...new Set(rows.filter(r => !byName.has(r.church.toLowerCase())).map(r => r.church || '(empty)'))]
-    const good = rows.filter(r => byName.has(r.church.toLowerCase()) && r.fullName)
+    const good = rows.filter(r => byName.has(r.church.toLowerCase()) && r.firstName)
     try {
-      const body = good.map(r => ({ churchRef: r.churchRef, fullName: r.fullName, churchId: byName.get(r.church.toLowerCase()), phone: r.phone, email: r.email, profession: r.profession, position: r.position, gender: r.gender, birthDate: r.birthDate || null, hireDate: r.hireDate || null, address: r.address, notes: '', workingStatus: 'ACTIVE_EMPLOYEE' }))
+      const body = good.map(r => ({ churchRef: r.churchRef, firstName: r.firstName, middleName: r.middleName, lastName: r.lastName, motherName: r.motherName, churchId: byName.get(r.church.toLowerCase()), phone: r.phone, email: r.email, profession: r.profession, position: r.position, gender: r.gender.toUpperCase().startsWith('F') ? 'FEMALE' : r.gender.toUpperCase().startsWith('M') ? 'MALE' : '', birthDate: r.birthDate || null, hireDate: r.hireDate || null, address: r.address, notes: '', christianName: r.christianName, fatherConfessor: r.fatherConfessor, workingStatus: 'ACTIVE_EMPLOYEE' }))
       const res = body.length ? await api('/employees/import', { method: 'POST', body }) : { created: 0, updated: 0, errors: [] }
       setOk(t('{a} added, {b} updated.', { a: res.created, b: res.updated }))
       const problems = [...res.errors, ...(unknown.length ? [t('Church not found: {x}', { x: unknown.slice(0, 5).join(', ') })] : [])]
@@ -91,88 +206,96 @@ export default function Employees({ me }) {
   const f = k => e => setForm({ ...form, [k]: e.target.value })
   const pages = Math.max(1, Math.ceil(data.total / data.size))
 
+  if (view && !form) return (
+    <>
+      {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
+      <Profile e0={view} canWrite={canWrite} canDocs={canWrite} onBack={() => { setView(null); setOk(''); load() }} onEdit={edit} onChanged={load}
+        onSeeCases={name => onSeeCases && onSeeCases(name)} setErr={setErr} setOk={setOk} />
+    </>
+  )
+
   return (
     <>
-      <h1>Employees</h1><p className="muted">{t('{n} people on the list. Their church-issued ID brings back all their details when registering a case.', { n: data.total })}</p>
+      <h1>Employees</h1><p className="muted">{t('{n} people on the list. Type an employee ID when registering a case to bring back all their details.', { n: data.total })}</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <datalist id="emp-church-list">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
-      <div className="card">
+      {!form && <div className="card">
         <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-          <input style={{ flex: '2 1 200px' }} placeholder="Search by name, ID, phone or profession…" value={q} onChange={e => { setQ(e.target.value); setPage(0) }} />
+          <input style={{ flex: '2 1 200px' }} placeholder="Search by name, ID number, mother’s name, phone or profession…" value={q} onChange={e => { setQ(e.target.value); setPage(0) }} />
           <select style={{ flex: '1 1 160px' }} value={church} onChange={e => { setChurch(e.target.value); setPage(0) }}>
             <option value="">All churches</option>{churches.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          {canWrite && <button className="btn sm" style={{ margin: 0 }} onClick={() => setForm({ ...blank })}>➕ Register employee</button>}
+          {canWrite && <button className="btn sm" style={{ margin: 0 }} onClick={() => { setForm({ ...blank }); setPhoto(null) }}>➕ Register employee</button>}
           {canWrite && <button className="btn ghost sm" style={{ margin: 0 }} onClick={() => setShowBulk(!showBulk)}>📥 Import list</button>}
         </div>
-      </div>
+      </div>}
 
-      {showBulk && canWrite && (
+      {showBulk && canWrite && !form && (
         <div className="card">
           <h2>Import the church’s employee list</h2>
-          <p className="hint">Paste from Excel or a CSV file. First line = column names: <code>churchRef, fullName, church, phone, email, profession, position, gender, birthDate, hireDate, address</code>. Everyone gets a new 12-digit employee ID automatically. People already on the list (same ID or church number) are updated.</p>
-          <textarea rows={6} value={bulk} onChange={e => setBulk(e.target.value)} placeholder={'churchRef,fullName,church,profession,phone\nEMP-0001,Abebe Kebede,Kidist Selassie Church,Accountant,0911223344'} />
+          <p className="hint">Paste from Excel or a CSV file. First line = column names: <code>churchRef, firstName, middleName, lastName, motherName, church, phone, email, profession, position, gender, birthDate, hireDate, address, christianName, fatherConfessor</code>. Everyone gets a new 12-digit employee ID automatically. People already on the list (same ID or church number) are updated. Photos and documents are added afterwards on each profile.</p>
+          <textarea rows={6} value={bulk} onChange={e => setBulk(e.target.value)} placeholder={'churchRef,firstName,middleName,lastName,motherName,church,profession\nEMP-0001,Abebe,Kebede,Tadesse,Almaz,Kidist Selassie Church,Accountant'} />
           <button className="btn" onClick={doImport}>📥 Import</button>
         </div>
       )}
 
       {form && (
         <form className="card" onSubmit={save}>
-          <h2>{form.id ? 'Edit employee' : 'Register employee'}</h2>
+          <h2>{form.id ? 'Edit employee' : 'Register employee'}{form.employeeId && <span className="idnum sm"> 🪪 {fmtId(form.employeeId)}</span>}</h2>
+          {!form.id && <p className="hint">{t('The employee ID (12 digits) is created automatically when you save.')}</p>}
+          <h3 className="sect">Identity</h3>
+          <div className="grid3">
+            <div><label>First name</label><input value={form.firstName} onChange={f('firstName')} required maxLength={80} autoFocus /></div>
+            <div><label>Middle name (father’s name)</label><input value={form.middleName} onChange={f('middleName')} required maxLength={80} /></div>
+            <div><label>Last name (grandfather’s name)</label><input value={form.lastName} onChange={f('lastName')} required maxLength={80} /></div>
+          </div>
           <div className="grid">
-            <div><label>Church’s own number (optional)</label><input value={form.churchRef} onChange={f('churchRef')} maxLength={40} />{!form.id && <small className="muted">{t('The employee ID (12 digits) is created automatically when you save.')}</small>}</div>
-            <div><label>Full name</label><input value={form.fullName} onChange={f('fullName')} required maxLength={160} /></div>
+            <div><label>Mother’s name</label><input value={form.motherName} onChange={f('motherName')} required maxLength={160} /></div>
+            <div><label>Gender</label><select value={form.gender} onChange={f('gender')} required><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
+            <div><label>Date of birth</label><input type="date" value={form.birthDate} onChange={f('birthDate')} required /></div>
+            <div><label>Photo</label><input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => setPhoto(e.target.files[0] || null)} />{photo && <small className="muted">{photo.name}</small>}</div>
+          </div>
+          <h3 className="sect">Spiritual life</h3>
+          <div className="grid">
+            <div><label>Christian name</label><input value={form.christianName} onChange={f('christianName')} maxLength={120} /></div>
+            <div><label>Father confessor</label><input value={form.fatherConfessor} onChange={f('fatherConfessor')} maxLength={160} /></div>
+            <div><label>Service in the church</label><select value={form.spiritualRank} onChange={f('spiritualRank')}><option value="">—</option>{Object.entries(SPIRITUAL_RANK).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}</select></div>
+            <div><label>Ordained on</label><input type="date" value={form.ordainedOn} onChange={f('ordainedOn')} /></div>
+          </div>
+          <h3 className="sect">Work and contact</h3>
+          <div className="grid">
             <div><label>Church</label><input list="emp-church-list" value={form.churchName} onChange={f('churchName')} required placeholder="Start typing…" /></div>
             <div><label>Working status</label><select value={form.workingStatus} onChange={f('workingStatus')}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
             <div><label>Profession</label><input value={form.profession} onChange={f('profession')} maxLength={120} placeholder="e.g. Accountant, Teacher, Priest" /></div>
             <div><label>Position at the church</label><input value={form.position} onChange={f('position')} maxLength={120} /></div>
             <div><label>Phone</label><input value={form.phone} onChange={f('phone')} inputMode="tel" maxLength={40} /></div>
             <div><label>Email</label><input type="email" value={form.email} onChange={f('email')} maxLength={120} /></div>
-            <div><label>Gender</label><select value={form.gender} onChange={f('gender')}><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
-            <div><label>Date of birth</label><input type="date" value={form.birthDate} onChange={f('birthDate')} /></div>
             <div><label>Hired on</label><input type="date" value={form.hireDate} onChange={f('hireDate')} /></div>
             <div><label>Address</label><input value={form.address} onChange={f('address')} maxLength={255} /></div>
+            <div><label>Church’s own number (optional)</label><input value={form.churchRef} onChange={f('churchRef')} maxLength={40} /></div>
+            {form.id && form.employeeId && <div><label>Card valid until</label><input type="date" value={form.idExpiresOn} onChange={f('idExpiresOn')} /></div>}
           </div>
           <label>Notes</label><textarea rows={3} value={form.notes} onChange={f('notes')} maxLength={4000} />
           <div className="iact"><button className="btn sm">Save</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>Cancel</button></div>
         </form>
       )}
 
-      <div className="card list">
+      {!form && <div className="card list">
         {data.items.map(e => (
-          <div key={e.id}>
-            <div className="row" style={{ cursor: 'pointer' }} onClick={() => setOpen(open === e.id ? null : e.id)}>
-              <div className="avatar">{initial(e.fullName)}</div>
-              <div className="grow"><b>{e.fullName}</b>
-                <small>{e.employeeId ? '🪪 ' + fmtId(e.employeeId) + ' · ' : ''}⛪ {e.churchName}{e.profession ? ' · ' + e.profession : ''}{e.position ? ' · ' + e.position : ''}</small></div>
-              {e.complaintsAgainst > 0 && <span className="badge st-referred">⚠️ {e.complaintsAgainst}</span>}
-              <span className="badge st-open">{t('{n} cases', { n: e.totalCases })}</span>
-            </div>
-            {open === e.id && (
-              <div className="panel">
-                {e.employeeId && <div className="idcard-mini"><span>🪪 {t('Employee ID')}</span><b>{fmtId(e.employeeId)}</b>{e.churchRef && <small>{t('Church number')}: {e.churchRef}</small>}</div>}
-                <div className="grid">
-                  <div><small>{WORKING[e.workingStatus]}</small></div>
-                  {e.phone && <div><small>📞 {e.phone}</small></div>}
-                  {e.email && <div><small>✉️ {e.email}</small></div>}
-                  {e.gender && <div><small>{e.gender === 'MALE' ? 'Male' : 'Female'}</small></div>}
-                  {e.birthDate && <div><small>🎂 {fmtDay(e.birthDate)}</small></div>}
-                  {e.hireDate && <div><small>📅 {t('Hired {d}', { d: fmtDay(e.hireDate) })}</small></div>}
-                  {e.address && <div><small>📍 {e.address}</small></div>}
-                </div>
-                {e.notes && <p className="notes">{e.notes}</p>}
-                <small>{t('{a} cases in total · {b} still active · {c} about this person', { a: e.totalCases, b: e.openCases, c: e.complaintsAgainst })}</small>
-                <div className="iact"><button className="btn ghost sm" onClick={() => printCard(e)}>🖨️ {t('Print ID card')}</button></div>
-                {canWrite && <div className="iact"><button className="btn ghost sm" onClick={() => { edit(e); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>✏️ Edit</button></div>}
-              </div>
-            )}
+          <div className="row" key={e.id} style={{ cursor: 'pointer' }} onClick={async () => { setErr(''); setView(e) }}>
+            <div className="avatar">{initial(e.fullName)}</div>
+            <div className="grow"><b>{e.fullName}</b>
+              <small>{e.employeeId ? '🪪 ' + fmtId(e.employeeId) + ' · ' : ''}⛪ {e.churchName}{e.profession ? ' · ' + e.profession : ''}{e.motherName ? ' · ' + t('mother') + ': ' + e.motherName : ''}</small></div>
+            {e.idExpired && <span className="badge s-court">{t('Expired')}</span>}
+            {e.complaintsAgainst > 0 && <span className="badge s-ref">⚠️ {e.complaintsAgainst}</span>}
+            <span className="badge s-open">{t('{n} cases', { n: e.totalCases })}</span>
           </div>
         ))}
         {data.items.length === 0 && <p className="muted">No employees match.</p>}
         {pages > 1 && <div className="row" style={{ justifyContent: 'center', gap: 10 }}>
           <button className="btn ghost sm" disabled={page === 0} onClick={() => setPage(page - 1)}>←</button><span>{page + 1} / {pages}</span>
           <button className="btn ghost sm" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>→</button></div>}
-      </div>
+      </div>}
     </>
   )
 }

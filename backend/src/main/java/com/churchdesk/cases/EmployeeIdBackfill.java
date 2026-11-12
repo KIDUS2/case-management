@@ -18,8 +18,11 @@ public class EmployeeIdBackfill implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         tx.executeWithoutResult(s -> {
             List<Person> missing = persons.findByEmployeeIdIsNullAndWorkingStatusNot(WorkingStatus.CHURCH_MEMBER);
-            for (Person p : missing) p.setEmployeeId(EmployeeIds.generate(id -> persons.existsByEmployeeId(id)));
+            for (Person p : missing) p.assignId(EmployeeIds.generate(id -> persons.existsByEmployeeId(id)));
             persons.saveAll(missing);
+            List<Person> unsplit = persons.findByFirstNameIsNull();
+            unsplit.forEach(Person::splitFullName);
+            persons.saveAll(unsplit);
         });
     }
 }

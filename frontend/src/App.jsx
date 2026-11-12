@@ -37,7 +37,7 @@ const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFI
 export default function App() {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
-  const [page, setPage] = useState(null)
+  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'employees' : null))
   const [openId, setOpenId] = useState(null)
   const [fresh, setFresh] = useState(null)
   const [query, setQuery] = useState('')
@@ -45,6 +45,7 @@ export default function App() {
   const [ring, setRing] = useState(false)
   const [toast, setToast] = useState(null)
   const lastUnread = useRef(0)
+  const [focusEmp, setFocusEmp] = useState(() => new URLSearchParams(location.search).get('emp'))
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return setReady(true)
@@ -125,7 +126,7 @@ export default function App() {
         {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches />}
-        {current === 'employees' && <Employees me={user} />}
+        {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} />}
         {current === 'departments' && <Departments />}
         {current === 'users' && <Users me={user} />}
         {current === 'account' && <Account me={user} onUser={setUser} />}

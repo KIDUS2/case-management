@@ -252,3 +252,17 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Ethiopic",
 .idcard-mini{display:flex;flex-direction:column;gap:2px;padding:10px 14px;margin-bottom:10px;border-radius:12px;background:var(--surface-2,rgba(47,111,214,.1));border:1px dashed var(--line,#9bb)}
 .idcard-mini b{font:700 1.25rem ui-monospace,monospace;letter-spacing:.08em}
 .idcard-mini span{font-size:.78rem;opacity:.75}
+
+.dossier{display:flex;gap:20px;align-items:flex-start;margin:14px 0 18px;flex-wrap:wrap}
+.phbox{display:flex;flex-direction:column;align-items:flex-start}
+.photo{width:132px;height:168px;border-radius:14px;overflow:hidden;background:var(--surface-2,rgba(47,111,214,.12));border:2px solid var(--line,#9bb);display:grid;place-items:center}
+.photo img{width:100%;height:100%;object-fit:cover}
+.photo .ph{font-size:3rem;font-weight:800;opacity:.5}
+.dhead{flex:1 1 260px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.idnum{font:800 1.5rem ui-monospace,Menlo,Consolas,monospace;letter-spacing:.1em}
+.idnum.sm{font-size:1rem;margin-left:10px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line,rgba(150,160,190,.25))}
+.kv:last-child{border-bottom:0}.kv span{opacity:.7}.kv b{text-align:right;font-weight:600}
+.sect{margin:18px 0 4px;font-size:.95rem;opacity:.85}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.grid3{grid-template-columns:1fr}.photo{width:110px;height:140px}}

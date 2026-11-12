@@ -103,11 +103,12 @@ public class CaseService {
         if (person == null) person = persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId()).orElseGet(Person::new);
         if (typed != null && person.getId() == null && !EmployeeIds.looksLikeId(typed)) person.setChurchRef(typed);
         person.setFullName(name);
+        if (person.getFirstName() == null) person.splitFullName();
         person.setChurch(church);
         person.setWorkingStatus(in.workingStatus());
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
         if (person.getEmployeeId() == null && in.workingStatus() != WorkingStatus.CHURCH_MEMBER)
-            person.setEmployeeId(EmployeeIds.generate(persons::existsByEmployeeId));
+            person.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         person = persons.save(person);
 
         if (!seen.add(person.getId() + ":" + role)) return order; // same person listed twice in the same role
