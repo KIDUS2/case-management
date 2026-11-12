@@ -131,7 +131,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
       const c = await api('/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter } })
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
-      for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch { failed.push(f.name) } }
+      for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
       onCreated(c.id, failed)
     } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
@@ -205,7 +205,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
             <button type="button" className="btn x" onClick={() => setFiles(l => l.filter((_, j) => j !== k))}>Remove</button></div>
         ))}
         <label className="drop">📎 Choose files (PDF, image, Word, Excel · up to 10 MB each)
-          <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setFiles(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
+          <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { const picked = Array.from(e.target.files); e.target.value = ''; setFiles(l => [...l, ...picked]) }} /></label>
       </div>
 
       </div>
