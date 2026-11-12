@@ -3,6 +3,7 @@ import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
 import { WORKING, initial, fmtId, fmtSize } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
+import { askConfirm, notify } from '../dialog.js'
 
 const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
@@ -44,7 +45,7 @@ function Docs({ e, setErr }) {
     setBusy(true); setErr('')
     try { await upload(`/employees/${e.id}/documents`, f, { title, kind }); setTitle(''); load() } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
-  const remove = async d => { if (!confirm(t('Remove this document?'))) return; try { await api('/employee-files/' + d.id, { method: 'DELETE' }); load() } catch (x) { setErr(x.message) } }
+  const remove = async d => { if (!(await askConfirm(t('Remove “{f}”?', { f: d.title }), { title: 'Remove this document?', confirmText: 'Remove', danger: true }))) return; try { await api('/employee-files/' + d.id, { method: 'DELETE' }); load() } catch (x) { setErr(x.message) } }
   if (!list) return null
   return (
     <div className="card">
@@ -79,7 +80,7 @@ function Profile({ e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases,
     try { await upload(`/employees/${e.id}/photo`, f); setE({ ...e, hasPhoto: true }); setVer(v => v + 1); onChanged() } catch (x) { setErr(x.message) }
   }
   const renew = async () => {
-    if (!confirm(t('Renew the card for five more years?'))) return
+    if (!(await askConfirm(t('The new card will be valid for five more years from today.'), { title: 'Renew the card?', confirmText: 'Renew' }))) return
     try { const n = await api(`/employees/${e.id}/renew`, { method: 'POST' }); setE(n); onChanged(); setOk(t('Card renewed ✅')) } catch (x) { setErr(x.message) }
   }
   const print = async () => { setErr(''); try { if (!(await printIdCard(e))) setErr(t('Please allow pop-ups to print the card.')) } catch (x) { setErr(x.message || String(x)) } }

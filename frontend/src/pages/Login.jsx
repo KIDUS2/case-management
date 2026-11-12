@@ -17,7 +17,7 @@ export default function Login({ onLogin }) {
     <div className="center loginhero">
       <div className="loginprefs"><Prefs /></div>
       <form className="card login" onSubmit={submit}>
-        <img className="loginlogo" src="/logo.png" alt="Addis Ababa Diocese Media" />
+        <img className="loginlogo" src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church – Addis Ababa Diocese" />
         <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>
         <h1>Case Desk</h1>
         <p className="muted">Welcome! Please sign in to continue.</p>

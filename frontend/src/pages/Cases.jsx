@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { askConfirm } from '../dialog.js'
 import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
 import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
@@ -395,7 +396,7 @@ function Files({ c, me, onChange, setErr }) {
     setBusy(false)
   }
   const remove = async f => {
-    if (!confirm(t('Remove “{f}”?', { f: f.originalName }))) return
+    if (!(await askConfirm(t('Remove “{f}”?', { f: f.originalName }), { title: 'Remove this file?', confirmText: 'Remove', danger: true }))) return
     try { await api('/files/' + f.id, { method: 'DELETE' }); onChange(await api('/cases/' + c.id)) } catch (x) { setErr(x.message) }
   }
   return (

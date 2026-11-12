@@ -3,8 +3,13 @@ function headers(json) {
   return { ...(json ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: 'Bearer ' + token } : {}) }
 }
 
+/** fetch that never shows the browser's raw network error. */
+async function send(url, opts) {
+  try { return await fetch(url, opts) } catch { throw new Error('Cannot reach the server. Please check the connection and try again.') }
+}
+
 async function check(res) {
-  if (res.status === 401 && localStorage.getItem('token')) { localStorage.removeItem('token'); location.reload() }
+  if (res.status === 401 && localStorage.getItem('token')) { localStorage.removeItem('token'); window.dispatchEvent(new Event('session-expired')) }
   if (!res.ok) {
     const e = await res.json().catch(() => ({}))
     throw new Error(e.message || 'Something went wrong. Please try again.')
@@ -13,7 +18,7 @@ async function check(res) {
 }
 
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await check(await fetch('/api' + path, { method, headers: headers(true), body: body ? JSON.stringify(body) : undefined }))
+  const res = await check(await send('/api' + path, { method, headers: headers(true), body: body ? JSON.stringify(body) : undefined }))
   return res.status === 204 ? null : res.json()
 }
 
@@ -22,13 +27,13 @@ export async function upload(path, file, fields = {}) {
   const form = new FormData()
   form.append('file', file)
   Object.entries(fields).forEach(([k, v]) => { if (v) form.append(k, v) })
-  const res = await check(await fetch('/api' + path, { method: 'POST', headers: headers(false), body: form }))
+  const res = await check(await send('/api' + path, { method: 'POST', headers: headers(false), body: form }))
   return res.json()
 }
 
 /** Files need the login header, so fetch the bytes and let the browser save them. */
 export async function download(id, name) {
-  const res = await check(await fetch('/api/files/' + id, { headers: headers(false) }))
+  const res = await check(await send('/api/files/' + id, { headers: headers(false) }))
   const url = URL.createObjectURL(await res.blob())
   const a = document.createElement('a')
   a.href = url; a.download = name
@@ -38,7 +43,7 @@ export async function download(id, name) {
 
 /** Fetch any protected file (photo, document) as a Blob. */
 export async function blob(path) {
-  const res = await check(await fetch('/api' + path, { headers: headers(false) }))
+  const res = await check(await send('/api' + path, { headers: headers(false) }))
   return res.blob()
 }
 

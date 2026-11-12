@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 import { ROLES } from '../ui.js'
+import { askText } from '../dialog.js'
 
 const empty = { username: '', fullName: '', password: '', role: 'RECEPTION', departmentId: '', jobTitle: '', phone: '', email: '', canViewAll: false }
 
@@ -30,7 +32,7 @@ export default function Users({ me }) {
     setErr(''); setOk('')
     try { await api('/users/' + u.id, { method: 'PUT', body }); load() } catch (x) { setErr(x.message) }
   }
-  const reset = u => { const p = prompt('New password for ' + u.fullName + ' (min 6 characters):'); if (p) patch(u, { password: p }) }
+  const reset = async u => { const p = await askText(t('New password for {n} (min 6 characters):', { n: u.fullName }), { title: 'Reset password', type: 'password', minLength: 6 }); if (p) patch(u, { password: p }) }
   const saveDetails = async () => {
     const { id, ...body } = edit
     await patch({ id }, body); setEdit(null)

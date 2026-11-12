@@ -14,13 +14,16 @@ export const profileLink = e => `${location.origin}/?emp=${e.employeeId}`
 
 /** Opens a print page with the front and back of the employee ID card. */
 export async function printIdCard(e) {
-  const w = window.open('', '_blank', 'width=720,height=640')
-  if (!w) return false
-  w.document.write('<p style="font-family:sans-serif;padding:24px">Preparing the card…</p>')
+  // printed from a hidden frame inside the app, so no pop-up window can be blocked by the browser
+  const frame = document.createElement('iframe')
+  frame.setAttribute('aria-hidden', 'true')
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden'
+  document.body.appendChild(frame)
+  const w = frame.contentWindow
   let photo = ''
   if (e.hasPhoto) { try { photo = await toDataUrl(await blob(`/employees/${e.id}/photo`)) } catch { /* the card still prints without it */ } }
   const asset = async u => { try { return await toDataUrl(await (await fetch(u)).blob()) } catch { return '' } }
-  const [logo, cross] = await Promise.all([asset('/logo.png'), asset('/ewtc-logo.png')])
+  const cross = await asset('/ewtc-logo.png')
   const qr = await QRCode.toDataURL(profileLink(e), { margin: 0, width: 300, errorCorrectionLevel: 'M' })
   const sex = e.gender === 'MALE' ? 'Male · ወንድ' : e.gender === 'FEMALE' ? 'Female · ሴት' : '—'
   const rank = RANKS[e.spiritualRank] || ''
@@ -52,7 +55,7 @@ export async function printIdCard(e) {
   @media print{body{background:#fff;padding:0;gap:8mm}.card{box-shadow:none}.hint{display:none}}
   </style></head><body>
   <div class="card front">
-    <div class="band"><img src="${cross}" alt=""><div class="t"><b>የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን</b><span>Ethiopian Orthodox Tewahedo Church</span><span>አዲስ አበባ ሀገረ ስብከት · Addis Ababa Diocese</span></div><img src="${logo}" alt=""></div>
+    <div class="band"><img src="${cross}" alt=""><div class="t"><b>የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን</b><span>Ethiopian Orthodox Tewahedo Church</span><span>አዲስ አበባ ሀገረ ስብከት · Addis Ababa Diocese</span></div><i style="width:11mm;flex:none"></i></div>
     <div class="body">
       <div class="photo">${photo ? `<img src="${photo}" alt="">` : '👤'}</div>
       <div class="f">
@@ -66,7 +69,7 @@ export async function printIdCard(e) {
     <div class="stripe"><span>EMPLOYEE ID · የሠራተኛ መታወቂያ</span><span class="${expired ? 'exp' : ''}">Exp ${esc(day(e.idExpiresOn))}</span></div>
   </div>
   <div class="card back">
-    <div class="band"><img src="${cross}" alt=""><div class="t"><b>የሠራተኛ መታወቂያ ካርድ</b><span>Employee identification card</span></div><img src="${logo}" alt=""></div>
+    <div class="band"><img src="${cross}" alt=""><div class="t"><b>የሠራተኛ መታወቂያ ካርድ</b><span>Employee identification card</span></div><i style="width:11mm;flex:none"></i></div>
     <div class="body">
       <img class="qr" src="${qr}" alt="QR">
       <div class="f">
@@ -80,7 +83,10 @@ export async function printIdCard(e) {
     <div class="stripe"><span>${esc(fmtId(e.employeeId))}</span><span>Valid until ${esc(day(e.idExpiresOn))}</span></div>
   </div>
   <div class="hint">Print on card stock at 100% size, front and back.</div>
-  <script>window.onload=()=>setTimeout(()=>window.print(),500)</script></body></html>`)
+  </body></html>`)
   w.document.close()
+  await new Promise(r => setTimeout(r, 400))
+  w.focus(); w.print()
+  setTimeout(() => frame.remove(), 60000)
   return true
 }

@@ -16,6 +16,8 @@ import Account from './pages/Account.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import Bell from './components/Bell.jsx'
 import Prefs from './components/Prefs.jsx'
+import { notify } from './dialog.js'
+import { t } from './i18n.js'
 
 const DESK = ['ADMIN', 'OFFICER', 'RECEPTION']
 /** Which pages each role sees. */
@@ -80,6 +82,12 @@ export default function App() {
     const t = setTimeout(() => setToast(null), 8000)
     return () => clearTimeout(t)
   }, [toast])
+
+  useEffect(() => {
+    const h = () => { setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0); notify(t('Your session has ended. Please sign in again.'), 'info') }
+    window.addEventListener('session-expired', h)
+    return () => window.removeEventListener('session-expired', h)
+  }, [])
 
   const logout = () => { localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
   const go = key => { setOpenId(null); setFresh(null); setQuery(''); setPage(key) }
