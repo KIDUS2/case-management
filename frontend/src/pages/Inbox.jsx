@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
+import { t } from '../i18n.js'
 import { CATEGORY, ISSUE_STATUS, ago, dayDiff, fmtCode, fmtDay, initial, names } from '../ui.js'
 
 /** What has been sent to a department. Its staff resolve issues here; the person who registered the case is notified. */
@@ -48,8 +49,8 @@ export default function Inbox({ me, onOpen }) {
 
   return (
     <>
-      <div className="head"><div><h1>{deptName ? deptName + ' inbox' : 'Department inbox'}</h1>
-        <p className="muted">Issues sent to {isDept ? 'your department' : 'this department'}. Resolving one tells the desk straight away.</p></div>
+      <div className="head"><div><h1>{deptName ? t('{x} inbox', { x: deptName }) : t('Department inbox')}</h1>
+        <p className="muted">{t('Issues sent to {x}. Resolving one tells the desk straight away.', { x: isDept ? 'your department' : 'this department' })}</p></div>
         {!isDept && departments.length > 0 && (
           <select style={{ width: 'auto', minWidth: 200 }} value={deptId} onChange={e => setDeptId(e.target.value)}>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -58,7 +59,7 @@ export default function Inbox({ me, onOpen }) {
       </div>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <div className="tabs">
-        <button className={'chip' + (tab === 'pending' ? ' on' : '')} onClick={() => setTab('pending')}>⏳ Waiting{data ? ` (${data.pending})` : ''}</button>
+        <button className={'chip' + (tab === 'pending' ? ' on' : '')} onClick={() => setTab('pending')}>⏳ {data ? t('Waiting ({n})', { n: data.pending }) : t('Waiting')}</button>
         <button className={'chip' + (tab === 'done' ? ' on' : '')} onClick={() => setTab('done')}>✅ Resolved</button>
       </div>
       {!data && !err && <div className="muted">Loading…</div>}
@@ -74,8 +75,8 @@ export default function Inbox({ me, onOpen }) {
                 <div className="ctitle"><b>{CATEGORY[it.category].icon} {CATEGORY[it.category].label}</b><span className={'badge ' + st.cls}>{st.label}</span></div>
                 <p style={{ margin: '4px 0', whiteSpace: 'pre-wrap' }}>{it.description || <span className="muted">No detail written.</span>}</p>
                 <small>👤 {names(it.complainants)} · ⛪ {it.churchName}{it.subjects.length ? ' · about ' + names(it.subjects) : ''}</small>
-                {it.status !== 'RESOLVED' && <small>Received {it.referredAt ? ago(it.referredAt) : ''}{it.returnOn ? <> · person returns <b className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>{fmtDay(it.returnOn)}</b></> : ''}</small>}
-                {it.status === 'RESOLVED' && <div className="resbox">✅ Resolved {ago(it.resolvedAt)} by @{it.resolvedBy}{it.resolutionNote ? ' — ' + it.resolutionNote : ''}</div>}
+                {it.status !== 'RESOLVED' && <small>{t('Received {x}', { x: it.referredAt ? ago(it.referredAt) : '' })}{it.returnOn ? <> · {t('person returns')} <b className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>{fmtDay(it.returnOn)}</b></> : ''}</small>}
+                {it.status === 'RESOLVED' && <div className="resbox">✅ {t('Resolved {when} by @{who}{note}', { when: ago(it.resolvedAt), who: it.resolvedBy, note: it.resolutionNote ? ' — ' + it.resolutionNote : '' })}</div>}
               </div>
               <div className="cside"><span className="codechip">{fmtCode(it.code)}</span></div>
             </div>
@@ -98,7 +99,7 @@ export default function Inbox({ me, onOpen }) {
       {data && data.total > data.size && (
         <div className="pager">
           <button className="btn ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>← Previous</button>
-          <span className="muted">Page {page + 1} of {pages}</span>
+          <span className="muted">{t('Page {a} of {b}', { a: page + 1, b: pages })}</span>
           <button className="btn ghost" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button>
         </div>
       )}

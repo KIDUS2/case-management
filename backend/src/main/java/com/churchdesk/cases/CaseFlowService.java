@@ -23,10 +23,11 @@ public class CaseFlowService {
     private final DepartmentRepository departments;
     private final UserRepository users;
     private final NotificationService notifier;
+    private final AccessService access;
 
     public CaseFlowService(ChurchCaseRepository cases, CaseEventRepository events, DepartmentRepository departments,
-                           UserRepository users, NotificationService notifier) {
-        this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier;
+                           UserRepository users, NotificationService notifier, AccessService access) {
+        this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
     }
 
     // ---- used while registering a new case ----
@@ -64,6 +65,7 @@ public class CaseFlowService {
     @Transactional
     public void refer(Long caseId, Long issueId, Long departmentId, LocalDate returnOn, String note, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         CaseIssue i = issue(c, issueId);
         Department d = departments.findById(departmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
         applyReferral(c, i, d, returnOn, note, actor);
@@ -72,6 +74,7 @@ public class CaseFlowService {
     @Transactional
     public void resolve(Long caseId, Long issueId, String note, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         CaseIssue i = issue(c, issueId);
         if (!CaseAccess.canResolve(actor, i))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the department that received this issue (or an officer) can resolve it");
@@ -99,6 +102,7 @@ public class CaseFlowService {
     @Transactional
     public void court(Long caseId, Long issueId, String note, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         CaseIssue i = issue(c, issueId);
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
         i.setStatus(IssueStatus.COURT);
@@ -115,6 +119,7 @@ public class CaseFlowService {
     @Transactional
     public void acknowledgeCourt(Long caseId, Long issueId, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         CaseIssue i = issue(c, issueId);
         if (i.getCourtAt() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This issue has not gone to court");
         if (i.getCourtAckAt() != null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already acknowledged");
@@ -129,6 +134,7 @@ public class CaseFlowService {
     @Transactional
     public void arrived(Long caseId, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         for (CaseIssue i : c.getIssues()) if (i.getStatus() != IssueStatus.RESOLVED) i.setReturnOn(null);
         events.save(new CaseEvent(c.getId(), null, EventType.ARRIVED, "Person came back to the door", actor.getUsername()));
     }
@@ -137,13 +143,15 @@ public class CaseFlowService {
     public void addNote(Long caseId, String text, AppUser actor) {
         if (text == null || text.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please write a note");
         ChurchCase c = load(caseId);
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         events.save(new CaseEvent(c.getId(), null, EventType.NOTE, text.trim(), actor.getUsername()));
     }
 
     @Transactional
     public void setLetter(Long caseId, boolean issued, AppUser actor) {
         ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
         if (c.isLetterIssued() == issued) return;
         c.setLetterIssued(issued);
         events.save(new CaseEvent(c.getId(), null, EventType.LETTER, issued ? "Letter issued" : "Letter marked as not issued", actor.getUsername()));

@@ -26,11 +26,12 @@ public class FileService {
     private final CaseFileRepository files;
     private final ChurchCaseRepository cases;
     private final CaseEventRepository events;
+    private final AccessService access;
     private final Path root;
 
-    public FileService(CaseFileRepository files, ChurchCaseRepository cases, CaseEventRepository events,
+    public FileService(CaseFileRepository files, ChurchCaseRepository cases, CaseEventRepository events, AccessService access,
                        @Value("${app.storage.dir:./uploads}") String dir) throws IOException {
-        this.files = files; this.cases = cases; this.events = events;
+        this.files = files; this.cases = cases; this.events = events; this.access = access;
         this.root = Path.of(dir).toAbsolutePath().normalize();
         Files.createDirectories(root);
     }
@@ -38,7 +39,7 @@ public class FileService {
     @Transactional
     public CaseDtos.FileDto store(Long caseId, Long issueId, MultipartFile file, AppUser actor) throws IOException {
         ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         if (issueId != null && c.getIssues().stream().noneMatch(i -> i.getId().equals(issueId)))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is not part of this case");
         if (file == null || file.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a file");
@@ -63,7 +64,7 @@ public class FileService {
     public Download load(Long id, AppUser actor) {
         CaseFile f = files.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
         ChurchCase c = cases.findById(f.getCaseId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         Path p = root.resolve(f.getStoredName()).normalize();
         if (!p.startsWith(root) || !Files.exists(p)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "The file is missing from storage");
         return new Download(new FileSystemResource(p), f.getOriginalName(), f.getContentType());

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 import { STATUS, fmtCode, initial, names } from '../ui.js'
 
 /** One search box for everything: a person's name, a church, or a case code. */
@@ -65,7 +66,7 @@ export default function SearchBar({ onOpen, onSeeAll }) {
           {q.trim().length < 2 && <div className="gmsg">Keep typing…</div>}
           {err && <div className="gmsg warn">{err}</div>}
           {q.trim().length >= 2 && !err && busy && !hits && <div className="gmsg">Searching…</div>}
-          {q.trim().length >= 2 && !err && hits && hits.length === 0 && !busy && <div className="gmsg">No case found for “{q.trim()}”. Check the spelling or the code.</div>}
+          {q.trim().length >= 2 && !err && hits && hits.length === 0 && !busy && <div className="gmsg">{t('No case found for “{q}”. Check the spelling or the code.', { q: q.trim() })}</div>}
           {hits && hits.length > 0 && hits.map((c, i) => (
             <button key={c.id} className={'ghit' + (i === sel ? ' on' : '')} onMouseEnter={() => setSel(i)} onClick={() => pick(c)}>
               <span className="avatar sm">{initial(c.complainants[0])}</span>
@@ -79,7 +80,7 @@ export default function SearchBar({ onOpen, onSeeAll }) {
               </span>
             </button>
           ))}
-          {hits && total > hits.length && <button className="gfoot" onClick={seeAll}>See all {total} results →</button>}
+          {hits && total > hits.length && <button className="gfoot" onClick={seeAll}>{t('See all {n} results →', { n: total })}</button>}
         </div>
       )}
     </div>

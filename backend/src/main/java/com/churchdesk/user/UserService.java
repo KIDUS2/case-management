@@ -33,6 +33,8 @@ public class UserService {
         u.setPasswordHash(encoder.encode(r.password()));
         u.setRole(r.role());
         u.setDepartment(departmentFor(r.role(), r.departmentId()));
+        u.setPhone(blank(r.phone())); u.setEmail(blank(r.email())); u.setJobTitle(blank(r.jobTitle()));
+        u.setCanViewAll(Boolean.TRUE.equals(r.canViewAll()));
         return UserDto.of(repo.save(u));
     }
 
@@ -48,9 +50,23 @@ public class UserService {
         u.setRole(role);
         u.setDepartment(departmentFor(role, deptId));
         if (r.active() != null) u.setActive(r.active());
+        if (r.phone() != null) u.setPhone(blank(r.phone()));
+        if (r.email() != null) u.setEmail(blank(r.email()));
+        if (r.jobTitle() != null) u.setJobTitle(blank(r.jobTitle()));
+        if (r.canViewAll() != null) u.setCanViewAll(r.canViewAll());
         if (r.password() != null) u.setPasswordHash(encoder.encode(r.password()));
         return UserDto.of(u);
     }
+
+    @Transactional
+    public UserDto updateProfile(AppUser who, ProfileRequest r) {
+        AppUser u = repo.findById(who.getId()).orElseThrow();
+        u.setFullName(r.fullName().trim());
+        u.setPhone(blank(r.phone())); u.setEmail(blank(r.email())); u.setJobTitle(blank(r.jobTitle()));
+        return UserDto.of(u);
+    }
+
+    private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 
     @Transactional
     public void changePassword(AppUser who, ChangePasswordRequest r) {

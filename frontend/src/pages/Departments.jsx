@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 import { CATEGORY } from '../ui.js'
 
 const empty = { name: '', handlesCategory: '' }
@@ -61,7 +62,7 @@ export default function Departments() {
               <>
                 <div className="grow">
                   <b>{d.name}</b>
-                  <small>{d.handlesCategory ? CATEGORY[d.handlesCategory].icon + ' ' + CATEGORY[d.handlesCategory].label : 'Any kind of issue'} · {d.staff} staff account{d.staff === 1 ? '' : 's'}{d.active ? '' : ' · switched off'}</small>
+                  <small>{d.handlesCategory ? CATEGORY[d.handlesCategory].icon + ' ' + CATEGORY[d.handlesCategory].label : 'Any kind of issue'} · {t('{n} staff accounts', { n: d.staff })}{d.active ? '' : ' · ' + t('switched off')}</small>
                 </div>
                 <button className="btn ghost sm" onClick={() => setEdit({ id: d.id, name: d.name, handlesCategory: d.handlesCategory || '' })}>✏️ Edit</button>
                 <button className="btn ghost sm" onClick={() => toggle(d)}>{d.active ? 'Switch off' : 'Switch on'}</button>

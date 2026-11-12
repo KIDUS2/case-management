@@ -37,6 +37,11 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
     }
 
+    @PutMapping("/profile")
+    public UserDto profile(@Valid @RequestBody ProfileRequest r, Authentication auth) {
+        return service.updateProfile(current.get(auth), r);
+    }
+
     @PostMapping("/password") @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(@Valid @RequestBody ChangePasswordRequest r, Authentication auth) {
         service.changePassword(current.get(auth), r);

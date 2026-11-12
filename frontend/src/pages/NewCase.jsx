@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
+import { t } from '../i18n.js'
 import { CATEGORY, WORKING, addDays, todayStr, fmtSize } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
@@ -30,8 +31,8 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
       <input value={party.fullName} onChange={e => set({ fullName: e.target.value })} maxLength={160} autoFocus={autoFocus} />
       {exact.map(m => (
         <div className="banner" key={m.id}>
-          <b>👋 Already on record:</b> {m.fullName} · {m.churchName} · in {m.totalCases} case{m.totalCases === 1 ? '' : 's'} ({m.openCases} still active)
-          {m.complaintsAgainst > 0 && <div className="warn">⚠️ {m.complaintsAgainst} earlier case{m.complaintsAgainst === 1 ? ' is' : 's are'} about this person</div>}
+          <b>👋 {t('Already on record:')}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: m.fullName, b: m.churchName, c: m.totalCases, d: m.openCases })}
+          {m.complaintsAgainst > 0 && <div className="warn">⚠️ {t('{n} earlier cases are about this person', { n: m.complaintsAgainst })}</div>}
           <div><button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => use(m)}>Use these details</button></div>
         </div>
       ))}
@@ -69,7 +70,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
 
   const toPayload = (p, label) => {
     const church = findChurch(p.churchName)
-    if (!church) throw new Error(`${label}: please choose the church from the list (start typing its name).`)
+    if (!church) throw new Error(t('{x}: please choose the church from the list (start typing its name).', { x: label }))
     return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone, workingStatus: p.workingStatus }
   }
 
@@ -77,12 +78,12 @@ export default function NewCase({ me, onCreated, goChurches }) {
     e.preventDefault(); setErr('')
     try {
       const comp = complainants.map((p, i) => {
-        if (!p.fullName.trim()) throw new Error(`Person ${i + 1} reporting: please enter the name.`)
-        return toPayload(p, `Person ${i + 1} reporting`)
+        if (!p.fullName.trim()) throw new Error(t('{x}: please enter the name.', { x: t('Person {n} reporting', { n: i + 1 }) }))
+        return toPayload(p, t('Person {n} reporting', { n: i + 1 }))
       })
-      const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, `Person ${i + 1} it is about`))
+      const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 })))
       const bad = issues.findIndex(i => i.category !== 'UNCLEAR' && !i.description.trim())
-      if (bad >= 0) throw new Error(`Issue ${bad + 1}: please describe the cause, or mark it “Not clear yet”.`)
+      if (bad >= 0) throw new Error(t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }))
       setBusy(true)
       const payload = issues.map(i => ({
         category: i.category, description: i.description,
@@ -108,7 +109,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
         {complainants.map((p, i) => (
-          <PartyEditor key={i} title={complainants.length > 1 ? `Person ${i + 1}` : 'Person reporting'} party={p} churches={churches} autoFocus={i === 0}
+          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} autoFocus={i === 0}
             onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setComplainants(l => [...l, blankParty(l[0]?.workingStatus)])}>➕ Add another person (group)</button>
@@ -118,7 +119,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">2</span>Who is it about? <small className="inl">(optional)</small></h2>
         <p className="hint">If the report is about an employee or a leader, add them here. Leave empty for a request or general matter.</p>
         {subjects.map((p, i) => (
-          <PartyEditor key={i} title={`Person ${i + 1} it is about`} party={p} churches={churches}
+          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches}
             onChange={setAt(setSubjects, i)} onRemove={removeAt(setSubjects, i)} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setSubjects(l => [...l, blankParty()])}>➕ Add an employee or leader</button>
@@ -129,7 +130,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <p className="hint">Add each issue separately. Not sure yet? Choose “Not clear yet”.</p>
         {issues.map((it, i) => (
           <div className="issue" key={i}>
-            <div className="top"><b>Issue {i + 1}</b>{issues.length > 1 && <button type="button" className="btn x" onClick={() => setIssues(l => l.filter((_, k) => k !== i))}>Remove</button>}</div>
+            <div className="top"><b>{t('Issue {n}', { n: i + 1 })}</b>{issues.length > 1 && <button type="button" className="btn x" onClick={() => setIssues(l => l.filter((_, k) => k !== i))}>Remove</button>}</div>
             <select value={it.category} onChange={e => setIssue(i, { category: e.target.value })}>
               {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
             </select>
@@ -146,7 +147,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
             )}
           </div>
         ))}
-        {issues.length >= 3 && <div className="banner">📎 {issues.length} issues in one case. Consider noting which one is most urgent.</div>}
+        {issues.length >= 3 && <div className="banner">📎 {t('{n} issues in one case. Consider noting which one is most urgent.', { n: issues.length })}</div>}
         <button type="button" className="btn ghost" onClick={() => setIssues(l => [...l, blankIssue()])}>➕ Add another issue</button>
       </div>
 

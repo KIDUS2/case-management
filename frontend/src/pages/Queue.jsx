@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 import { dayDiff, fmtCode, fmtDay, initial, names } from '../ui.js'
 
 const GROUPS = [
@@ -47,7 +48,7 @@ export default function Queue({ onOpen, goNew }) {
                 <div className="avatar">{initial(it.people[0])}</div>
                 <div className="grow">
                   <b>{names(it.people)}</b>
-                  <small>⛪ {it.churchName} · {it.issues} issue{it.issues === 1 ? '' : 's'}{it.departments.length ? ' · with ' + it.departments.join(', ') : ''}</small>
+                  <small>⛪ {it.churchName} · {t(it.issues === 1 ? '{n} issue' : '{n} issues', { n: it.issues })}{it.departments.length ? ' · ' + t('with {x}', { x: it.departments.join(', ') }) : ''}</small>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className="codechip">{fmtCode(it.code)}</span>
@@ -60,7 +61,7 @@ export default function Queue({ onOpen, goNew }) {
           </section>
         )
       })}
-      {items && items.length > 0 && shown.length === 0 && <div className="card empty">No match for “{filter}”.</div>}
+      {items && items.length > 0 && shown.length === 0 && <div className="card empty">{t('No match for “{f}”.', { f: filter })}</div>}
     </>
   )
 }

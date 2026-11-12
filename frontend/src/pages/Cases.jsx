@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, upload, download } from '../api.js'
+import { t } from '../i18n.js'
 import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
@@ -57,21 +58,21 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
             <div className="avatar">{initial(c.complainants[0])}</div>
             <div className="grow">
               <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span></div>
-              <small>⛪ {c.churchName}{c.complainants.length > 1 ? ` · group of ${c.complainants.length}` : ''}</small>
-              {c.subjects.length > 0 && <small className="about">👤 About: {names(c.subjects)}</small>}
+              <small>⛪ {c.churchName}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</small>
+              {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
               <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
             </div>
-            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{c.resolvedCount}/{c.issueCount} resolved{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small></div>
+            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{t('{a}/{b} resolved', { a: c.resolvedCount, b: c.issueCount })}{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small></div>
           </button>
         ))}
         {!loading && !data.items.length && (
-          <div className="card empty">🌿<br />{q || status ? 'No cases match your search.' : 'No cases yet. Register the first one!'}</div>
+          <div className="card empty">🌿<br />{q || status ? 'No cases match your search.' : me.role === 'ADMIN' ? 'No cases yet. Register the first one!' : 'You only see cases you registered, cases you were added to, or issues sent to your department.'}</div>
         )}
       </div>
       {data.total > data.size && (
         <div className="pager">
           <button className="btn ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>← Previous</button>
-          <span className="muted">Page {page + 1} of {pages}</span>
+          <span className="muted">{t('Page {a} of {b}', { a: page + 1, b: pages })}</span>
           <button className="btn ghost" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next →</button>
         </div>
       )}
@@ -87,8 +88,8 @@ function PersonRow({ p }) {
         <b>{p.fullName}</b>
         <small>⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
         {p.involvement && <small className="about">📌 {p.involvement}</small>}
-        {p.complaintsAgainst > 1 && <small className="warn">⚠️ {p.complaintsAgainst} cases are about this person</small>}
-        {p.totalCases > 1 && p.complaintsAgainst <= 1 && <small>In {p.totalCases} cases on record</small>}
+        {p.complaintsAgainst > 1 && <small className="warn">⚠️ {t('{n} cases are about this person', { n: p.complaintsAgainst })}</small>}
+        {p.totalCases > 1 && p.complaintsAgainst <= 1 && <small>{t('In {n} cases on record', { n: p.totalCases })}</small>}
       </div>
     </div>
   )
@@ -150,9 +151,9 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
       <div className="issue-body">
         <div className="ihead"><b>{k + 1}. {CATEGORY[i.category].label}</b><span className={'badge ' + st.cls}>{st.icon} {st.label}</span>
           {i.departmentName && <span className="idept">🏢 {i.departmentName}</span>}
-          {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 Returns {fmtDay(i.returnOn)}{d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : ''}</span>}</div>
+          {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 {t('Returns {x}', { x: fmtDay(i.returnOn) + (d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : '') })}</span>}</div>
         <p>{i.description || <span className="muted">No detail written yet.</span>}</p>
-        {done && <div className="resbox">✅ Resolved {ago(i.resolvedAt)}{i.departmentName ? ' by ' + i.departmentName : ''} (@{i.resolvedBy}){i.resolutionNote ? ' — ' + i.resolutionNote : ''}</div>}
+        {done && <div className="resbox">✅ {t('Resolved {when}{by} (@{who}){note}', { when: ago(i.resolvedAt), by: i.departmentName ? ' by ' + i.departmentName : '', who: i.resolvedBy, note: i.resolutionNote ? ' — ' + i.resolutionNote : '' })}</div>}
         {myFiles.length > 0 && (
           <div style={{ marginTop: 8 }}>
             {myFiles.map(f => (
@@ -163,8 +164,8 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           </div>
         )}
         {i.courtAt && (
-          <div className="courtbox">⚖️ In court since {fmtDate(i.courtAt)} ·{' '}
-            {i.courtAckAt ? <b>acknowledged by @{i.courtAckBy}</b> : <b className="warn">waiting for the admin to acknowledge</b>}
+          <div className="courtbox">⚖️ {t('In court since {d} ·', { d: fmtDate(i.courtAt) })}{' '}
+            {i.courtAckAt ? <b>{t('acknowledged by @{u}', { u: i.courtAckBy })}</b> : <b className="warn">waiting for the admin to acknowledge</b>}
             {me.role === 'ADMIN' && !i.courtAckAt && <> <button className="btn sm gold" style={{ margin: '0 0 0 8px' }} disabled={busy} onClick={() => run('acknowledge')}>🖊️ Acknowledge</button></>}
           </div>
         )}
@@ -180,7 +181,7 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
               <div><label>Department</label>
                 <select value={dept} onChange={e => setDept(e.target.value)}>
                   <option value="">Choose…</option>
-                  {departments.filter(x => x.active).map(x => <option key={x.id} value={x.id}>{x.name}{x.id === suggested?.id ? ' ★ suggested' : ''}</option>)}
+                  {departments.filter(x => x.active).map(x => <option key={x.id} value={x.id}>{t('{x}{s}', { x: x.name, s: x.id === suggested?.id ? ' ★ suggested' : '' })}</option>)}
                 </select></div>
               <div><label>Person comes back on</label><input type="date" min={todayStr()} value={ret} onChange={e => setRet(e.target.value)} /></div>
             </div>
@@ -267,6 +268,46 @@ function InvolvedCard({ c, churches, onChange, setErr }) {
   )
 }
 
+/** Admin only: who else may open this case. */
+function AccessCard({ c, setErr }) {
+  const [grants, setGrants] = useState(null)
+  const [users, setUsers] = useState([])
+  const [pick, setPick] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    api(`/cases/${c.id}/access`).then(setGrants).catch(e => setErr(e.message))
+    api('/users').then(setUsers).catch(() => {})
+  }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!grants) return null
+  const taken = new Set(grants.map(g => g.userId))
+  const options = users.filter(u => u.active && u.role !== 'ADMIN' && !u.canViewAll && !taken.has(u.id) && u.username !== c.createdBy)
+  const add = async () => {
+    if (!pick) return
+    setBusy(true); setErr('')
+    try { setGrants(await api(`/cases/${c.id}/access`, { method: 'POST', body: { userId: Number(pick) } })); setPick('') } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const remove = async g => { setErr(''); try { setGrants(await api(`/cases/${c.id}/access/${g.userId}`, { method: 'DELETE' })) } catch (x) { setErr(x.message) } }
+  return (
+    <div className="card">
+      <h2>Who can open this case <span className="count">{grants.length}</span></h2>
+      <p className="hint">{t('Administrators, people with the “see all cases” privilege, @{u} (who registered it) and the departments it was sent to always have access. Add anyone else here.', { u: c.createdBy })}</p>
+      {grants.map(g => (
+        <div className="filerow" key={g.userId}><span className="avatar sm">{initial(g.fullName)}</span>
+          <div className="grow"><div className="fname">{g.fullName}</div><small>{t('@{u} · added by @{b}', { u: g.username, b: g.grantedBy })} · {ago(g.grantedAt)}</small></div>
+          <button className="btn x" onClick={() => remove(g)}>Remove</button></div>
+      ))}
+      {grants.length === 0 && <p className="muted">Nobody else has been added.</p>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        <select style={{ flex: '1 1 180px' }} value={pick} onChange={e => setPick(e.target.value)}>
+          <option value="">Add a person…</option>
+          {options.map(u => <option key={u.id} value={u.id}>{u.fullName} (@{u.username})</option>)}
+        </select>
+        <button className="btn sm" style={{ margin: 0 }} disabled={!pick || busy} onClick={add}>🔓 Give access</button>
+      </div>
+    </div>
+  )
+}
+
 function Files({ c, me, onChange, setErr }) {
   const [busy, setBusy] = useState(false)
   const add = async e => {
@@ -280,7 +321,7 @@ function Files({ c, me, onChange, setErr }) {
     setBusy(false)
   }
   const remove = async f => {
-    if (!confirm('Remove “' + f.originalName + '”?')) return
+    if (!confirm(t('Remove “{f}”?', { f: f.originalName }))) return
     try { await api('/files/' + f.id, { method: 'DELETE' }); onChange(await api('/cases/' + c.id)) } catch (x) { setErr(x.message) }
   }
   return (
@@ -354,7 +395,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
       <button className="btn ghost back" onClick={onBack}>← All cases</button>
       {fresh && (
         <div className="fresh">✅ <b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.
-          {fresh.failed?.length > 0 && <div className="warn" style={{ marginTop: 6 }}>⚠️ These files could not be uploaded: {fresh.failed.join(', ')}. Add them again below.</div>}
+          {fresh.failed?.length > 0 && <div className="warn" style={{ marginTop: 6 }}>⚠️ {t('These files could not be uploaded: {f}. Add them again below.', { f: fresh.failed.join(', ') })}</div>}
         </div>
       )}
       {err && <div className="err">{err}</div>}
@@ -362,8 +403,8 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
         <div className="grow">
           <small className="onhero">Case code</small>
           <div className="bigcode">{fmtCode(c.code)}</div>
-          <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ` (group of ${c.complainants.length})` : ''}</div>
-          <div className="onhero" style={{ marginTop: 6 }}>{resolved} of {c.issues.length} issue{c.issues.length === 1 ? '' : 's'} resolved</div>
+          <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</div>
+          <div className="onhero" style={{ marginTop: 6 }}>{t('{a} of {b} issues resolved', { a: resolved, b: c.issues.length })}</div>
           <div className="progress"><i style={{ width: (c.issues.length ? (resolved / c.issues.length) * 100 : 0) + '%' }} /></div>
         </div>
         <div className="heroside">
@@ -384,13 +425,13 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             <p className="notes">{c.discussionNotes || <span className="muted">No notes were written.</span>}</p>
             <span className={'pill ' + (c.letterIssued ? 'yes' : 'no')}>{c.letterIssued ? '✉️ Letter issued' : '✉️ Letter not issued yet'}</span>
             {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
-            <small style={{ marginTop: 12 }}>Registered {fmtDate(c.createdAt)} by @{c.createdBy}</small>
+            <small style={{ marginTop: 12 }}>{t('Registered {d} by @{u}', { d: fmtDate(c.createdAt), u: c.createdBy })}</small>
           </div>
           <Timeline c={c} onChange={setC} setErr={setErr} />
         </div>
         <div>
           <div className="card">
-            <h2>{c.complainants.length > 1 ? `Reported by a group (${c.complainants.length})` : 'Reported by'}</h2>
+            <h2>{c.complainants.length > 1 ? t('Reported by a group ({n})', { n: c.complainants.length }) : t('Reported by')}</h2>
             {c.complainants.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
           <div className="card">
@@ -398,6 +439,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
             {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
+          {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
           <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />
           <Files c={c} me={me} onChange={setC} setErr={setErr} />
           <div className="card">

@@ -1,0 +1,283 @@
+/**
+ * English / Amharic. The page is written in English; when Amharic is chosen, a small translator swaps the
+ * wording on screen. Static text is looked up in AM; text with numbers or names uses t('… {n} …', { n }).
+ * Changing the language reloads the page, so there is no half-translated state.
+ */
+export const getLang = () => { try { return localStorage.getItem('lang') === 'am' ? 'am' : 'en' } catch { return 'en' } }
+export const setLang = l => { try { localStorage.setItem('lang', l) } catch { /* private mode */ } location.reload() }
+export const locale = () => (getLang() === 'am' ? 'am-ET' : undefined)
+
+const AM = {
+  // navigation and general
+  'Dashboard': 'ዳሽቦርድ', 'Department inbox': 'የመምሪያ ገቢ ጉዳዮች', 'Door queue': 'የበር ወረፋ', 'Register case': 'ጉዳይ መዝግብ',
+  'All cases': 'ሁሉም ጉዳዮች', 'Notifications': 'ማሳወቂያዎች', 'Churches': 'አብያተ ክርስቲያናት', 'Departments': 'መምሪያዎች',
+  'Users': 'ተጠቃሚዎች', 'My account': 'የእኔ መለያ', 'Log out': 'ውጣ', 'Cases': 'ጉዳዮች', 'Case Desk': 'የጉዳይ ጠረጴዛ',
+  'Loading…': 'በመጫን ላይ…', 'Cancel': 'ተው', 'Save': 'አስቀምጥ', 'Edit': 'አስተካክል', 'Remove': 'አስወግድ', 'Open': 'ክፈት',
+  'Open case': 'ጉዳዩን ክፈት', 'Search cases': 'ጉዳዮችን ፈልግ', 'Clear search': 'ፍለጋውን አጽዳ', 'All': 'ሁሉም', 'Unread': 'ያልተነበቡ',
+  'Next →': 'ቀጣይ →', '← Previous': '← ቀዳሚ', '← Newer': '← አዲስ', 'Older →': 'የቆየ →', '← All cases': '← ሁሉም ጉዳዮች', '← Back': '← ተመለስ',
+  'Name': 'ስም', 'Full name': 'ሙሉ ስም', 'Username': 'የተጠቃሚ ስም', 'Password': 'የይለፍ ቃል', 'Role': 'ሚና', 'Church': 'ቤተ ክርስቲያን',
+  'Phone (optional)': 'ስልክ (አማራጭ)', '(optional)': '(አማራጭ)', 'Start typing…': 'መጻፍ ይጀምሩ…', 'Something went wrong. Please try again.': 'የሆነ ችግር ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።',
+  'Language': 'ቋንቋ', 'Theme': 'ገጽታ', 'Light': 'ብሩህ', 'Dark': 'ጨለማ', 'Automatic': 'ራስ-ሰር', 'Light mode': 'ብሩህ ገጽታ', 'Dark mode': 'ጨለማ ገጽታ', 'Same as device': 'እንደ መሣሪያው',
+  // login
+  'Welcome! Please sign in to continue.': 'እንኳን ደህና መጡ! ለመቀጠል እባክዎ ይግቡ።', 'Sign in': 'ግባ', 'Signing in…': 'በመግባት ላይ…', 'Wrong username or password': 'የተጠቃሚ ስም ወይም የይለፍ ቃል ትክክል አይደለም',
+  // roles
+  'Administrator': 'አስተዳዳሪ', 'Case officer': 'የጉዳይ ባለሙያ', 'Reception (door)': 'አቀባበል (በር)', 'Department staff': 'የመምሪያ ሠራተኛ',
+  // statuses / categories / working
+  'Open (status)': 'ክፍት', 'In a department': 'በመምሪያ ውስጥ', 'In court': 'በፍርድ ቤት', 'Resolved': 'የተፈታ', 'With the desk': 'በጠረጴዛው ላይ', 'Referred': 'የተላለፈ',
+  'HR management': 'የሰው ሀብት አስተዳደር', 'Finance': 'ፋይናንስ', 'Management': 'አስተዳደር', 'Court matter': 'የፍርድ ቤት ጉዳይ', 'Not clear yet': 'ገና ግልጽ ያልሆነ',
+  'Active employee': 'ንቁ ሠራተኛ', 'Leader / priest': 'መሪ / ካህን', 'Retired': 'ጡረታ የወጣ', 'Suspended': 'የታገደ', 'Contract': 'የኮንትራት', 'Volunteer': 'በጎ ፈቃደኛ',
+  'Church member (not an employee)': 'የቤተ ክርስቲያን አባል (ሠራተኛ ያልሆነ)', 'Human Resources': 'የሰው ሀብት', 'Legal': 'የሕግ',
+  'Any kind of issue': 'ማንኛውም ዓይነት ጉዳይ',
+  // dashboard
+  'Total cases': 'ጠቅላላ ጉዳዮች', 'Still active': 'አሁንም በሂደት ላይ', 'Waiting in departments': 'በመምሪያዎች የሚጠባበቁ', 'issues sent, not yet resolved': 'የተላኩ፣ ገና ያልተፈቱ ጉዳዮች',
+  'Expected today': 'ዛሬ የሚጠበቁ', 'Court, not acknowledged': 'በፍርድ ቤት፣ ያልተረጋገጠ', 'People served': 'አገልግሎት ያገኙ ሰዎች', 'Churches reached': 'የደረስንባቸው አብያተ ክርስቲያናት',
+  'Letters issued': 'የተሰጡ ደብዳቤዎች', 'Church members reporting': 'ጉዳይ ያቀረቡ የቤተ ክርስቲያን አባላት', 'not employees': 'ሠራተኞች ያልሆኑ', 'Employees reported on': 'ክስ የቀረበባቸው ሠራተኞች',
+  'Repeat complaints': 'ተደጋጋሚ ቅሬታዎች', 'employees in 2+ cases': 'በ2 እና ከዚያ በላይ ጉዳዮች ያሉ ሠራተኞች', 'Cases per day': 'በቀን የሚመዘገቡ ጉዳዮች', 'last 30 days': 'ያለፉት 30 ቀናት',
+  'Cases per day, last 30 days': 'በቀን የሚመዘገቡ ጉዳዮች፣ ያለፉት 30 ቀናት', 'Cases by status': 'ጉዳዮች በደረጃ', 'What people bring': 'ሰዎች የሚያመጡት', 'issues by type': 'ጉዳዮች በዓይነት',
+  'Issues by department': 'ጉዳዮች በመምሪያ', 'waiting vs resolved': 'የሚጠባበቁ እና የተፈቱ', 'resolved': 'የተፈቱ', 'waiting': 'የሚጠባበቁ', 'Busiest churches': 'ብዙ ጉዳይ ያላቸው አብያተ ክርስቲያናት',
+  'Latest cases': 'የቅርብ ጊዜ ጉዳዮች', 'No cases yet.': 'ገና ምንም ጉዳይ የለም።', 'No departments yet.': 'ገና ምንም መምሪያ የለም።', 'Nothing to show yet.': 'ገና የሚታይ ነገር የለም።',
+  'Loading your reports…': 'ሪፖርቶችዎ በመጫን ላይ…', 'cases': 'ጉዳዮች', 'people did not come back on time': 'ሰዎች በተባለው ጊዜ አልተመለሱም', 'expected at the door today': 'ዛሬ በበር የሚጠበቁ',
+  'Good morning': 'እንደምን አደሩ', 'Good afternoon': 'እንደምን ዋሉ', 'Good evening': 'እንደምን አመሹ',
+  // cases list / detail
+  'Every report and request that came to the desk.': 'ወደ ጠረጴዛው የመጡ ሁሉም ሪፖርቶችና ጥያቄዎች።', 'Filter this list by name, church or case code…': 'ዝርዝሩን በስም፣ በቤተ ክርስቲያን ወይም በጉዳይ ኮድ አጣራ…',
+  'No cases match your search.': 'ከፍለጋዎ ጋር የሚመሳሰል ጉዳይ የለም።', 'No cases yet. Register the first one!': 'ገና ምንም ጉዳይ የለም። የመጀመሪያውን ይመዝግቡ!',
+  'Case code': 'የጉዳይ ኮድ', 'Copy code': 'ኮዱን ቅዳ', 'Copied': 'ተቀድቷል', 'Person is here': 'ሰውየው መጥተዋል',
+  'Case registered.': 'ጉዳዩ ተመዝግቧል።', 'Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.': 'ይህንን ኮድ ለሰውየው ይስጡ። ሲመለሱ ሊጠቅሱት ይችላሉ፤ ሠራተኞችም ጉዳዩን ወዲያውኑ ለማግኘት ሊጽፉት ይችላሉ።',
+  'Issues': 'ጉዳዮች (ንዑስ ጉዳዮች)', 'each issue is a sub-case with its own status, department and files': 'እያንዳንዱ ጉዳይ የራሱ ደረጃ፣ መምሪያና ፋይሎች ያሉት ንዑስ ጉዳይ ነው',
+  'No detail written yet.': 'ገና ዝርዝር አልተጻፈም።', 'Send to department': 'ወደ መምሪያ ላክ', 'Send to another department': 'ወደ ሌላ መምሪያ ላክ', 'Mark resolved': 'እንደተፈታ ምልክት አድርግ',
+  'Take to court': 'ወደ ፍርድ ቤት ውሰድ', 'Attach file': 'ፋይል አያይዝ', 'Acknowledge': 'አረጋግጥ', 'waiting for the admin to acknowledge': 'አስተዳዳሪው እንዲያረጋግጥ በመጠባበቅ ላይ',
+  'Department': 'መምሪያ', 'Choose…': 'ይምረጡ…', 'Person comes back on': 'ሰውየው የሚመለሱበት ቀን', 'Note for the department (optional)': 'ለመምሪያው የሚሆን ማስታወሻ (አማራጭ)',
+  'Send now': 'አሁን ላክ', 'Sending…': 'በመላክ ላይ…', 'The department is notified straight away, and the person will show in the door queue on that day.': 'መምሪያው ወዲያውኑ ይነገረዋል፤ ሰውየውም በዚያ ቀን በበር ወረፋ ውስጥ ይታያል።',
+  'What was done? (the desk and admin are notified)': 'ምን ተደረገ? (ጠረጴዛውና አስተዳዳሪው ይነገራቸዋል)', 'What was done? (this is sent to the desk)': 'ምን ተደረገ? (ይህ ለጠረጴዛው ይላካል)',
+  'Attach the paper or proof (optional)': 'ወረቀቱን ወይም ማስረጃውን ያያይዙ (አማራጭ)', 'Confirm resolved': 'መፈታቱን አረጋግጥ', 'Saving…': 'በማስቀመጥ ላይ…',
+  'Court details (optional)': 'የፍርድ ቤት ዝርዝር (አማራጭ)', 'Court, case number, next hearing…': 'ፍርድ ቤት፣ የመዝገብ ቁጥር፣ ቀጣይ ቀጠሮ…', 'Mark as in court': 'በፍርድ ቤት እንዳለ ምልክት አድርግ',
+  'The admin is notified and must acknowledge it.': 'አስተዳዳሪው ይነገረዋል፤ ማረጋገጥም አለበት።',
+  'Discussion notes': 'የውይይት ማስታወሻ', 'No notes were written.': 'ምንም ማስታወሻ አልተጻፈም።', 'Letter issued': 'ደብዳቤ ተሰጥቷል', 'Letter not issued yet': 'ደብዳቤ ገና አልተሰጠም',
+  'Undo': 'ቀልብስ', 'Mark as issued': 'እንደተሰጠ ምልክት አድርግ', 'History': 'ታሪክ', 'Add a note to the history…': 'በታሪኩ ላይ ማስታወሻ ጨምር…', 'Add note': 'ማስታወሻ ጨምር',
+  'Reported by': 'ያቀረቡት', 'Who it is about': 'ጉዳዩ ስለ ማን ነው', 'No one in particular. This is a request or general matter.': 'የተለየ ሰው የለም። ይህ ጥያቄ ወይም አጠቃላይ ጉዳይ ነው።',
+  'Related cases': 'ተዛማጅ ጉዳዮች', 'None of these people are in another case.': 'ከእነዚህ ሰዎች ውስጥ በሌላ ጉዳይ ያለ የለም።',
+  'Other people involved': 'ሌሎች የተሳተፉ ሰዎች', 'No one else has been called in yet.': 'ገና ሌላ ሰው አልተጠራም።', 'Call in another person': 'ሌላ ሰው ጥራ',
+  'Who are they to this case?': 'ከዚህ ጉዳይ ጋር ያላቸው ግንኙነት ምንድን ነው?', 'Called in / involved (witness, accountant, other employee…)': 'የተጠራ / የተሳተፈ (ምስክር፣ ሂሳብ ሠራተኛ፣ ሌላ ሠራተኛ…)',
+  'Another person the case is about': 'ጉዳዩ የሚመለከተው ሌላ ሰው', 'Another person reporting': 'ጉዳይ የሚያቀርብ ሌላ ሰው', 'This person is': 'ይህ ሰው',
+  'What are they involved in? (what they said or provided)': 'በምን ተሳትፈዋል? (የተናገሩት ወይም ያቀረቡት)', 'e.g. Cashier in 2024, handed over the cash book.': 'ለምሳሌ፦ በ2016 ገንዘብ ተቀባይ ነበሩ፤ የገንዘብ መዝገቡን አስረክበዋል።',
+  'Add to case': 'ወደ ጉዳዩ ጨምር', 'Adding…': 'በመጨመር ላይ…', 'Add their paper afterwards with “Attach file” on the issue, or in Documents.': 'ወረቀታቸውን በኋላ በጉዳዩ ላይ “ፋይል አያይዝ” ወይም በሰነዶች ውስጥ ይጨምሩ።',
+  'Documents': 'ሰነዶች', 'No files yet. Add the letter, scans or evidence.': 'ገና ምንም ፋይል የለም። ደብዳቤውን፣ ስካኖችን ወይም ማስረጃዎችን ይጨምሩ።', 'Uploading…': 'በመጫን ላይ…',
+  'Add files (PDF, image, Word, Excel · up to 10 MB each)': 'ፋይሎችን ጨምር (PDF፣ ምስል፣ Word፣ Excel · እያንዳንዳቸው እስከ 10 MB)', 'Choose files (PDF, image, Word, Excel · up to 10 MB each)': 'ፋይሎችን ምረጥ (PDF፣ ምስል፣ Word፣ Excel · እያንዳንዳቸው እስከ 10 MB)',
+  'No match for': 'ምንም አልተገኘም፦',
+  // register form
+  'Register a case': 'ጉዳይ ይመዝግቡ', 'Listen first, then record. A short code is created when you save.': 'መጀመሪያ ያዳምጡ፣ ከዚያ ይመዝግቡ። ሲያስቀምጡ አጭር ኮድ ይፈጠራል።',
+  'Who is reporting?': 'ማን እያቀረበ ነው?', 'One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.': 'አንድ ሠራተኛ፣ በጋራ የሚጠይቁ የሠራተኞች ቡድን፣ ወይም ሠራተኛ ያልሆነ የቤተ ክርስቲያን አባል። የመጡትን ሁሉ ይጨምሩ።',
+  'Person reporting': 'ጉዳይ የሚያቀርበው ሰው', 'Add another person (group)': 'ሌላ ሰው ጨምር (ቡድን)', 'Who is it about?': 'ጉዳዩ ስለ ማን ነው?',
+  'If the report is about an employee or a leader, add them here. Leave empty for a request or general matter.': 'ሪፖርቱ ስለ ሠራተኛ ወይም መሪ ከሆነ እዚህ ይጨምሩ። ለጥያቄ ወይም አጠቃላይ ጉዳይ ባዶ ይተዉት።',
+  'Add an employee or leader': 'ሠራተኛ ወይም መሪ ጨምር', 'What are the issues?': 'ጉዳዮቹ ምንድን ናቸው?', 'Add each issue separately. Not sure yet? Choose “Not clear yet”.': 'እያንዳንዱን ጉዳይ ለየብቻ ይጨምሩ። ገና እርግጠኛ አይደሉም? “ገና ግልጽ ያልሆነ” ይምረጡ።',
+  'Describe the cause…': 'መንስኤውን ይግለጹ…', 'Send to a department now? (optional)': 'አሁን ወደ መምሪያ ይላክ? (አማራጭ)', 'Keep with the desk for now': 'ለአሁን በጠረጴዛው ላይ ይቆይ',
+  'Add another issue': 'ሌላ ጉዳይ ጨምር', 'Discussion & letter': 'ውይይት እና ደብዳቤ', 'Discussion notes ': 'የውይይት ማስታወሻ', 'What was discussed and agreed…': 'የተወያዩበትና የተስማሙበት…',
+  'A letter has been issued': 'ደብዳቤ ተሰጥቷል', 'Save case and get code': 'ጉዳዩን አስቀምጥና ኮድ ውሰድ', 'Documents ': 'ሰነዶች', 'Attach the letter, scans or evidence. They are saved with the case.': 'ደብዳቤውን፣ ስካኖችን ወይም ማስረጃዎችን ያያይዙ። ከጉዳዩ ጋር ይቀመጣሉ።',
+  'Use these details': 'እነዚህን ዝርዝሮች ተጠቀም', 'Already on record:': 'ቀድሞ በመዝገብ ላይ አለ፦', 'Add the church list first →': 'መጀመሪያ የአብያተ ክርስቲያናት ዝርዝር ይጨምሩ →',
+  'Ask an administrator to add the church list.': 'አስተዳዳሪው የአብያተ ክርስቲያናት ዝርዝር እንዲጨምር ይጠይቁ።',
+  // queue / inbox
+  'People who were asked to come back. Mark them “Arrived” when they reach the door.': 'እንዲመለሱ የተጠየቁ ሰዎች። በር ላይ ሲደርሱ “መጥተዋል” ብለው ምልክት ያድርጉ።', 'Filter this list by name, church or code…': 'ዝርዝሩን በስም፣ በቤተ ክርስቲያን ወይም በኮድ አጣራ…',
+  'Nobody is expected back right now.': 'አሁን የሚጠበቅ ሰው የለም።', 'Overdue': 'ጊዜው ያለፈበት', 'Should have come already': 'አስቀድመው መምጣት ነበረባቸው', 'Today': 'ዛሬ', 'Expected at the door today': 'ዛሬ በበር የሚጠበቁ',
+  'Tomorrow': 'ነገ', 'This week': 'በዚህ ሳምንት', 'Later': 'ቆይቶ', 'Arrived': 'መጥተዋል', 'Waiting': 'በመጠበቅ ላይ', 'Department inbox ': 'የመምሪያ ገቢ ጉዳዮች',
+  'Nothing is waiting. Great work!': 'የሚጠብቅ ነገር የለም። መልካም ሥራ!', 'Nothing resolved yet.': 'ገና ምንም አልተፈታም።', 'Resolve': 'ፍታ', 'No detail written.': 'ዝርዝር አልተጻፈም።',
+  'Resolved. The person who registered the case and the admin have been notified.': 'ተፈቷል። ጉዳዩን የመዘገበው ሰውና አስተዳዳሪው ተነግሯቸዋል።',
+  // notifications / account
+  'News about the cases you registered or the issues sent to your department.': 'ስለመዘገቧቸው ጉዳዮች ወይም ለመምሪያዎ ስለተላኩ ጉዳዮች የሚገኙ ዜናዎች።', 'Mark all read': 'ሁሉንም እንደተነበበ ምልክት አድርግ', 'Mark all as read': 'ሁሉንም እንደተነበበ ምልክት አድርግ',
+  'See all notifications →': 'ሁሉንም ማሳወቂያዎች ይመልከቱ →', 'You are all caught up.': 'ሁሉንም ጨርሰዋል።', 'You are all caught up. 🎉': 'ሁሉንም ጨርሰዋል። 🎉', 'No notifications yet.': 'ገና ምንም ማሳወቂያ የለም።',
+  'Your sign-in details.': 'የመግቢያ ዝርዝሮችዎ።', 'Profile': 'መገለጫ', 'Change password': 'የይለፍ ቃል ቀይር', 'Current password': 'የአሁኑ የይለፍ ቃል', 'New password (at least 6 characters)': 'አዲስ የይለፍ ቃል (ቢያንስ 6 ቁምፊዎች)',
+  'New password again': 'አዲሱን የይለፍ ቃል እንደገና ያስገቡ', 'Password changed': 'የይለፍ ቃል ተቀይሯል', 'The two new passwords do not match.': 'ሁለቱ አዲስ የይለፍ ቃሎች አይዛመዱም።',
+  // search
+  'Search a name, church or case code…': 'ስም፣ ቤተ ክርስቲያን ወይም የጉዳይ ኮድ ይፈልጉ…', 'Keep typing…': 'መጻፍዎን ይቀጥሉ…', 'Searching…': 'በመፈለግ ላይ…',
+  // users / departments / churches
+  'Add staff and choose what each person can do. Department staff only see the issues sent to their own department.': 'ሠራተኞችን ይጨምሩ እና እያንዳንዱ ሰው ምን ማድረግ እንደሚችል ይምረጡ። የመምሪያ ሠራተኞች ለራሳቸው መምሪያ የተላኩ ጉዳዮችን ብቻ ያያሉ።',
+  'Add user': 'ተጠቃሚ ጨምር', 'Choose the department…': 'መምሪያውን ይምረጡ…', 'Search by name or username…': 'በስም ወይም በተጠቃሚ ስም ፈልግ…', 'All roles': 'ሁሉም ሚናዎች', 'Edit name': 'ስም አስተካክል', 'Reset password': 'የይለፍ ቃል ዳግም አስጀምር',
+  'Deactivate': 'አቦዝን', 'Activate': 'አንቃ', 'No users match.': 'የሚመሳሰል ተጠቃሚ የለም።', 'User added': 'ተጠቃሚ ተጨምሯል',
+  'The offices that receive issues (HR, Finance, Legal…). Add, rename or switch them off. Staff accounts are linked to a department in': 'ጉዳዮችን የሚቀበሉ ቢሮዎች (የሰው ሀብት፣ ፋይናንስ፣ ሕግ…)። ይጨምሩ፣ ስም ይቀይሩ ወይም ያጥፏቸው። የሠራተኛ መለያዎች ከመምሪያ ጋር የሚያያዙት በ',
+  'Department name': 'የመምሪያ ስም', 'Normally handles': 'በተለምዶ የሚያስተናግደው', 'Add department': 'መምሪያ ጨምር', 'Switch off': 'አጥፋ', 'Switch on': 'አብራ', 'No departments yet.': 'ገና ምንም መምሪያ የለም።', 'Department added': 'መምሪያ ተጨምሯል',
+  'Church name': 'የቤተ ክርስቲያን ስም', 'Add church': 'ቤተ ክርስቲያን ጨምር', 'Add one church': 'አንድ ቤተ ክርስቲያን ጨምር', 'Paste many at once': 'ብዙዎችን በአንድ ጊዜ ለጥፍ', 'Add all': 'ሁሉንም ጨምር', 'Search churches…': 'አብያተ ክርስቲያናትን ፈልግ…',
+  'One church name per line. Names already on the list are skipped.': 'በአንድ መስመር አንድ የቤተ ክርስቲያን ስም። ቀድሞ በዝርዝሩ ላይ ያሉ ስሞች ይዘለላሉ።', 'Church one\nChurch two\nChurch three': 'የመጀመሪያ ቤተ ክርስቲያን\nሁለተኛ ቤተ ክርስቲያን\nሦስተኛ ቤተ ክርስቲያን',
+  // backend messages
+  'Edit details': 'ዝርዝር አስተካክል', 'Details': 'ዝርዝር', 'Email': 'ኢሜይል', 'Email (optional)': 'ኢሜይል (አማራጭ)', 'Job title': 'የሥራ መደብ', 'Job title (optional)': 'የሥራ መደብ (አማራጭ)', 'Phone': 'ስልክ',
+  'Your details and sign-in.': 'ዝርዝርዎ እና የመግቢያ መረጃዎ።', 'Your username, role and department are set by the administrator.': 'የተጠቃሚ ስምዎ፣ ሚናዎ እና መምሪያዎ በአስተዳዳሪው ይወሰናሉ።', 'e.g. Finance officer': 'ለምሳሌ፦ የፋይናንስ ባለሙያ',
+  'e.g. Salary difference paid on 12 Nov.': 'ለምሳሌ፦ የደመወዝ ልዩነት በኅዳር 12 ተከፍሏል።', 'Save profile': 'መገለጫ አስቀምጥ', 'Profile saved': 'መገለጫ ተቀምጧል', 'switched off': 'ጠፍቷል',
+  'Sees only cases they registered or were added to': 'የሚያየው የመዘገባቸውን ወይም የተጨመረባቸውን ጉዳዮች ብቻ ነው', 'Can see every case': 'ሁሉንም ጉዳዮች ማየት ይችላል', 'Can see every case (otherwise only cases they registered or are added to)': 'ሁሉንም ጉዳዮች ማየት ይችላል (አለበለዚያ የመዘገቧቸውን ወይም የተጨመሩባቸውን ጉዳዮች ብቻ)',
+  'Who can open this case': 'ይህንን ጉዳይ ማን መክፈት ይችላል', 'Nobody else has been added.': 'ሌላ ማንም አልተጨመረም።', 'Add a person…': 'ሰው ጨምር…', 'Give access': 'መዳረሻ ስጥ', 'You do not have access to this case. Ask the administrator to add you to it.': 'ወደዚህ ጉዳይ መዳረሻ የለዎትም። አስተዳዳሪው እንዲጨምርዎት ይጠይቁ።',
+  'You only see cases you registered, cases you were added to, or issues sent to your department.': 'የሚያዩት የመዘገቧቸውን፣ የተጨመሩባቸውን ወይም ለመምሪያዎ የተላኩ ጉዳዮችን ብቻ ነው።',
+  'You can now open this case.': 'አሁን ይህንን ጉዳይ መክፈት ይችላሉ።', 
+  'Case registered': 'ጉዳዩ ተመዝግቧል', 'Person came back to the door': 'ሰውየው በር ላይ ተመልሰው መጥተዋል', 'Letter issued ': 'ደብዳቤ ተሰጥቷል', 'Letter marked as not issued': 'ደብዳቤው እንዳልተሰጠ ምልክት ተደርጓል',
+  'Needs your acknowledgment': 'የእርስዎን ማረጋገጫ ይፈልጋል', 'No case has that code. Please check it and try again.': 'ይህ ኮድ ያለው ጉዳይ የለም። እባክዎ ያረጋግጡ እና እንደገና ይሞክሩ።',
+  'Your current password is not correct': 'የአሁኑ የይለፍ ቃልዎ ትክክል አይደለም', 'That username is already taken': 'ይህ የተጠቃሚ ስም ተይዟል', 'That issue is already resolved': 'ይህ ጉዳይ አስቀድሞ ተፈቷል',
+  'This case is not assigned to your department': 'ይህ ጉዳይ ለመምሪያዎ አልተመደበም', 'Please write a note': 'እባክዎ ማስታወሻ ይጻፉ', 'A department with that name already exists': 'ይህ ስም ያለው መምሪያ አስቀድሞ አለ',
+  'Please choose a file': 'እባክዎ ፋይል ይምረጡ', 'That file is too large (the limit is 10 MB)': 'ፋይሉ በጣም ትልቅ ነው (ገደቡ 10 MB ነው)', 'That file type is not allowed. Use PDF, image, Word, Excel or text files.': 'ይህ የፋይል ዓይነት አይፈቀድም። PDF፣ ምስል፣ Word፣ Excel ወይም የጽሑፍ ፋይሎችን ይጠቀሙ።',
+  'Case not found': 'ጉዳዩ አልተገኘም', 'File not found': 'ፋይሉ አልተገኘም', 'You can’t deactivate or demote your own account': 'የራስዎን መለያ ማቦዘን ወይም ደረጃ መቀነስ አይችሉም',
+}
+
+const CATEGORY_AM = { HR: 'ሰው ሀብት', Finance: 'ፋይናንስ', Management: 'አስተዳደር', Court: 'ፍርድ ቤት', Unclear: 'ገና ግልጽ ያልሆነ' }
+const cat = k => CATEGORY_AM[k] || k
+/** Department names are typed by the admin; the standard ones have an Amharic name. */
+const dn = n => String(n).split(', ').map(x => AM[x] || x).join('፣ ')
+
+/** Sentences with names and numbers. Each returns the Amharic text. */
+const PATTERNS = [
+  [/^(\d+) issues? resolved$/, m => `${m[1]} ጉዳይ ተፈቷል`],
+  [/^(\d+) of (\d+) issues? resolved$/, m => `ከ${m[2]} ጉዳዮች ${m[1]} ተፈቷል`],
+  [/^(\d+)\/(\d+) resolved$/, m => `${m[1]}/${m[2]} ተፈቷል`],
+  [/^(\d+) issues?$/, m => `${m[1]} ጉዳይ`],
+  [/^(\d+) church(?:es)? on the list\. These appear when registering a case\.$/, m => `${m[1]} አብያተ ክርስቲያናት በዝርዝሩ ላይ አሉ። ጉዳይ ሲመዘገብ ይታያሉ።`],
+  [/^Page (\d+) of (\d+)$/, m => `ገጽ ${m[1]} ከ${m[2]}`],
+  [/^See all (\d+) results →?$/, m => `ሁሉንም ${m[1]} ውጤቶች ይመልከቱ →`],
+  [/^No case found for “(.*)”\. Check the spelling or the code\.$/, m => `ለ“${m[1]}” ምንም ጉዳይ አልተገኘም። ፊደሉን ወይም ኮዱን ያረጋግጡ።`],
+  [/^No match for “(.*)”\.$/, m => `ለ“${m[1]}” ምንም አልተገኘም።`],
+  [/^Notifications, (\d+) unread$/, m => `ማሳወቂያዎች፣ ${m[1]} ያልተነበቡ`],
+  [/^group of (\d+)$/, m => `የ${m[1]} ሰዎች ቡድን`],
+  [/^About: (.*)$/, m => `ስለ፦ ${m[1]}`],
+  [/^about (.*)$/, m => `ስለ ${m[1]}`],
+  [/^with (.*)$/, m => `ከ${dn(m[1])} ጋር`],
+  [/^(\d+) cases are about this person$/, m => `${m[1]} ጉዳዮች ስለዚህ ሰው ናቸው`],
+  [/^In (\d+) cases on record$/, m => `በመዝገብ ላይ በ${m[1]} ጉዳዮች ውስጥ አለ`],
+  [/^Returns (.+?)( \(overdue\)| \(today\))?$/, m => `የሚመለሱት ${m[1]}${m[2] ? (m[2].includes('overdue') ? ' (ጊዜው አልፏል)' : ' (ዛሬ)') : ''}`],
+  [/^Resolved (.+?)(?: by (.+?))? \(@(.+?)\)(?: — (.*))?$/, m => `ተፈቷል ${m[1]}${m[2] ? ' በ' + dn(m[2].replace(/^ by /, '')) : ''} (@${m[3]})${m[4] ? ' — ' + m[4] : ''}`],
+  [/^Resolved (.+?) by @(\S+)(?: — (.*))?$/, m => `ተፈቷል ${m[1]} በ@${m[2]}${m[3] ? ' — ' + m[3] : ''}`],
+  [/^In court since (.+?) ·$/, m => `ከ${m[1]} ጀምሮ በፍርድ ቤት ·`],
+  [/^acknowledged by @(\S+)$/, m => `በ@${m[1]} ተረጋግጧል`],
+  [/^(.*) ★ suggested$/, m => `${m[1]} ★ የሚመከር`],
+  [/^Registered (.+?) by @(\S+)$/, m => `የተመዘገበው ${m[1]} በ@${m[2]}`],
+  [/^Reported by a group \((\d+)\)$/, m => `በቡድን የቀረበ (${m[1]})`],
+  [/^Received (.*)$/, m => `ተቀብሏል ${m[1]}`],
+  [/^person returns$/, () => 'ሰውየው የሚመለሱት'],
+  [/^(\d+) staff accounts?$/, m => `${m[1]} የሠራተኛ መለያዎች`],
+  [/^(.+) · switched off$/, m => `${m[1]} · ጠፍቷል`],
+  [/^Waiting \((\d+)\)$/, m => `በመጠባበቅ ላይ (${m[1]})`],
+  [/^Unread \((\d+)\)$/, m => `ያልተነበቡ (${m[1]})`],
+  [/^(.+) inbox$/, m => `${dn(m[1])} ገቢ ጉዳዮች`],
+  [/^Issues sent to (your department|this department)\. Resolving one tells the desk straight away\.$/, m => `ለ${m[1] === 'your department' ? 'መምሪያዎ' : 'ይህ መምሪያ'} የተላኩ ጉዳዮች። አንዱን ሲፈቱ ጠረጴዛው ወዲያውኑ ይነገረዋል።`],
+  [/^Issue (\d+)$/, m => `ጉዳይ ${m[1]}`],
+  [/^Person (\d+)$/, m => `ሰው ${m[1]}`],
+  [/^Person (\d+) it is about$/, m => `ጉዳዩ የሚመለከተው ሰው ${m[1]}`],
+  [/^Person (\d+) reporting$/, m => `ጉዳይ የሚያቀርበው ሰው ${m[1]}`],
+  [/^(\d+) issues in one case\. Consider noting which one is most urgent\.$/, m => `በአንድ ጉዳይ ውስጥ ${m[1]} ጉዳዮች አሉ። የትኛው በጣም አስቸኳይ እንደሆነ ማስታወሱን ያስቡበት።`],
+  [/^(.+) · in (\d+) cases? \((\d+) still active\)$/, m => `${m[1]} · በ${m[2]} ጉዳዮች ውስጥ (${m[3]} አሁንም ንቁ ናቸው)`],
+  [/^(\d+) earlier cases? (?:is|are) about this person$/, m => `${m[1]} ቀደምት ጉዳዮች ስለዚህ ሰው ናቸው`],
+  [/^(\d+) new cases? this week · (\d+) still being handled\.$/, m => `በዚህ ሳምንት ${m[1]} አዲስ ጉዳዮች · ${m[2]} አሁንም በሂደት ላይ ናቸው።`],
+  [/^Welcome! Register the first case to see your reports come alive\.$/, () => 'እንኳን ደህና መጡ! ሪፖርቶችዎ ሕያው ሆነው ለማየት የመጀመሪያውን ጉዳይ ይመዝግቡ።'],
+  [/^(\d+) in the last 7 days$/, m => `ባለፉት 7 ቀናት ${m[1]}`],
+  [/^(\d+) in court$/, m => `${m[1]} በፍርድ ቤት`],
+  [/^(\d+)% resolution rate$/, m => `${m[1]}% የመፍታት መጠን`],
+  [/^(\d+) overdue$/, m => `${m[1]} ጊዜው ያለፈባቸው`],
+  [/^(\d+) came back$/, m => `${m[1]} ተመልሰዋል`],
+  [/^(\d+) waiting · (\d+) resolved$/, m => `${m[1]} በመጠባበቅ ላይ · ${m[2]} ተፈቷል`],
+  [/^(.+): (\d+) cases?$/, m => `${m[1]}፦ ${m[2]} ጉዳይ`],
+  [/^court issues? waiting for your acknowledgment$/, () => 'የእርስዎን ማረጋገጫ የሚጠብቁ የፍርድ ቤት ጉዳዮች'],
+  [/^(\d+) min ago$/, m => `ከ${m[1]} ደቂቃ በፊት`], [/^(\d+) h ago$/, m => `ከ${m[1]} ሰዓት በፊት`], [/^(\d+) d ago$/, m => `ከ${m[1]} ቀን በፊት`], [/^just now$/, () => 'አሁን'],
+  [/^(\d+) churches?$/, m => `${m[1]} አብያተ ክርስቲያናት`],
+  [/^These files could not be uploaded: (.*)\. Add them again below\.$/, m => `እነዚህ ፋይሎች አልተጫኑም፦ ${m[1]}። ከታች እንደገና ይጨምሩ።`],
+  [/^Resolved, but these files were not saved: (.*)$/, m => `ተፈቷል፣ ግን እነዚህ ፋይሎች አልተቀመጡም፦ ${m[1]}`],
+  [/^(.+): please choose the church from the list \(start typing its name\)\.$/, m => `${m[1]}፦ እባክዎ ቤተ ክርስቲያኑን ከዝርዝሩ ይምረጡ (ስሙን መጻፍ ይጀምሩ)።`],
+  [/^Please choose the church from the list \(start typing its name\)\.$/, () => 'እባክዎ ቤተ ክርስቲያኑን ከዝርዝሩ ይምረጡ (ስሙን መጻፍ ይጀምሩ)።'],
+  [/^(.+): please enter the name\.$/, m => `${m[1]}፦ እባክዎ ስሙን ያስገቡ።`],
+  [/^Issue (\d+): please describe the cause, or mark it “Not clear yet”\.$/, m => `ጉዳይ ${m[1]}፦ እባክዎ መንስኤውን ይግለጹ ወይም “ገና ግልጽ ያልሆነ” ብለው ምልክት ያድርጉ።`],
+  [/^You were added to case (\S+)$/, m => `ወደ ጉዳይ ${m[1]} ተጨምረዋል`],
+  [/^Access given to (.+)$/, m => `ለ${m[1]} መዳረሻ ተሰጥቷል`],
+  [/^Access removed from (.+)$/, m => `ከ${m[1]} መዳረሻ ተወግዷል`],
+  [/^Administrators, people with the “see all cases” privilege, @(.+) \(who registered it\) and the departments it was sent to always have access\. Add anyone else here\.$/, m => `አስተዳዳሪዎች፣ “ሁሉንም ጉዳዮች ማየት” መብት ያላቸው ሰዎች፣ @${m[1]} (የመዘገበው) እና ጉዳዩ የተላከላቸው መምሪያዎች ሁልጊዜ መዳረሻ አላቸው። ሌላ ማንኛውንም ሰው እዚህ ይጨምሩ።`],
+  [/^(.+) \(@(\S+)\)$/, m => `${m[1]} (@${m[2]})`],
+  [/^@(\S+) · added by @(\S+)$/, m => `@${m[1]} · የጨመረው @${m[2]}`],
+  [/^Remove “(.*)”\?$/, m => `“${m[1]}” ይወገድ?`],
+  [/^New password for (.*) \(min 6 characters\):$/, m => `ለ${m[1]} አዲስ የይለፍ ቃል (ቢያንስ 6 ቁምፊዎች)፦`],
+  // messages written by the server
+  [/^New (HR|Finance|Management|Court|Unclear) issue for (.+)$/, m => `ለ${dn(m[2])} አዲስ የ${cat(m[1])} ጉዳይ`],
+  [/^Case (\S+) fully resolved$/, m => `ጉዳይ ${m[1]} ሙሉ በሙሉ ተፈቷል`],
+  [/^Case (\S+) is in court$/, m => `ጉዳይ ${m[1]} በፍርድ ቤት ነው`],
+  [/^Court case (\S+) acknowledged$/, m => `የፍርድ ቤት ጉዳይ ${m[1]} ተረጋግጧል`],
+  [/^Acknowledged by (.+)$/, m => `በ${m[1]} ተረጋግጧል`],
+  [/^Needs your acknowledgment · (.+)$/, m => `የእርስዎን ማረጋገጫ ይፈልጋል · ${m[1]}`],
+  [/^Case (\S+) · (.+?)(?: — (.*))?$/, m => `ጉዳይ ${m[1]} · ${m[2]}${m[3] ? ' — ' + m[3] : ''}`],
+  [/^(HR|Finance|Management|Court|Unclear) issue sent to (.+?)(?:\. Person asked to come back on (\d{4}-\d\d-\d\d))?(?:\. ([\s\S]*))?$/, m => `የ${cat(m[1])} ጉዳይ ወደ ${dn(m[2])} ተልኳል${m[3] ? '። ሰውየው በ' + m[3] + ' እንዲመለሱ ተጠይቀዋል' : ''}${m[4] ? '። ' + m[4] : ''}`],
+  [/^(HR|Finance|Management|Court|Unclear) issue resolved by (.+?)(?:\. ([\s\S]*))?$/, m => `የ${cat(m[1])} ጉዳይ በ${dn(m[2])} ተፈቷል${m[3] ? '። ' + m[3] : ''}`],
+  [/^(HR|Finance|Management|Court|Unclear) issue taken to court(?:\. ([\s\S]*))?$/, m => `የ${cat(m[1])} ጉዳይ ወደ ፍርድ ቤት ተወስዷል${m[2] ? '። ' + m[2] : ''}`],
+  [/^Court case acknowledged by (.+)$/, m => `የፍርድ ቤት ጉዳይ በ${m[1]} ተረጋግጧል`],
+  [/^File added: (.+?)(?: \(to issue (\d+)\))?$/, m => `ፋይል ተጨምሯል፦ ${m[1]}${m[2] ? ' (ወደ ጉዳይ ' + m[2] + ')' : ''}`],
+  [/^File removed: (.+)$/, m => `ፋይል ተወግዷል፦ ${m[1]}`],
+  [/^Person added: (.+?) \((also reporting|the case is about them|involved)\)(?:: ([\s\S]*))?$/, m => `ሰው ተጨምሯል፦ ${m[1]} (${{ 'also reporting': 'ጉዳይ አቅራቢ', 'the case is about them': 'ጉዳዩ የሚመለከታቸው', involved: 'የተሳተፈ' }[m[2]]})${m[3] ? '፦ ' + m[3] : ''}`],
+  [/^(.+) is not active right now$/, m => `${m[1]} አሁን ንቁ አይደለም`],
+  [/^(.+) is already in this case in that role$/, m => `${m[1]} በዚህ ጉዳይ ውስጥ በዚያ ሚና አስቀድሞ አለ`],
+  [/^Please choose a church from the list for (.+)$/, m => `ለ${m[1]} እባክዎ ቤተ ክርስቲያን ከዝርዝሩ ይምረጡ`],
+]
+
+const STRIP_LEAD = /^[^\p{L}\p{N}“"(]+/u
+const STRIP_TRAIL = /[\s→←★⭐]+$/u
+
+/** Translate one piece of text; returns it unchanged when there is no translation. */
+export function tr(text) {
+  if (getLang() !== 'am' || !text) return text
+  const lead = (text.match(/^\s*/) || [''])[0]
+  const trail = (text.match(/\s*$/) || [''])[0]
+  const body = text.trim()
+  if (!/\p{L}/u.test(body)) return text
+  const sym = (body.match(STRIP_LEAD) || [''])[0]
+  let core = body.slice(sym.length)
+  const tail = (core.match(STRIP_TRAIL) || [''])[0]
+  if (tail) core = core.slice(0, core.length - tail.length)
+  const arrow = /→\s*$/.test(body) ? ' →' : /←\s*$/.test(body) ? '' : ''
+  const normalized = core.replace(/\s+/g, ' ')
+  let out = AM[normalized]
+  if (out === undefined) out = AM[normalized + '…'] // keys that end with an ellipsis
+  if (out === undefined) { for (const [re, fn] of PATTERNS) { const m = normalized.match(re); if (m) { out = fn(m); break } } }
+  if (out === undefined) {
+    const full = body.replace(/\s+/g, ' ')
+    out = AM[full]
+    if (out === undefined) { for (const [re, fn] of PATTERNS) { const m = full.match(re); if (m) { out = fn(m); break } } }
+    if (out !== undefined) return lead + out + trail
+    return text
+  }
+  const leftArrow = /^←/.test(body) && !sym.includes('←') ? '' : ''
+  return lead + sym + out + (tail.includes('→') && !out.endsWith('→') ? ' →' : '') + leftArrow + arrow.slice(0, 0) + trail
+}
+
+/** For text built in code: t('{n} issues', { n: 3 }). The English text is the key. */
+export function t(en, vars) {
+  const filled = vars ? en.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? '')) : en
+  return tr(filled)
+}
+
+const ATTRS = ['placeholder', 'title', 'aria-label']
+const done = new WeakMap() // text node or element -> last text we wrote
+
+function fixText(node) {
+  const v = node.nodeValue
+  if (done.get(node) === v) return
+  const out = tr(v)
+  if (out !== v) { done.set(node, out); node.nodeValue = out }
+}
+function fixAttrs(el) {
+  for (const a of ATTRS) {
+    const v = el.getAttribute?.(a)
+    if (!v) continue
+    const key = done.get(el) || {}
+    if (key[a] === v) continue
+    const out = tr(v)
+    if (out !== v) { key[a] = out; done.set(el, key); el.setAttribute(a, out) }
+  }
+}
+function walk(root) {
+  if (root.nodeType === 3) return fixText(root)
+  if (root.nodeType !== 1) return
+  if (root.tagName === 'SCRIPT' || root.tagName === 'STYLE' || root.tagName === 'TEXTAREA' && false) return
+  fixAttrs(root)
+  for (const c of root.childNodes) walk(c)
+}
+
+/** Keeps the page in Amharic as React updates it. Does nothing in English. */
+export function startTranslator() {
+  if (getLang() !== 'am') return
+  document.documentElement.lang = 'am'
+  const run = () => walk(document.body)
+  new MutationObserver(list => {
+    for (const m of list) {
+      if (m.type === 'characterData') fixText(m.target)
+      else if (m.type === 'attributes') fixAttrs(m.target)
+      else m.addedNodes.forEach(walk)
+    }
+  }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS })
+  run()
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 
 export default function Churches() {
   const [list, setList] = useState([])
@@ -29,7 +30,7 @@ export default function Churches() {
 
   return (
     <>
-      <h1>Churches</h1><p className="muted">{list.length} church{list.length === 1 ? '' : 'es'} on the list. These appear when registering a case.</p>
+      <h1>Churches</h1><p className="muted">{t('{n} churches on the list. These appear when registering a case.', { n: list.length })}</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <div className="cols">
         <div className="card">

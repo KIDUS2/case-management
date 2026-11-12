@@ -14,6 +14,7 @@ import Notifications from './pages/Notifications.jsx'
 import Account from './pages/Account.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import Bell from './components/Bell.jsx'
+import Prefs from './components/Prefs.jsx'
 
 const DESK = ['ADMIN', 'OFFICER', 'RECEPTION']
 /** Which pages each role sees. */
@@ -111,6 +112,7 @@ export default function App() {
         <div className="topbar">
           <SearchBar onOpen={id => openCase(id)} onSeeAll={seeAll} />
           <div className="tbspace">
+            <Prefs />
             <Bell unread={unread} ring={ring} onOpenCase={id => openCase(id)} onSeeAll={() => go('notifications')} onChanged={refreshUnread} />
           </div>
         </div>
@@ -123,7 +125,7 @@ export default function App() {
         {current === 'churches' && <Churches />}
         {current === 'departments' && <Departments />}
         {current === 'users' && <Users me={user} />}
-        {current === 'account' && <Account me={user} />}
+        {current === 'account' && <Account me={user} onUser={setUser} />}
       </main>
       {toast && (
         <div className="toast" role="status" onClick={() => { setToast(null); if (toast.caseId) openCase(toast.caseId) }}>

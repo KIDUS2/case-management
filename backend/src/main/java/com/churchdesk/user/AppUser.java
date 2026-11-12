@@ -13,6 +13,10 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false) private String passwordHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(nullable = false) private boolean active = true;
+    private String phone;
+    private String email;
+    @Column(name = "job_title") private String jobTitle;
+    @Column(name = "can_view_all", nullable = false) private boolean canViewAll;
     @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "department_id") private Department department;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
@@ -27,6 +31,14 @@ public class AppUser {
     public void setRole(Role v) { role = v; }
     public Department getDepartment() { return department; }
     public void setDepartment(Department v) { department = v; }
+    public String getPhone() { return phone; }
+    public void setPhone(String v) { phone = v; }
+    public String getEmail() { return email; }
+    public void setEmail(String v) { email = v; }
+    public String getJobTitle() { return jobTitle; }
+    public void setJobTitle(String v) { jobTitle = v; }
+    public boolean isCanViewAll() { return canViewAll; }
+    public void setCanViewAll(boolean v) { canViewAll = v; }
     public boolean isActive() { return active; }
     public void setActive(boolean v) { active = v; }
 }

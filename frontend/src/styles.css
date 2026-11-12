@@ -1,5 +1,7 @@
 :root{--bg:#f3f6fb;--card:#fff;--ink:#1c2433;--mute:#677086;--line:#dfe5f0;--pri:#0a40a0;--pri2:#2f6fd6;--soft:#e8effb;--gold:#f2b705;--gold-soft:#fff6d6;--bad:#c4302b;--ok:#23915f;--warn:#c98300;--court:#b4452a;--logo-bg:transparent;--solid:#0a40a0;--solid2:#2f6fd6;color-scheme:light}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#192032;--ink:#eef2fb;--mute:#9aa5bd;--line:#2b3550;--pri:#7aa8ff;--pri2:#2f6fd6;--soft:#1f2c4a;--gold:#f7c52b;--gold-soft:#3a3115;--warn:#e5a23b;--court:#e07a52;--logo-bg:#fff;--solid:#2457b8;--solid2:#3a7be6;color-scheme:dark}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1420;--card:#192032;--ink:#eef2fb;--mute:#9aa5bd;--line:#2b3550;--pri:#7aa8ff;--pri2:#2f6fd6;--soft:#1f2c4a;--gold:#f7c52b;--gold-soft:#3a3115;--warn:#e5a23b;--court:#e07a52;--logo-bg:#fff;--solid:#2457b8;--solid2:#3a7be6;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#0f1420;--card:#192032;--ink:#eef2fb;--mute:#9aa5bd;--line:#2b3550;--pri:#7aa8ff;--pri2:#2f6fd6;--soft:#1f2c4a;--gold:#f7c52b;--gold-soft:#3a3115;--warn:#e5a23b;--court:#e07a52;--logo-bg:#fff;--solid:#2457b8;--solid2:#3a7be6;color-scheme:dark}
+:root[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 h1{margin:0 0 4px}h2{margin:0 0 10px;font-size:1.05rem}.muted,small{color:var(--mute)}small{display:block;font-size:.8rem}.grow{flex:1;min-width:0}
 a{color:var(--pri)}
@@ -149,7 +151,8 @@ main{width:100%;min-width:0;padding:28px clamp(16px,3vw,48px) calc(60px + env(sa
 /* ===== Addis Ababa Diocese branding ===== */
 .brand{display:block;padding:4px 6px 10px}
 .brand img{display:block;width:100%;max-width:200px;height:auto;margin:0 auto;background:var(--logo-bg);border-radius:12px;padding:var(--logo-pad,0)}
-@media (prefers-color-scheme:dark){:root{--logo-pad:6px}}
+:root[data-theme=dark]{--logo-pad:6px}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--logo-pad:6px}}
 .dash-hero{border-bottom:5px solid var(--gold)}
 .hero-card{border-bottom:5px solid var(--gold)}
 .btn.gold{background:var(--gold);color:#1c2433}
@@ -233,3 +236,15 @@ main{width:100%;min-width:0;padding:28px clamp(16px,3vw,48px) calc(60px + env(sa
   .brand{padding:0}.brand img{width:auto;height:44px;max-width:none;margin:0}
 }
 @media(max-width:640px){.panel .two{grid-template-columns:1fr}.gsearch kbd{display:none}.qrow{flex-wrap:wrap}.qrow .grow{flex:1 1 100%}.bpanel{position:fixed;left:12px;right:12px;top:72px;width:auto;margin-top:0}}
+
+/* ===== language + theme switch ===== */
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Ethiopic","Abyssinica SIL",Nyala,Kefa,sans-serif}
+.prefs{display:flex;align-items:center;gap:8px}
+.pbtn{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--card);cursor:pointer;font-size:1.2rem;display:grid;place-items:center}
+.pbtn:hover{background:var(--soft)}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--card);height:46px}
+.lang button{border:0;background:none;color:var(--mute);font:inherit;font-weight:700;padding:0 13px;cursor:pointer;min-width:44px}
+.lang button.on{background:var(--solid);color:#fff}
+.loginprefs{position:fixed;top:max(14px,env(safe-area-inset-top));right:14px}
+.loginprefs .pbtn,.loginprefs .lang{background:var(--card)}
+@media(max-width:640px){.topbar{flex-wrap:wrap}.gsearch{flex:1 1 100%;max-width:none;order:2}.tbspace{margin-left:auto;order:1}.pbtn,.lang,.bellbtn{height:42px}.pbtn,.bellbtn{width:42px}}

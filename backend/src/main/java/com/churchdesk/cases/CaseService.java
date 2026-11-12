@@ -44,13 +44,14 @@ public class CaseService {
     private final CaseEventRepository eventRepo;
     private final CaseFileRepository fileRepo;
     private final CaseFlowService flow;
+    private final AccessService access;
     private final SecureRandom random = new SecureRandom();
 
     public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
                        DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
-                       CaseFileRepository fileRepo, CaseFlowService flow) {
+                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access) {
         this.cases = cases; this.partyRepo = partyRepo; this.persons = persons; this.churches = churches;
-        this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow;
+        this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow; this.access = access;
     }
 
     @Transactional
@@ -125,14 +126,7 @@ public class CaseService {
 
     @Transactional(readOnly = true)
     public PageDto<CaseSummary> list(String q, CaseStatus status, int page, int size, AppUser actor) {
-        Specification<ChurchCase> spec = (root, query, cb) -> cb.conjunction();
-        if (actor.getRole() == Role.DEPARTMENT) {
-            final Long dept = CaseAccess.departmentId(actor);
-            spec = spec.and((root, query, cb) -> {
-                query.distinct(true);
-                return cb.equal(root.join("issues", JoinType.INNER).join("department", JoinType.INNER).get("id"), dept == null ? -1L : dept);
-            });
-        }
+        Specification<ChurchCase> spec = access.visibleTo(actor);
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
@@ -159,7 +153,7 @@ public class CaseService {
     @Transactional(readOnly = true)
     public CaseDetail get(Long id, AppUser actor) {
         ChurchCase c = cases.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         return toDetail(c);
     }
 
@@ -168,7 +162,7 @@ public class CaseService {
     public CaseDetail getByCode(String code, AppUser actor) {
         ChurchCase c = cases.findByCode(normalizeCode(code))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No case has that code. Please check it and try again."));
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         return toDetail(c);
     }
 
@@ -212,9 +206,14 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public Summary summary() {
-        return new Summary(cases.count(), cases.countByStatus(CaseStatus.OPEN), cases.countByStatus(CaseStatus.REFERRED),
-                cases.countByStatus(CaseStatus.COURT), cases.countByStatus(CaseStatus.RESOLVED));
+    public Summary summary(AppUser actor) {
+        Specification<ChurchCase> mine = access.visibleTo(actor);
+        return new Summary(cases.count(mine), count(mine, CaseStatus.OPEN), count(mine, CaseStatus.REFERRED),
+                count(mine, CaseStatus.COURT), count(mine, CaseStatus.RESOLVED));
+    }
+
+    private long count(Specification<ChurchCase> mine, CaseStatus s) {
+        return cases.count(mine.and((root, query, cb) -> cb.equal(root.get("status"), s)));
     }
 
     /** Used while registering: finds people already on record with a similar name. */
@@ -254,7 +253,7 @@ public class CaseService {
     @Transactional
     public CaseDetail addParty(Long caseId, AddPartyRequest r, AppUser actor) {
         ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
-        CaseAccess.assertCanView(c, actor);
+        access.assertCanView(c, actor);
         Set<String> seen = new HashSet<>();
         for (CaseParty p : c.getParties()) seen.add(p.getPerson().getId() + ":" + p.getRole());
         int before = c.getParties().size();

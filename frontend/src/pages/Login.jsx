@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api.js'
+import Prefs from '../components/Prefs.jsx'
 
 export default function Login({ onLogin }) {
   const [username, setU] = useState('')
@@ -14,6 +15,7 @@ export default function Login({ onLogin }) {
   }
   return (
     <div className="center loginhero">
+      <div className="loginprefs"><Prefs /></div>
       <form className="card login" onSubmit={submit}>
         <img className="loginlogo" src="/logo.png" alt="Addis Ababa Diocese Media" />
         <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>

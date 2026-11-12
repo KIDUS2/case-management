@@ -33,7 +33,7 @@ public class CaseController {
     }
 
     @GetMapping("/cases/summary")
-    public Summary summary() { return service.summary(); }
+    public Summary summary(Authentication auth) { return service.summary(current.get(auth)); }
 
     @GetMapping("/cases/code/{code}")
     public CaseDetail byCode(@PathVariable String code, Authentication auth) { return service.getByCode(code, current.get(auth)); }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { t } from '../i18n.js'
 import { NOTE_ICON, ago, fmtDate } from '../ui.js'
 
 export default function Notifications({ onOpen, onChanged }) {
@@ -25,7 +26,7 @@ export default function Notifications({ onOpen, onChanged }) {
         {data?.unread > 0 && <button className="btn ghost" onClick={readAll}>✔ Mark all as read</button>}</div>
       {err && <div className="err">{err}</div>}
       <div className="tabs">
-        <button className={'chip' + (tab === 'unread' ? ' on' : '')} onClick={() => setTab('unread')}>Unread{data ? ` (${data.unread})` : ''}</button>
+        <button className={'chip' + (tab === 'unread' ? ' on' : '')} onClick={() => setTab('unread')}>{data ? t('Unread ({n})', { n: data.unread }) : t('Unread')}</button>
         <button className={'chip' + (tab === 'all' ? ' on' : '')} onClick={() => setTab('all')}>All</button>
       </div>
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -42,7 +43,7 @@ export default function Notifications({ onOpen, onChanged }) {
       {data && data.total > data.size && (
         <div className="pager">
           <button className="btn ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>← Newer</button>
-          <span className="muted">Page {page + 1} of {pages}</span>
+          <span className="muted">{t('Page {a} of {b}', { a: page + 1, b: pages })}</span>
           <button className="btn ghost" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older →</button>
         </div>
       )}
