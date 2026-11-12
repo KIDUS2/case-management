@@ -1,5 +1,7 @@
 package com.churchdesk.user;
 
+import com.churchdesk.department.Department;
+import com.churchdesk.department.DepartmentRepository;
 import com.churchdesk.user.Dtos.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,10 +13,14 @@ import java.util.List;
 @Service
 public class UserService {
     private final UserRepository repo;
+    private final DepartmentRepository departments;
     private final PasswordEncoder encoder;
 
-    public UserService(UserRepository repo, PasswordEncoder encoder) { this.repo = repo; this.encoder = encoder; }
+    public UserService(UserRepository repo, DepartmentRepository departments, PasswordEncoder encoder) {
+        this.repo = repo; this.departments = departments; this.encoder = encoder;
+    }
 
+    @Transactional(readOnly = true)
     public List<UserDto> list() { return repo.findAll().stream().map(UserDto::of).toList(); }
 
     @Transactional
@@ -26,6 +32,7 @@ public class UserService {
         u.setFullName(r.fullName().trim());
         u.setPasswordHash(encoder.encode(r.password()));
         u.setRole(r.role());
+        u.setDepartment(departmentFor(r.role(), r.departmentId()));
         return UserDto.of(repo.save(u));
     }
 
@@ -36,9 +43,27 @@ public class UserService {
         if (self && ((r.active() != null && !r.active()) || (r.role() != null && r.role() != Role.ADMIN)))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You can’t deactivate or demote your own account");
         if (r.fullName() != null && !r.fullName().isBlank()) u.setFullName(r.fullName().trim());
-        if (r.role() != null) u.setRole(r.role());
+        Role role = r.role() != null ? r.role() : u.getRole();
+        Long deptId = r.departmentId() != null ? r.departmentId() : (u.getDepartment() == null ? null : u.getDepartment().getId());
+        u.setRole(role);
+        u.setDepartment(departmentFor(role, deptId));
         if (r.active() != null) u.setActive(r.active());
         if (r.password() != null) u.setPasswordHash(encoder.encode(r.password()));
         return UserDto.of(u);
+    }
+
+    @Transactional
+    public void changePassword(AppUser who, ChangePasswordRequest r) {
+        AppUser u = repo.findById(who.getId()).orElseThrow();
+        if (!encoder.matches(r.currentPassword(), u.getPasswordHash()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Your current password is not correct");
+        u.setPasswordHash(encoder.encode(r.newPassword()));
+    }
+
+    /** Only department staff belong to a department, and they must belong to one. */
+    private Department departmentFor(Role role, Long departmentId) {
+        if (role != Role.DEPARTMENT) return null;
+        if (departmentId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose the department this person works in");
+        return departments.findById(departmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
     }
 }

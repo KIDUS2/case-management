@@ -1,86 +1,136 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api.js'
+import { ROLES, NOTE_ICON } from './ui.js'
 import Login from './pages/Login.jsx'
 import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
 import NewCase from './pages/NewCase.jsx'
 import Churches from './pages/Churches.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Queue from './pages/Queue.jsx'
+import Inbox from './pages/Inbox.jsx'
+import Departments from './pages/Departments.jsx'
+import Notifications from './pages/Notifications.jsx'
+import Account from './pages/Account.jsx'
+import SearchBar from './components/SearchBar.jsx'
+import Bell from './components/Bell.jsx'
 
-function CodeLookup({ onFound }) {
-  const [code, setCode] = useState('')
-  const [msg, setMsg] = useState('')
-  const go = async e => {
-    e.preventDefault(); setMsg('')
-    if (!code.trim()) return
-    try { const c = await api('/cases/code/' + encodeURIComponent(code.trim())); setCode(''); onFound(c.id) }
-    catch (x) { setMsg(x.message) }
-  }
-  return (
-    <form className="lookup" onSubmit={go}>
-      <label>Open a case by code</label>
-      <div className="lrow"><input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="e.g. K7M-2QX" maxLength={12} /><button className="btn">Go</button></div>
-      {msg && <small className="warn">{msg}</small>}
-    </form>
-  )
-}
-
+const DESK = ['ADMIN', 'OFFICER', 'RECEPTION']
+/** Which pages each role sees. */
 const NAV = [
-  { key: 'dashboard', icon: '📊', label: 'Dashboard', admin: true },
-  { key: 'cases', icon: '📁', label: 'Cases' },
-  { key: 'new', icon: '➕', label: 'Register case' },
-  { key: 'churches', icon: '⛪', label: 'Churches', admin: true },
-  { key: 'users', icon: '👥', label: 'Users', admin: true },
-  { key: 'queue', icon: '🚪', label: 'Door queue', soon: true },
+  { key: 'dashboard', icon: '📊', label: 'Dashboard', roles: ['ADMIN'] },
+  { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER'] },
+  { key: 'queue', icon: '🚪', label: 'Door queue', roles: DESK },
+  { key: 'new', icon: '➕', label: 'Register case', roles: DESK },
+  { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
+  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
+  { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
+  { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
+  { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
+  { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
 ]
+const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases' }
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
   const [page, setPage] = useState(null)
   const [openId, setOpenId] = useState(null)
-  const [fresh, setFresh] = useState(false)
+  const [fresh, setFresh] = useState(null)
+  const [query, setQuery] = useState('')
+  const [unread, setUnread] = useState(0)
+  const [ring, setRing] = useState(false)
+  const [toast, setToast] = useState(null)
+  const lastUnread = useRef(0)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return setReady(true)
     api('/auth/me').then(setUser).catch(() => {}).finally(() => setReady(true))
   }, [])
 
-  const logout = () => { localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(false) }
-  const go = key => { setOpenId(null); setFresh(false); setPage(key) }
-  const openCase = (id, isNew = false) => { setOpenId(id); setFresh(isNew); setPage('cases') }
+  const refreshUnread = useCallback(async () => {
+    try {
+      const { count } = await api('/notifications/unread-count')
+      if (count > lastUnread.current) {
+        // something new arrived: pop a short message and ring the bell
+        const r = await api('/notifications?unread=true&size=1').catch(() => null)
+        if (r?.items?.[0]) { setToast(r.items[0]); setRing(true); setTimeout(() => setRing(false), 1200) }
+      }
+      lastUnread.current = count
+      setUnread(count)
+    } catch { /* a missed poll is fine, the next one will catch up */ }
+  }, [])
 
-  const current = page ?? (user?.role === 'ADMIN' ? 'dashboard' : 'cases')
+  // check for news every 25 seconds while the tab is visible
+  useEffect(() => {
+    if (!user) return
+    refreshUnread()
+    const t = setInterval(() => { if (!document.hidden) refreshUnread() }, 25000)
+    const vis = () => { if (!document.hidden) refreshUnread() }
+    document.addEventListener('visibilitychange', vis)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', vis) }
+  }, [user, refreshUnread])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 8000)
+    return () => clearTimeout(t)
+  }, [toast])
+
+  const logout = () => { localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
+  const go = key => { setOpenId(null); setFresh(null); setQuery(''); setPage(key) }
+  const openCase = (id, isNew = false, failed = []) => { setOpenId(id); setFresh(isNew ? { failed } : null); setPage('cases') }
+  const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
 
   if (!ready) return <div className="center">Loading…</div>
   if (!user) return <Login onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
+
+  const items = NAV.filter(n => n.roles.includes(user.role))
+  const current = items.some(n => n.key === page) ? page : HOME[user.role]
 
   return (
     <div className="shell">
       <aside>
         <div className="topline">
-          <div className="brand">🕊️ Case Desk</div>
+          <div className="brand"><img src="/logo.png" alt="Addis Ababa Diocese" /></div>
           <div className="aside-foot">
-            <div className="me"><b>{user.fullName}</b><small>{user.role}</small></div>
+            <div className="me"><b>{user.fullName}</b><small>{ROLES[user.role]}{user.departmentName ? ' · ' + user.departmentName : ''}</small></div>
             <button className="nav" onClick={logout}>↩️ Log out</button>
           </div>
         </div>
-        <CodeLookup onFound={id => openCase(id)} />
         <nav className="navlist">
-          {NAV.filter(n => !n.admin || user.role === 'ADMIN').map(n => (
-            <button key={n.key} disabled={n.soon} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
-              <span>{n.icon}</span> {n.label} {n.soon && <small>soon</small>}
+          {items.map(n => (
+            <button key={n.key} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
+              <span>{n.icon}</span> {n.label}
+              {n.badge && unread > 0 && <span className="nbadge">{unread > 99 ? '99+' : unread}</span>}
             </button>
           ))}
         </nav>
       </aside>
       <main>
-        {current === 'dashboard' && <Dashboard me={user} onOpen={openCase} goNew={() => go('new')} />}
-        {current === 'cases' && <Cases openId={openId} setOpenId={id => { setOpenId(id); setFresh(false) }} goNew={() => go('new')} fresh={fresh} />}
-        {current === 'new' && <NewCase me={user} onCreated={id => openCase(id, true)} goChurches={() => go('churches')} />}
+        <div className="topbar">
+          <SearchBar onOpen={id => openCase(id)} onSeeAll={seeAll} />
+          <div className="tbspace">
+            <Bell unread={unread} ring={ring} onOpenCase={id => openCase(id)} onSeeAll={() => go('notifications')} onChanged={refreshUnread} />
+          </div>
+        </div>
+        {current === 'dashboard' && <Dashboard me={user} onOpen={openCase} goNew={() => go('new')} go={go} />}
+        {current === 'inbox' && <Inbox me={user} onOpen={openCase} />}
+        {current === 'queue' && <Queue onOpen={openCase} goNew={() => go('new')} />}
+        {current === 'cases' && <Cases me={user} openId={openId} setOpenId={id => { setOpenId(id); setFresh(null) }} goNew={() => go('new')} fresh={fresh} initialQuery={query} />}
+        {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
+        {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches />}
+        {current === 'departments' && <Departments />}
         {current === 'users' && <Users me={user} />}
+        {current === 'account' && <Account me={user} />}
       </main>
+      {toast && (
+        <div className="toast" role="status" onClick={() => { setToast(null); if (toast.caseId) openCase(toast.caseId) }}>
+          <span className="nicon">{NOTE_ICON[toast.type] || '🔔'}</span>
+          <span><b>{toast.title}</b><small>{toast.body}</small></span>
+        </div>
+      )}
     </div>
   )
 }

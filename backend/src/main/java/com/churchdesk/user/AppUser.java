@@ -1,5 +1,6 @@
 package com.churchdesk.user;
 
+import com.churchdesk.department.Department;
 import jakarta.persistence.*;
 import java.time.Instant;
 
@@ -12,6 +13,7 @@ public class AppUser {
     @Column(name = "password_hash", nullable = false) private String passwordHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(nullable = false) private boolean active = true;
+    @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "department_id") private Department department;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
     public Long getId() { return id; }
@@ -23,6 +25,8 @@ public class AppUser {
     public void setPasswordHash(String v) { passwordHash = v; }
     public Role getRole() { return role; }
     public void setRole(Role v) { role = v; }
+    public Department getDepartment() { return department; }
+    public void setDepartment(Department v) { department = v; }
     public boolean isActive() { return active; }
     public void setActive(boolean v) { active = v; }
 }

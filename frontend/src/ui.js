@@ -1,6 +1,13 @@
 export const STATUS = {
-  OPEN: { label: 'Open', cls: 's-open', icon: '🟣' },
-  REFERRED: { label: 'Referred', cls: 's-ref', icon: '➡️' },
+  OPEN: { label: 'Open', cls: 's-open', icon: '🟦' },
+  REFERRED: { label: 'In a department', cls: 's-ref', icon: '➡️' },
+  COURT: { label: 'In court', cls: 's-court', icon: '⚖️' },
+  RESOLVED: { label: 'Resolved', cls: 's-ok', icon: '✅' },
+}
+/** Progress of a single issue. */
+export const ISSUE_STATUS = {
+  NEW: { label: 'With the desk', cls: 's-open', icon: '🟦' },
+  REFERRED: { label: 'In a department', cls: 's-ref', icon: '➡️' },
   COURT: { label: 'In court', cls: 's-court', icon: '⚖️' },
   RESOLVED: { label: 'Resolved', cls: 's-ok', icon: '✅' },
 }
@@ -16,6 +23,12 @@ export const WORKING = {
   SUSPENDED: 'Suspended', CONTRACT: 'Contract', VOLUNTEER: 'Volunteer',
   CHURCH_MEMBER: 'Church member (not an employee)',
 }
+export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff' }
+export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎' }
+export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️' }
+
+export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION'].includes(role)
+
 export const fmtDate = iso => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
 export const initial = s => (s || '?').trim()[0]?.toUpperCase() || '?'
 /** K7M2QX -> K7M-2QX, easier to read out and write down */
@@ -24,3 +37,19 @@ export const names = list => (list.length > 2 ? list.slice(0, 2).join(', ') + ' 
 export async function copyText(t) {
   try { await navigator.clipboard.writeText(t); return true } catch { return false }
 }
+
+/** Dates are Ethiopian local time (Addis Ababa) as YYYY-MM-DD. */
+export const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
+export const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+export const fmtDay = iso => new Date(iso + 'T00:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+export const dayDiff = iso => Math.round((new Date(iso + 'T00:00:00Z') - new Date(todayStr() + 'T00:00:00Z')) / 86400000)
+
+export function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return Math.floor(s / 60) + ' min ago'
+  if (s < 86400) return Math.floor(s / 3600) + ' h ago'
+  if (s < 86400 * 7) return Math.floor(s / 86400) + ' d ago'
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB')

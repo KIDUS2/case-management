@@ -3,6 +3,10 @@ package com.churchdesk.cases;
 import com.churchdesk.cases.CaseDtos.*;
 import com.churchdesk.church.Church;
 import com.churchdesk.church.ChurchRepository;
+import com.churchdesk.department.Department;
+import com.churchdesk.department.DepartmentRepository;
+import com.churchdesk.user.AppUser;
+import com.churchdesk.user.Role;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -15,6 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.security.SecureRandom;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,19 +39,27 @@ public class CaseService {
     private final CasePartyRepository partyRepo;
     private final PersonRepository persons;
     private final ChurchRepository churches;
+    private final DepartmentRepository departments;
+    private final CaseIssueRepository issueRepo;
+    private final CaseEventRepository eventRepo;
+    private final CaseFileRepository fileRepo;
+    private final CaseFlowService flow;
     private final SecureRandom random = new SecureRandom();
 
-    public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches) {
+    public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
+                       DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
+                       CaseFileRepository fileRepo, CaseFlowService flow) {
         this.cases = cases; this.partyRepo = partyRepo; this.persons = persons; this.churches = churches;
+        this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow;
     }
 
     @Transactional
-    public CaseDetail create(CreateCaseRequest r, String username) {
+    public CaseDetail create(CreateCaseRequest r, AppUser actor) {
         ChurchCase c = new ChurchCase();
         c.setCode(newCode());
         c.setDiscussionNotes(blankToNull(r.discussionNotes()));
         c.setLetterIssued(r.letterIssued());
-        c.setCreatedBy(username);
+        c.setCreatedBy(actor.getUsername());
 
         Set<String> seen = new HashSet<>();
         int order = 0;
@@ -62,6 +78,15 @@ public class CaseService {
             c.getIssues().add(i);
         }
         c = cases.save(c);
+        flow.recordCreated(c, actor);
+        // issues the desk already sent to a department go out (and notify it) right away
+        for (int k = 0; k < r.issues().size(); k++) {
+            IssueIn in = r.issues().get(k);
+            if (in.departmentId() == null) continue;
+            Department d = departments.findById(in.departmentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
+            flow.applyReferral(c, c.getIssues().get(k), d, in.returnOn(), null, actor);
+        }
         return toDetail(c);
     }
 
@@ -98,8 +123,15 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public PageDto<CaseSummary> list(String q, CaseStatus status, int page, int size) {
+    public PageDto<CaseSummary> list(String q, CaseStatus status, int page, int size, AppUser actor) {
         Specification<ChurchCase> spec = (root, query, cb) -> cb.conjunction();
+        if (actor.getRole() == Role.DEPARTMENT) {
+            final Long dept = CaseAccess.departmentId(actor);
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("issues", JoinType.INNER).join("department", JoinType.INNER).get("id"), dept == null ? -1L : dept);
+            });
+        }
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
@@ -124,16 +156,58 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public CaseDetail get(Long id) {
-        return toDetail(cases.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found")));
+    public CaseDetail get(Long id, AppUser actor) {
+        ChurchCase c = cases.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
+        CaseAccess.assertCanView(c, actor);
+        return toDetail(c);
     }
 
     /** Staff type the short code (dashes and spaces are ignored) to open a case. */
     @Transactional(readOnly = true)
-    public CaseDetail getByCode(String code) {
-        return toDetail(cases.findByCode(normalizeCode(code))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No case has that code. Please check it and try again.")));
+    public CaseDetail getByCode(String code, AppUser actor) {
+        ChurchCase c = cases.findByCode(normalizeCode(code))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No case has that code. Please check it and try again."));
+        CaseAccess.assertCanView(c, actor);
+        return toDetail(c);
+    }
+
+    /** People asked to come back to the door, soonest first (overdue ones are included so nobody is forgotten). */
+    @Transactional(readOnly = true)
+    public List<QueueItem> queue(int days) {
+        LocalDate until = Times.today().plusDays(Math.min(Math.max(days, 0), 90));
+        Map<Long, List<CaseIssue>> byCase = new LinkedHashMap<>();
+        for (CaseIssue i : issueRepo.findExpected(until, IssueStatus.RESOLVED))
+            byCase.computeIfAbsent(i.getChurchCase().getId(), k -> new ArrayList<>()).add(i);
+        List<QueueItem> out = new ArrayList<>();
+        for (List<CaseIssue> list : byCase.values()) {
+            ChurchCase c = list.get(0).getChurchCase();
+            LocalDate when = list.stream().map(CaseIssue::getReturnOn).min(LocalDate::compareTo).orElse(until);
+            List<Person> who = peopleIn(c, PartyRole.COMPLAINANT);
+            out.add(new QueueItem(c.getId(), c.getCode(), when, who.stream().map(Person::getFullName).toList(),
+                    who.isEmpty() ? "" : who.get(0).getChurch().getName(),
+                    list.stream().map(i -> i.getDepartment() == null ? null : i.getDepartment().getName()).filter(n -> n != null).distinct().toList(),
+                    list.size()));
+        }
+        out.sort((a, b) -> a.returnOn().compareTo(b.returnOn()));
+        return out;
+    }
+
+    /** What a department has received (pending) or already finished (resolved). */
+    @Transactional(readOnly = true)
+    public InboxDto inbox(Long departmentId, boolean resolved, int page, int size) {
+        List<IssueStatus> statuses = resolved ? List.of(IssueStatus.RESOLVED) : List.of(IssueStatus.REFERRED, IssueStatus.COURT);
+        Page<CaseIssue> result = issueRepo.findForDepartment(departmentId, statuses,
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50)));
+        List<InboxItem> items = result.getContent().stream().map(i -> {
+            ChurchCase c = i.getChurchCase();
+            List<Person> who = peopleIn(c, PartyRole.COMPLAINANT);
+            return new InboxItem(i.getId(), c.getId(), c.getCode(), i.getCategory(), i.getDescription(), i.getStatus(),
+                    i.getDepartment().getName(), i.getReferredAt(), i.getReturnOn(), who.stream().map(Person::getFullName).toList(),
+                    peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
+                    who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote());
+        }).toList();
+        long pending = issueRepo.countByDepartmentIdAndStatus(departmentId, IssueStatus.REFERRED);
+        return new InboxDto(items, result.getTotalElements(), result.getNumber(), result.getSize(), pending);
     }
 
     @Transactional(readOnly = true)
@@ -163,7 +237,8 @@ public class CaseService {
         return new CaseSummary(c.getId(), c.getCode(),
                 complainants.stream().map(Person::getFullName).toList(),
                 peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
-                church, c.getStatus(), c.getIssues().size(), cats, c.isLetterIssued(), c.getCreatedAt());
+                church, c.getStatus(), c.getIssues().size(),
+                (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt());
     }
 
     private PersonInfo toPerson(Person p) {
@@ -180,10 +255,17 @@ public class CaseService {
         subjects.forEach(p -> ids.add(p.getId()));
         List<CaseSummary> related = ids.isEmpty() ? List.of()
                 : cases.findRelated(ids, c.getId(), PageRequest.of(0, 10)).stream().map(this::toSummary).toList();
-        List<IssueDto> issues = c.getIssues().stream().map(i -> new IssueDto(i.getId(), i.getCategory(), i.getDescription())).toList();
+        List<IssueDto> issues = c.getIssues().stream().map(i -> new IssueDto(i.getId(), i.getCategory(), i.getDescription(), i.getStatus(),
+                i.getDepartment() == null ? null : i.getDepartment().getId(), i.getDepartment() == null ? null : i.getDepartment().getName(),
+                i.getReferredAt(), i.getReturnOn(), i.getResolutionNote(), i.getResolvedBy(), i.getResolvedAt(),
+                i.getCourtAt(), i.getCourtAckBy(), i.getCourtAckAt())).toList();
+        List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
+                .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
+        List<FileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()
+                .map(f -> new FileDto(f.getId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
-                subjects.stream().map(this::toPerson).toList(), issues, related);
+                subjects.stream().map(this::toPerson).toList(), issues, related, events, files);
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

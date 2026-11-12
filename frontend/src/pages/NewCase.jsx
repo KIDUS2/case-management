@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
-import { CATEGORY, WORKING } from '../ui.js'
+import { api, upload } from '../api.js'
+import { CATEGORY, WORKING, addDays, todayStr, fmtSize } from '../ui.js'
 
+const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
 const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ fullName: '', churchName: '', phone: '', workingStatus: status })
 
 function Chips({ options, value, onChange }) {
@@ -47,14 +48,19 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
 export default function NewCase({ me, onCreated, goChurches }) {
   const [complainants, setComplainants] = useState([blankParty()])
   const [subjects, setSubjects] = useState([])
-  const [issues, setIssues] = useState([{ category: 'HR', description: '' }])
+  const [issues, setIssues] = useState([blankIssue()])
   const [notes, setNotes] = useState('')
   const [letter, setLetter] = useState(false)
   const [churches, setChurches] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [files, setFiles] = useState([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { api('/churches').then(setChurches).catch(e => setErr(e.message)) }, [])
+  useEffect(() => {
+    api('/churches').then(setChurches).catch(e => setErr(e.message))
+    api('/departments').then(d => setDepartments(d.filter(x => x.active))).catch(() => {})
+  }, [])
 
   const setAt = (setter, i) => v => setter(l => l.map((x, k) => (k === i ? v : x)))
   const removeAt = (setter, i) => () => setter(l => l.filter((_, k) => k !== i))
@@ -78,8 +84,15 @@ export default function NewCase({ me, onCreated, goChurches }) {
       const bad = issues.findIndex(i => i.category !== 'UNCLEAR' && !i.description.trim())
       if (bad >= 0) throw new Error(`Issue ${bad + 1}: please describe the cause, or mark it “Not clear yet”.`)
       setBusy(true)
-      const c = await api('/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues, discussionNotes: notes, letterIssued: letter } })
-      onCreated(c.id)
+      const payload = issues.map(i => ({
+        category: i.category, description: i.description,
+        departmentId: i.departmentId ? Number(i.departmentId) : null, returnOn: i.departmentId ? i.returnOn || null : null,
+      }))
+      const c = await api('/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter } })
+      // the case exists now, so attach the files one by one; a failed file never loses the case
+      const failed = []
+      for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch { failed.push(f.name) } }
+      onCreated(c.id, failed)
     } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
 
@@ -121,10 +134,20 @@ export default function NewCase({ me, onCreated, goChurches }) {
               {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
             </select>
             <textarea rows={3} placeholder="Describe the cause…" value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
+            {departments.length > 0 && (
+              <div className="grid" style={{ marginTop: 8 }}>
+                <div><label>Send to a department now? (optional)</label>
+                  <select value={it.departmentId} onChange={e => setIssue(i, { departmentId: e.target.value })}>
+                    <option value="">Keep with the desk for now</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}{d.handlesCategory === it.category ? ' ★' : ''}</option>)}
+                  </select></div>
+                {it.departmentId && <div><label>Person comes back on</label><input type="date" min={todayStr()} value={it.returnOn} onChange={e => setIssue(i, { returnOn: e.target.value })} /></div>}
+              </div>
+            )}
           </div>
         ))}
         {issues.length >= 3 && <div className="banner">📎 {issues.length} issues in one case. Consider noting which one is most urgent.</div>}
-        <button type="button" className="btn ghost" onClick={() => setIssues(l => [...l, { category: 'HR', description: '' }])}>➕ Add another issue</button>
+        <button type="button" className="btn ghost" onClick={() => setIssues(l => [...l, blankIssue()])}>➕ Add another issue</button>
       </div>
 
       <div className="card">
@@ -132,6 +155,17 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <label>Discussion notes</label>
         <textarea rows={4} value={notes} maxLength={8000} onChange={e => setNotes(e.target.value)} placeholder="What was discussed and agreed…" />
         <label className="check"><input type="checkbox" checked={letter} onChange={e => setLetter(e.target.checked)} /> ✉️ A letter has been issued</label>
+      </div>
+
+      <div className="card">
+        <h2><span className="num">5</span>Documents <small className="inl">(optional)</small></h2>
+        <p className="hint">Attach the letter, scans or evidence. They are saved with the case.</p>
+        {files.map((f, k) => (
+          <div className="filerow" key={k}><span className="iicon">📄</span><div className="grow"><div className="fname">{f.name}</div><small>{fmtSize(f.size)}</small></div>
+            <button type="button" className="btn x" onClick={() => setFiles(l => l.filter((_, j) => j !== k))}>Remove</button></div>
+        ))}
+        <label className="drop">📎 Choose files (PDF, image, Word, Excel · up to 10 MB each)
+          <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setFiles(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
       </div>
 
       </div>

@@ -13,12 +13,13 @@ export default function Login({ onLogin }) {
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
   return (
-    <div className="center hero">
+    <div className="center loginhero">
       <form className="card login" onSubmit={submit}>
-        <div className="logo">🕊️</div>
-        <h1>Church Case Desk</h1>
+        <img className="loginlogo" src="/logo.png" alt="Addis Ababa Diocese Media" />
+        <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>
+        <h1>Case Desk</h1>
         <p className="muted">Welcome! Please sign in to continue.</p>
-        <label>Username</label><input value={username} onChange={e => setU(e.target.value)} autoFocus />
+        <label>Username</label><input value={username} onChange={e => setU(e.target.value)} autoFocus autoCapitalize="none" />
         <label>Password</label><input type="password" value={password} onChange={e => setP(e.target.value)} />
         {err && <div className="err">{err}</div>}
         <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>

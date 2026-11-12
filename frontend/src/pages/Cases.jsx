@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
-import { STATUS, CATEGORY, WORKING, fmtDate, initial, fmtCode, names, copyText } from '../ui.js'
+import { api, upload, download } from '../api.js'
+import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff } from '../ui.js'
 
-export default function Cases({ openId, setOpenId, goNew, fresh }) {
-  if (openId) return <CaseDetail id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
-  return <CaseList onOpen={setOpenId} goNew={goNew} />
+export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
+  if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
+  return <CaseList key={initialQuery} me={me} onOpen={setOpenId} goNew={goNew} initialQuery={initialQuery} />
 }
 
-function CaseList({ onOpen, goNew }) {
-  const [q, setQ] = useState('')
+function CaseList({ me, onOpen, goNew, initialQuery }) {
+  const [q, setQ] = useState(initialQuery || '')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ items: [], total: 0, size: 12 })
@@ -32,7 +32,7 @@ function CaseList({ onOpen, goNew }) {
   const pages = Math.max(1, Math.ceil(data.total / data.size))
   const tiles = [
     { key: '', label: 'All cases', n: sum?.total, icon: '📚' },
-    { key: 'OPEN', label: 'Open', n: sum?.open, icon: '🟣' },
+    { key: 'OPEN', label: 'Open', n: sum?.open, icon: '🟦' },
     { key: 'REFERRED', label: 'Referred', n: sum?.referred, icon: '➡️' },
     { key: 'COURT', label: 'In court', n: sum?.court, icon: '⚖️' },
     { key: 'RESOLVED', label: 'Resolved', n: sum?.resolved, icon: '✅' },
@@ -41,7 +41,7 @@ function CaseList({ onOpen, goNew }) {
   return (
     <>
       <div className="head"><div><h1>Cases</h1><p className="muted">Every report and request that came to the desk.</p></div>
-        <button className="btn" onClick={goNew}>➕ Register case</button></div>
+        {isStaff(me.role) && <button className="btn" onClick={goNew}>➕ Register case</button>}</div>
       {err && <div className="err">{err}</div>}
       <div className="tiles">
         {tiles.map(t => (
@@ -50,7 +50,7 @@ function CaseList({ onOpen, goNew }) {
           </button>
         ))}
       </div>
-      <input className="search" placeholder="🔍 Search by name, church or case code…" value={q} onChange={e => setQ(e.target.value)} />
+      <input className="search" placeholder="Filter this list by name, church or case code…" value={q} onChange={e => setQ(e.target.value)} />
       <div className={loading ? 'fade' : ''}>
         {data.items.map(c => (
           <button key={c.id} className={'case ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
@@ -61,7 +61,7 @@ function CaseList({ onOpen, goNew }) {
               {c.subjects.length > 0 && <small className="about">👤 About: {names(c.subjects)}</small>}
               <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
             </div>
-            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{c.issueCount} issue{c.issueCount === 1 ? '' : 's'}{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small></div>
+            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{c.resolvedCount}/{c.issueCount} resolved{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small></div>
           </button>
         ))}
         {!loading && !data.items.length && (
@@ -93,30 +93,190 @@ function PersonRow({ p }) {
   )
 }
 
-function CaseDetail({ id, fresh, onBack, onOpen }) {
+function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
+  const [panel, setPanel] = useState(null) // 'refer' | 'resolve' | 'court'
+  const suggested = departments.find(d => d.handlesCategory === i.category)
+  const [dept, setDept] = useState(i.departmentId || suggested?.id || '')
+  const [ret, setRet] = useState(addDays(todayStr(), 7))
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { if (!dept && suggested) setDept(suggested.id) }, [suggested]) // eslint-disable-line react-hooks/exhaustive-deps
+  const st = ISSUE_STATUS[i.status]
+  const done = i.status === 'RESOLVED'
+  const desk = ['ADMIN', 'OFFICER', 'RECEPTION'].includes(me.role)
+  const canRefer = desk && !done
+  const canResolve = !done && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId))
+  const canCourt = ['ADMIN', 'OFFICER'].includes(me.role) && !done && i.status !== 'COURT'
+  const d = i.returnOn ? dayDiff(i.returnOn) : null
+
+  const run = async (path, body) => {
+    setBusy(true); setErr('')
+    try { onChange(await api(`/cases/${c.id}/issues/${i.id}/${path}`, { method: 'POST', body })); setPanel(null); setNote('') }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const open = p => { setPanel(panel === p ? null : p); setNote('') }
+
+  return (
+    <div className="issue-row">
+      <div className="iicon">{CATEGORY[i.category].icon}</div>
+      <div className="issue-body">
+        <div className="ihead"><b>{k + 1}. {CATEGORY[i.category].label}</b><span className={'badge ' + st.cls}>{st.icon} {st.label}</span>
+          {i.departmentName && <span className="idept">🏢 {i.departmentName}</span>}
+          {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 Returns {fmtDay(i.returnOn)}{d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : ''}</span>}</div>
+        <p>{i.description || <span className="muted">No detail written yet.</span>}</p>
+        {done && <div className="resbox">✅ Resolved {ago(i.resolvedAt)}{i.departmentName ? ' by ' + i.departmentName : ''} (@{i.resolvedBy}){i.resolutionNote ? ' — ' + i.resolutionNote : ''}</div>}
+        {i.courtAt && (
+          <div className="courtbox">⚖️ In court since {fmtDate(i.courtAt)} ·{' '}
+            {i.courtAckAt ? <b>acknowledged by @{i.courtAckBy}</b> : <b className="warn">waiting for the admin to acknowledge</b>}
+            {me.role === 'ADMIN' && !i.courtAckAt && <> <button className="btn sm gold" style={{ margin: '0 0 0 8px' }} disabled={busy} onClick={() => run('acknowledge')}>🖊️ Acknowledge</button></>}
+          </div>
+        )}
+        <div className="iact">
+          {canRefer && <button className="btn ghost sm" onClick={() => open('refer')}>{i.departmentId ? '🔁 Send to another department' : '📤 Send to department'}</button>}
+          {canResolve && <button className="btn ok sm" onClick={() => open('resolve')}>✅ Mark resolved</button>}
+          {canCourt && <button className="btn court sm" onClick={() => open('court')}>⚖️ Take to court</button>}
+        </div>
+        {panel === 'refer' && (
+          <div className="panel">
+            <div className="two">
+              <div><label>Department</label>
+                <select value={dept} onChange={e => setDept(e.target.value)}>
+                  <option value="">Choose…</option>
+                  {departments.filter(x => x.active).map(x => <option key={x.id} value={x.id}>{x.name}{x.id === suggested?.id ? ' ★ suggested' : ''}</option>)}
+                </select></div>
+              <div><label>Person comes back on</label><input type="date" min={todayStr()} value={ret} onChange={e => setRet(e.target.value)} /></div>
+            </div>
+            <label>Note for the department (optional)</label>
+            <textarea rows={2} value={note} maxLength={2000} onChange={e => setNote(e.target.value)} />
+            <div className="iact"><button className="btn sm" disabled={busy || !dept} onClick={() => run('refer', { departmentId: Number(dept), returnOn: ret || null, note })}>{busy ? 'Sending…' : '📤 Send now'}</button>
+              <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
+            <small>The department is notified straight away, and the person will show in the door queue on that day.</small>
+          </div>
+        )}
+        {panel === 'resolve' && (
+          <div className="panel">
+            <label>What was done? (the desk and admin are notified)</label>
+            <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} />
+            <div className="iact"><button className="btn ok sm" disabled={busy} onClick={() => run('resolve', { note })}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button>
+              <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
+          </div>
+        )}
+        {panel === 'court' && (
+          <div className="panel">
+            <label>Court details (optional)</label>
+            <textarea rows={2} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} placeholder="Court, case number, next hearing…" />
+            <div className="iact"><button className="btn court sm" disabled={busy} onClick={() => run('court', { note })}>{busy ? 'Saving…' : '⚖️ Mark as in court'}</button>
+              <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
+            <small>The admin is notified and must acknowledge it.</small>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Files({ c, me, onChange, setErr }) {
+  const [busy, setBusy] = useState(false)
+  const add = async e => {
+    const picked = [...e.target.files]; e.target.value = ''
+    if (!picked.length) return
+    setBusy(true); setErr('')
+    const failed = []
+    for (const f of picked) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
+    try { onChange(await api('/cases/' + c.id)) } catch { /* list refresh failed; next open will show it */ }
+    if (failed.length) setErr(failed.join(' · '))
+    setBusy(false)
+  }
+  const remove = async f => {
+    if (!confirm('Remove “' + f.originalName + '”?')) return
+    try { await api('/files/' + f.id, { method: 'DELETE' }); onChange(await api('/cases/' + c.id)) } catch (x) { setErr(x.message) }
+  }
+  return (
+    <div className="card">
+      <h2>Documents <span className="count">{c.files.length}</span></h2>
+      {c.files.length === 0 && <p className="muted">No files yet. Add the letter, scans or evidence.</p>}
+      {c.files.map(f => (
+        <div className="filerow" key={f.id}>
+          <span className="iicon">📄</span>
+          <div className="grow"><div className="fname">{f.originalName}</div><small>{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
+          <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button>
+          {['ADMIN', 'OFFICER'].includes(me.role) && <button className="btn x" onClick={() => remove(f)} aria-label="Remove file">🗑️</button>}
+        </div>
+      ))}
+      <label className="drop">{busy ? 'Uploading…' : '📎 Add files (PDF, image, Word, Excel · up to 10 MB each)'}
+        <input type="file" multiple disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={add} /></label>
+    </div>
+  )
+}
+
+function Timeline({ c, onChange, setErr }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const add = async e => {
+    e.preventDefault(); if (!text.trim()) return
+    setBusy(true); setErr('')
+    try { onChange(await api(`/cases/${c.id}/notes`, { method: 'POST', body: { note: text } })); setText('') } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <div className="card">
+      <h2>History</h2>
+      <form onSubmit={add} style={{ marginBottom: 16 }}>
+        <textarea rows={2} value={text} maxLength={4000} placeholder="Add a note to the history…" onChange={e => setText(e.target.value)} />
+        <button className="btn sm" disabled={busy || !text.trim()} style={{ marginTop: 8 }}>📝 Add note</button>
+      </form>
+      <ul className="timeline">
+        {c.events.map(e => (
+          <li key={e.id}>
+            <span className="tdot">{EVENT_ICON[e.type] || '•'}</span>
+            <div className="grow"><p>{e.message}</p><small>@{e.actor} · {fmtDate(e.createdAt)}</small></div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function CaseDetail({ me, id, fresh, onBack, onOpen }) {
   const [c, setC] = useState(null)
   const [err, setErr] = useState('')
+  const [fatal, setFatal] = useState('')
   const [copied, setCopied] = useState(false)
-  useEffect(() => { setC(null); api('/cases/' + id).then(setC).catch(e => setErr(e.message)) }, [id])
+  const [departments, setDepartments] = useState([])
+  const desk = isStaff(me.role) && me.role !== 'DEPARTMENT'
 
-  if (err) return <><button className="btn ghost" onClick={onBack}>← Back</button><div className="err">{err}</div></>
+  useEffect(() => { setC(null); setFatal(''); api('/cases/' + id).then(setC).catch(e => setFatal(e.message)) }, [id])
+  useEffect(() => { api('/departments').then(setDepartments).catch(() => {}) }, [])
+
+  if (fatal) return <><button className="btn ghost" onClick={onBack}>← Back</button><div className="err">{fatal}</div></>
   if (!c) return <div className="muted">Loading…</div>
   const st = STATUS[c.status]
   const copy = async () => { if (await copyText(fmtCode(c.code))) { setCopied(true); setTimeout(() => setCopied(false), 1800) } }
+  const resolved = c.issues.filter(i => i.status === 'RESOLVED').length
+  const comingBack = c.issues.some(i => i.returnOn && i.status !== 'RESOLVED')
+  const setLetter = async issued => { setErr(''); try { setC(await api(`/cases/${c.id}/letter`, { method: 'PUT', body: { issued } })) } catch (x) { setErr(x.message) } }
+  const arrived = async () => { setErr(''); try { setC(await api(`/cases/${c.id}/arrived`, { method: 'POST' })) } catch (x) { setErr(x.message) } }
 
   return (
     <>
       <button className="btn ghost back" onClick={onBack}>← All cases</button>
-      {fresh && <div className="fresh">✅ <b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.</div>}
+      {fresh && (
+        <div className="fresh">✅ <b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.
+          {fresh.failed?.length > 0 && <div className="warn" style={{ marginTop: 6 }}>⚠️ These files could not be uploaded: {fresh.failed.join(', ')}. Add them again below.</div>}
+        </div>
+      )}
+      {err && <div className="err">{err}</div>}
       <div className={'hero-card ' + st.cls}>
         <div className="grow">
           <small className="onhero">Case code</small>
           <div className="bigcode">{fmtCode(c.code)}</div>
           <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ` (group of ${c.complainants.length})` : ''}</div>
+          <div className="onhero" style={{ marginTop: 6 }}>{resolved} of {c.issues.length} issue{c.issues.length === 1 ? '' : 's'} resolved</div>
+          <div className="progress"><i style={{ width: (c.issues.length ? (resolved / c.issues.length) * 100 : 0) + '%' }} /></div>
         </div>
         <div className="heroside">
           <span className="badge light">{st.icon} {st.label}</span>
           <button className="btn light sm" onClick={copy}>{copied ? '✔ Copied' : '📋 Copy code'}</button>
+          {desk && comingBack && <button className="btn gold sm" onClick={arrived}>🚪 Person is here</button>}
         </div>
       </div>
 
@@ -124,19 +284,16 @@ function CaseDetail({ id, fresh, onBack, onOpen }) {
         <div>
           <div className="card">
             <h2>Issues <span className="count">{c.issues.length}</span></h2>
-            {c.issues.map((i, k) => (
-              <div className="issue-row" key={i.id}>
-                <div className="iicon">{CATEGORY[i.category].icon}</div>
-                <div><b>{k + 1}. {CATEGORY[i.category].label}</b><p>{i.description || <span className="muted">No detail written yet.</span>}</p></div>
-              </div>
-            ))}
+            {c.issues.map((i, k) => <IssueCard key={i.id} i={i} k={k} c={c} me={me} departments={departments} onChange={setC} setErr={setErr} />)}
           </div>
           <div className="card">
             <h2>Discussion notes</h2>
             <p className="notes">{c.discussionNotes || <span className="muted">No notes were written.</span>}</p>
             <span className={'pill ' + (c.letterIssued ? 'yes' : 'no')}>{c.letterIssued ? '✉️ Letter issued' : '✉️ Letter not issued yet'}</span>
+            {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
             <small style={{ marginTop: 12 }}>Registered {fmtDate(c.createdAt)} by @{c.createdBy}</small>
           </div>
+          <Timeline c={c} onChange={setC} setErr={setErr} />
         </div>
         <div>
           <div className="card">
@@ -148,6 +305,7 @@ function CaseDetail({ id, fresh, onBack, onOpen }) {
             {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
             {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
+          <Files c={c} me={me} onChange={setC} setErr={setErr} />
           <div className="card">
             <h2>Related cases</h2>
             {c.relatedCases.length === 0 && <p className="muted">None of these people are in another case.</p>}

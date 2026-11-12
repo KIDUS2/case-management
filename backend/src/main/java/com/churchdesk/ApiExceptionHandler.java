@@ -2,6 +2,7 @@ package com.churchdesk;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
@@ -15,5 +16,10 @@ public class ApiExceptionHandler {
                 .map(f -> f.getField() + " " + f.getDefaultMessage())
                 .orElse("Invalid request");
         return ResponseEntity.badRequest().body(Map.of("message", msg));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> tooBig(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(413).body(Map.of("message", "That file is too large (the limit is 10 MB)"));
     }
 }

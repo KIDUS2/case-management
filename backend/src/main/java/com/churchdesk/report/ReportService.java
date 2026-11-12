@@ -2,6 +2,8 @@ package com.churchdesk.report;
 
 import com.churchdesk.cases.CaseStatus;
 import com.churchdesk.cases.IssueCategory;
+import com.churchdesk.cases.IssueStatus;
+import com.churchdesk.cases.Times;
 import com.churchdesk.cases.PartyRole;
 import com.churchdesk.cases.WorkingStatus;
 import jakarta.persistence.EntityManager;
@@ -25,7 +27,10 @@ public class ReportService {
     public record DayCount(String date, long count) {}
     public record Totals(long cases, long people, long returningPeople, long churches, long letters,
                          long churchMembers, long reportedOn, long repeatReportedOn) {}
-    public record Overview(Totals totals, Map<String, Long> byStatus, Map<String, Long> byCategory,
+    /** Work still to do: people expected at the door, and court cases the admin has not yet acknowledged. */
+    public record Flow(long expectedToday, long overdue, long courtUnacknowledged, long waitingInDepartments) {}
+    public record DeptCount(String name, long pending, long resolved) {}
+    public record Overview(Totals totals, Flow flow, List<DeptCount> byDepartment, Map<String, Long> byStatus, Map<String, Long> byCategory,
                            List<NameCount> topChurches, List<DayCount> daily) {}
 
     @PersistenceContext private EntityManager em;
@@ -71,7 +76,26 @@ public class ReportService {
             perDay.merge(at.atZone(ZONE).toLocalDate(), 1L, Long::sum);
         List<DayCount> daily = perDay.entrySet().stream().map(e -> new DayCount(e.getKey().toString(), e.getValue())).toList();
 
-        return new Overview(new Totals(cases, people, returning, churches, letters, churchMembers, reportedOn, repeatReportedOn), byStatus, byCategory, top, daily);
+        LocalDate day = Times.today();
+        long expectedToday = em.createQuery("select count(distinct i.churchCase.id) from CaseIssue i where i.returnOn = :d and i.status <> :r", Long.class)
+                .setParameter("d", day).setParameter("r", IssueStatus.RESOLVED).getSingleResult();
+        long overdue = em.createQuery("select count(distinct i.churchCase.id) from CaseIssue i where i.returnOn < :d and i.status <> :r", Long.class)
+                .setParameter("d", day).setParameter("r", IssueStatus.RESOLVED).getSingleResult();
+        long courtOpen = count("select count(i) from CaseIssue i where i.courtAt is not null and i.courtAckAt is null");
+        long waiting = em.createQuery("select count(i) from CaseIssue i where i.status = :s", Long.class)
+                .setParameter("s", IssueStatus.REFERRED).getSingleResult();
+
+        Map<String, long[]> dept = new LinkedHashMap<>();
+        for (String name : em.createQuery("select d.name from Department d where d.active = true order by d.name", String.class).getResultList())
+            dept.put(name, new long[]{0, 0});
+        for (Object[] row : em.createQuery("select d.name, i.status, count(i) from CaseIssue i join i.department d group by d.name, i.status", Object[].class).getResultList()) {
+            long[] v = dept.computeIfAbsent((String) row[0], k -> new long[]{0, 0});
+            if (row[1] == IssueStatus.RESOLVED) v[1] += (Long) row[2]; else v[0] += (Long) row[2];
+        }
+        List<DeptCount> byDept = dept.entrySet().stream().map(e -> new DeptCount(e.getKey(), e.getValue()[0], e.getValue()[1])).toList();
+
+        return new Overview(new Totals(cases, people, returning, churches, letters, churchMembers, reportedOn, repeatReportedOn),
+                new Flow(expectedToday, overdue, courtOpen, waiting), byDept, byStatus, byCategory, top, daily);
     }
 
     private long count(String jpql) { return em.createQuery(jpql, Long.class).getSingleResult(); }

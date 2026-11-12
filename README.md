@@ -15,10 +15,12 @@ docker-compose.yml   PostgreSQL for local development
 
 First login: **admin / admin123** (change it under Users). Set `JWT_SECRET` in production.
 
-## Roadmap (one feature at a time)
-- [x] 1. Login + user management (ADMIN, RECEPTION, OFFICER)
-- [x] 2. Churches + cases (register, list, detail), short case code, groups of people reporting, church members, people a case is about
-- [x] 3. Admin dashboard with reports
-- [ ] 4. Case flow: referral, return week, court acknowledgment, history
-- [ ] 5. File attachments
-- [ ] 6. Door queue / expected visitors
+## Features
+- Roles: ADMIN, OFFICER, RECEPTION, DEPARTMENT (department staff see only the issues sent to their own department)
+- Configurable departments (Departments page), each can be linked to the kind of issue it normally handles
+- Per-issue flow: with the desk -> sent to a department (with a return date) -> resolved, or taken to court (admin acknowledges)
+- Notifications (bell + page): department is told when an issue arrives; the person who registered the case and the admins are told when it is resolved
+- Door queue: who is expected back today / overdue, with an "Arrived" button
+- Department inbox, case history timeline, file attachments (stored in `./uploads`, set `app.storage.dir` to change)
+- One global search (name, church or case code)
+- Upgrading: migration `V4` runs automatically on start. Back up the database first.
