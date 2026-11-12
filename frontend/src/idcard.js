@@ -20,7 +20,7 @@ export async function printIdCard(e) {
   let photo = ''
   if (e.hasPhoto) { try { photo = await toDataUrl(await blob(`/employees/${e.id}/photo`)) } catch { /* the card still prints without it */ } }
   const asset = async u => { try { return await toDataUrl(await (await fetch(u)).blob()) } catch { return '' } }
-  const [logo, cross] = await Promise.all([asset('/logo.png'), asset('/ewtc-cross.svg')])
+  const [logo, cross] = await Promise.all([asset('/logo.png'), asset('/ewtc-logo.png')])
   const qr = await QRCode.toDataURL(profileLink(e), { margin: 0, width: 300, errorCorrectionLevel: 'M' })
   const sex = e.gender === 'MALE' ? 'Male · ወንድ' : e.gender === 'FEMALE' ? 'Female · ሴት' : '—'
   const rank = RANKS[e.spiritualRank] || ''
@@ -32,7 +32,7 @@ export async function printIdCard(e) {
   body{margin:0;font-family:"Noto Sans Ethiopic","Nyala",system-ui,sans-serif;background:#e9eef7;color:#12213f;display:flex;flex-direction:column;align-items:center;gap:14mm;padding:12mm 0}
   .card{width:85.6mm;height:54mm;border-radius:3.2mm;background:#fff;position:relative;overflow:hidden;box-shadow:0 2px 14px #0003;border:.3mm solid #c9d4ea;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .band{height:13.5mm;background:linear-gradient(100deg,#173f8f,#2f6fd6);color:#fff;display:flex;align-items:center;gap:2mm;padding:0 2.4mm}
-  .band img{width:9.6mm;height:9.6mm;object-fit:contain;background:#fff;border-radius:50%;padding:.4mm}
+  .band img{width:11mm;height:11mm;object-fit:contain;background:#fff;border-radius:50%;padding:.3mm}
   .band .t{flex:1;text-align:center;line-height:1.15}
   .band .t b{display:block;font-size:2.55mm}.band .t span{display:block;font-size:2.05mm;opacity:.95}
   .stripe{position:absolute;left:0;right:0;bottom:0;height:5.6mm;background:#f2b705;color:#3b2c00;display:flex;align-items:center;justify-content:space-between;padding:0 2.6mm;font-size:2mm;font-weight:700;letter-spacing:.02em}
