@@ -67,9 +67,134 @@ function Docs({ e, setErr }) {
   )
 }
 
+const LEVELS = {
+  SPIRITUAL: ['Sunday school', 'Deacon school', 'Zema (chant)', 'Qene (poetry)', 'Aqwaqwam (liturgical movement)', 'Scripture and commentary', 'Theological college diploma', 'Theological BA', 'Theological MA', 'Monastic training', 'Other'],
+  SECULAR: ['Grade 8', 'Grade 12', 'Certificate', 'Diploma', 'Bachelor’s degree', 'Master’s degree', 'PhD', 'Other'],
+}
+const yr = n => (n ? String(n) : '')
+
+/** Education history, spiritual and secular, saved on the employee. */
+function EducationCard({ e, canWrite, setErr }) {
+  const [list, setList] = useState(null)
+  const [form, setForm] = useState(null)
+  const load = () => api(`/employees/${e.id}/education`).then(setList).catch(x => setErr(x.message))
+  useEffect(() => { load() }, [e.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const start = kind => setForm({ kind, level: '', field: '', institution: '', startYear: '', endYear: '', completed: true, notes: '' })
+  const num = v => (v === '' || v == null ? null : Number(v))
+  const save = async ev => {
+    ev.preventDefault(); setErr('')
+    const body = { ...form, startYear: num(form.startYear), endYear: num(form.endYear) }
+    try { setList(form.id ? await api('/employee-education/' + form.id, { method: 'PUT', body }) : await api(`/employees/${e.id}/education`, { method: 'POST', body })); setForm(null) } catch (x) { setErr(x.message) }
+  }
+  const remove = async r => {
+    if (!(await askConfirm(r.level || r.field || r.institution, { title: 'Remove this record?', confirmText: 'Remove', danger: true }))) return
+    try { setList(await api('/employee-education/' + r.id, { method: 'DELETE' })) } catch (x) { setErr(x.message) }
+  }
+  if (!list) return null
+  const f = k => ev => setForm({ ...form, [k]: ev.target.value })
+  const group = (kind, title, icon) => {
+    const rows = list.filter(r => r.kind === kind)
+    return (
+      <div key={kind} style={{ marginBottom: 14 }}>
+        <h3 className="sect" style={{ marginTop: 6 }}>{icon} {title}</h3>
+        {rows.map(r => (
+          <div className="edu" key={r.id}>
+            <div className="grow">
+              <b>{r.level || r.field || r.institution}</b>
+              <small>{[r.level && r.field ? r.field : '', r.institution].filter(Boolean).join(' · ')}</small>
+              <small>{r.startYear || r.endYear ? [yr(r.startYear), r.completed ? yr(r.endYear) : t('studying')].filter(Boolean).join(' – ') : ''}{!r.completed && !r.startYear ? t('studying') : ''}</small>
+              {r.notes && <small>{r.notes}</small>}
+            </div>
+            {canWrite && <><button className="btn x" title="Edit" onClick={() => setForm({ ...r, startYear: yr(r.startYear), endYear: yr(r.endYear), notes: r.notes || '', level: r.level || '', field: r.field || '', institution: r.institution || '' })}>✏️</button>
+              <button className="btn x" title="Remove" onClick={() => remove(r)}>🗑️</button></>}
+          </div>
+        ))}
+        {rows.length === 0 && <p className="muted" style={{ margin: '2px 0 6px' }}>Nothing recorded yet.</p>}
+        {canWrite && !form && <button className="btn ghost sm" onClick={() => start(kind)}>➕ Add</button>}
+      </div>
+    )
+  }
+  return (
+    <div className="card">
+      <h2>Education</h2>
+      {group('SPIRITUAL', 'Spiritual education', '⛪')}
+      {group('SECULAR', 'Secular education', '🎓')}
+      {form && (
+        <form className="panel" onSubmit={save}>
+          <h3 className="sect" style={{ marginTop: 0 }}>{form.id ? 'Edit' : 'Add'} · {form.kind === 'SPIRITUAL' ? 'Spiritual education' : 'Secular education'}</h3>
+          <datalist id="edu-levels">{LEVELS[form.kind].map(l => <option key={l} value={l} />)}</datalist>
+          <div className="grid">
+            <div><label>Level or course</label><input list="edu-levels" value={form.level} onChange={f('level')} maxLength={120} autoFocus /></div>
+            <div><label>Field of study</label><input value={form.field} onChange={f('field')} maxLength={160} /></div>
+            <div className="span"><label>School or college</label><input value={form.institution} onChange={f('institution')} maxLength={200} /></div>
+            <div><label>Start year</label><input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={form.startYear} onChange={f('startYear')} placeholder="2010" /></div>
+            <div><label>End year</label><input inputMode="numeric" pattern="[0-9]{4}" maxLength={4} value={form.endYear} onChange={f('endYear')} placeholder="2014" /></div>
+          </div>
+          <label className="check"><input type="checkbox" checked={form.completed} onChange={ev => setForm({ ...form, completed: ev.target.checked })} /> Completed</label>
+          <label>Notes</label><input value={form.notes} onChange={f('notes')} maxLength={1000} />
+          <div className="iact"><button className="btn sm">Save</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>Cancel</button></div>
+        </form>
+      )}
+    </div>
+  )
+}
+
+/** Where the employee served and in which role, newest first. Moving churches in the profile adds to it automatically. */
+function ServiceCard({ e, churches, canWrite, setErr }) {
+  const [list, setList] = useState(null)
+  const [form, setForm] = useState(null)
+  const load = () => api(`/employees/${e.id}/service`).then(setList).catch(x => setErr(x.message))
+  useEffect(() => { load() }, [e.id, e.churchName, e.position]) // eslint-disable-line react-hooks/exhaustive-deps
+  const save = async ev => {
+    ev.preventDefault(); setErr('')
+    const body = { place: form.place, position: form.position, startDate: form.startDate || null, endDate: form.endDate || null, notes: form.notes }
+    try { setList(form.id ? await api('/employee-service/' + form.id, { method: 'PUT', body }) : await api(`/employees/${e.id}/service`, { method: 'POST', body })); setForm(null) } catch (x) { setErr(x.message) }
+  }
+  const remove = async r => {
+    if (!(await askConfirm(r.place, { title: 'Remove this record?', confirmText: 'Remove', danger: true }))) return
+    try { setList(await api('/employee-service/' + r.id, { method: 'DELETE' })) } catch (x) { setErr(x.message) }
+  }
+  if (!list) return null
+  const f = k => ev => setForm({ ...form, [k]: ev.target.value })
+  return (
+    <div className="card">
+      <h2>Service history <span className="count">{list.length}</span></h2>
+      <datalist id="svc-places">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
+      <ol className="timeline svc">
+        {list.map(r => (
+          <li key={r.id}>
+            <span className="tdot">{r.endDate ? '⛪' : '📍'}</span>
+            <div className="grow">
+              <b>{r.place}</b> {!r.endDate && <span className="badge s-ok">Current</span>}
+              <small>{[r.position, [r.startDate ? fmtDay(r.startDate) : '', r.endDate ? fmtDay(r.endDate) : r.startDate ? t('now') : ''].filter(Boolean).join(' → ')].filter(Boolean).join(' · ')}</small>
+              {r.notes && <small>{r.notes}</small>}
+            </div>
+            {canWrite && <><button className="btn x" title="Edit" onClick={() => setForm({ ...r, position: r.position || '', startDate: r.startDate || '', endDate: r.endDate || '', notes: r.notes || '' })}>✏️</button>
+              <button className="btn x" title="Remove" onClick={() => remove(r)}>🗑️</button></>}
+          </li>
+        ))}
+      </ol>
+      {list.length === 0 && <p className="muted">No service recorded yet.</p>}
+      {canWrite && !form && <button className="btn ghost sm" onClick={() => setForm({ place: '', position: '', startDate: '', endDate: '', notes: '' })}>➕ Add a place of service</button>}
+      {form && (
+        <form className="panel" onSubmit={save}>
+          <div className="grid">
+            <div><label>Church or office</label><input list="svc-places" value={form.place} onChange={f('place')} required maxLength={200} autoFocus /></div>
+            <div><label>Position</label><input value={form.position} onChange={f('position')} maxLength={160} /></div>
+            <div><label>From</label><input type="date" value={form.startDate} onChange={f('startDate')} /></div>
+            <div><label>Until (leave empty if still serving)</label><input type="date" value={form.endDate} onChange={f('endDate')} /></div>
+          </div>
+          <label>Notes</label><input value={form.notes} onChange={f('notes')} maxLength={1000} />
+          <div className="iact"><button className="btn sm">Save</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>Cancel</button></div>
+        </form>
+      )}
+    </div>
+  )
+}
+
 function Row({ k, v }) { return v ? <div className="kv"><span>{k}</span><b>{v}</b></div> : null }
 
-function Profile({ e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases, setErr, setOk }) {
+function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases, setErr, setOk }) {
   const [e, setE] = useState(e0)
   const [ver, setVer] = useState(0)
   useEffect(() => setE(e0), [e0])
@@ -132,6 +257,8 @@ function Profile({ e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases,
             <p>{t('{a} cases in total · {b} still active · {c} about this person', { a: e.totalCases, b: e.openCases, c: e.complaintsAgainst })}</p>
             {e.notes && <><h2 style={{ marginTop: 14 }}>Notes</h2><p className="notes">{e.notes}</p></>}
           </div>
+          <EducationCard e={e} canWrite={canWrite} setErr={setErr} />
+          <ServiceCard e={e} churches={churches} canWrite={canWrite} setErr={setErr} />
           {canDocs && <Docs e={e} setErr={setErr} />}
         </div>
       </div>
@@ -210,7 +337,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
   if (view && !form) return (
     <>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
-      <Profile e0={view} canWrite={canWrite} canDocs={canWrite} onBack={() => { setView(null); setOk(''); load() }} onEdit={edit} onChanged={load}
+      <Profile churches={churches} e0={view} canWrite={canWrite} canDocs={canWrite} onBack={() => { setView(null); setOk(''); load() }} onEdit={edit} onChanged={load}
         onSeeCases={name => onSeeCases && onSeeCases(name)} setErr={setErr} setOk={setOk} />
     </>
   )

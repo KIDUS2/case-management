@@ -437,3 +437,7 @@ aside::after{content:"";position:absolute;inset:auto 0 0 0;height:240px;backgrou
   .loginhero .login{margin-top:64px;padding:26px 20px 22px}.loginlogo{width:112px;height:112px;margin-top:-80px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.edu{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;margin-bottom:6px;border-radius:12px;background:color-mix(in srgb,var(--soft) 55%,transparent);border-left:3px solid var(--gold)}
+.edu b{display:block}
+.timeline.svc li{align-items:flex-start}

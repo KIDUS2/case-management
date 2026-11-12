@@ -47,9 +47,10 @@ public class EmployeeController {
     private final ChurchRepository churches;
     private final CasePartyRepository partyRepo;
     private final EmployeeFileRepository docs;
+    private final EmployeePostingRepository postings;
 
-    public EmployeeController(PersonRepository persons, ChurchRepository churches, CasePartyRepository partyRepo, EmployeeFileRepository docs) {
-        this.persons = persons; this.churches = churches; this.partyRepo = partyRepo; this.docs = docs;
+    public EmployeeController(PersonRepository persons, ChurchRepository churches, CasePartyRepository partyRepo, EmployeeFileRepository docs, EmployeePostingRepository postings) {
+        this.postings = postings; this.persons = persons; this.churches = churches; this.partyRepo = partyRepo; this.docs = docs;
     }
 
     @GetMapping @PreAuthorize(READ) @Transactional(readOnly = true)
@@ -83,15 +84,35 @@ public class EmployeeController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, p.getFullName() + " (mother: " + p.getMotherName() + ") is already registered, ID "
                     + (o.getEmployeeId() == null ? "-" : o.getEmployeeId()));
         });
-        return dto(persons.save(p));
+        Person saved = persons.save(p);
+        recordPosting(saved, null, null);
+        return dto(saved);
     }
 
     /** The ID number never changes after it is created. */
     @PutMapping("/{id}") @PreAuthorize(WRITE) @Transactional
     public EmployeeDto update(@PathVariable Long id, @Valid @RequestBody EmployeeRequest r) {
         Person p = find(id);
+        Long oldChurch = p.getChurch().getId();
+        String oldPosition = p.getPosition();
         apply(p, r, true);
-        return dto(persons.save(p));
+        p = persons.save(p);
+        recordPosting(p, oldChurch, oldPosition);
+        return dto(p);
+    }
+
+    /** Moving to another church, or taking another position, closes the current posting and opens a new one. */
+    private void recordPosting(Person p, Long oldChurchId, String oldPosition) {
+        if (p.getWorkingStatus() == WorkingStatus.CHURCH_MEMBER) return;
+        var open = postings.findFirstByPersonIdAndEndDateIsNullOrderByStartDateDescIdDesc(p.getId());
+        boolean same = open.isPresent() && oldChurchId != null && oldChurchId.equals(p.getChurch().getId())
+                && java.util.Objects.equals(oldPosition, p.getPosition());
+        if (same) return;
+        open.ifPresent(o -> { o.setEndDate(Times.today()); postings.save(o); });
+        EmployeePosting n = new EmployeePosting();
+        n.setPersonId(p.getId()); n.setPlace(p.getChurch().getName()); n.setPosition(p.getPosition());
+        n.setStartDate(oldChurchId == null && p.getHireDate() != null ? p.getHireDate() : Times.today());
+        postings.save(n);
     }
 
     /** A new card: same ID number, five more years. */
