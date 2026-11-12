@@ -308,6 +308,41 @@ function AccessCard({ c, setErr }) {
   )
 }
 
+function RelatedCard({ c, onOpen, onChange, setErr }) {
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const linked = new Set(c.linkedCaseIds || [])
+  const link = async e => {
+    e.preventDefault(); if (!code.trim()) return
+    setBusy(true); setErr('')
+    try { onChange(await api(`/cases/${c.id}/links`, { method: 'POST', body: { code: code.trim() } })); setCode(''); setOpen(false) } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const unlink = async o => { setErr(''); try { onChange(await api(`/cases/${c.id}/links/${o.id}`, { method: 'DELETE' })) } catch (x) { setErr(x.message) } }
+  return (
+    <div className="card">
+      <h2>Related cases {c.relatedCases.length > 0 && <span className="count">{c.relatedCases.length}</span>}</h2>
+      {c.relatedCases.length === 0 && <p className="muted">None of these people are in another case.</p>}
+      {c.relatedCases.map(o => (
+        <div key={o.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="mini" style={{ flex: 1 }} onClick={() => onOpen(o.id)}>
+            <span><b>{fmtCode(o.code)}</b><small>{names(o.complainants)}{o.subjects.length ? ' → ' + names(o.subjects) : ''}{linked.has(o.id) ? ' · 🔗' : ''}</small></span>
+            <span className={'badge ' + STATUS[o.status].cls}>{STATUS[o.status].label}</span>
+          </button>
+          {linked.has(o.id) && <button className="btn x" title="Remove link" onClick={() => unlink(o)}>✕</button>}
+        </div>
+      ))}
+      {open ? (
+        <form onSubmit={link} style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <input style={{ flex: '1 1 160px' }} placeholder="Case code, e.g. K7M-2QX" value={code} onChange={e => setCode(e.target.value)} autoFocus autoCapitalize="characters" />
+          <button className="btn sm" style={{ margin: 0 }} disabled={busy || !code.trim()}>🔗 Link</button>
+          <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={() => { setOpen(false); setCode('') }}>Cancel</button>
+        </form>
+      ) : <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setOpen(true)}>🔗 Link another case</button>}
+    </div>
+  )
+}
+
 function Files({ c, me, onChange, setErr }) {
   const [busy, setBusy] = useState(false)
   const add = async e => {
@@ -442,16 +477,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
           {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
           <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />
           <Files c={c} me={me} onChange={setC} setErr={setErr} />
-          <div className="card">
-            <h2>Related cases</h2>
-            {c.relatedCases.length === 0 && <p className="muted">None of these people are in another case.</p>}
-            {c.relatedCases.map(o => (
-              <button key={o.id} className="mini" onClick={() => onOpen(o.id)}>
-                <span><b>{fmtCode(o.code)}</b><small>{names(o.complainants)}{o.subjects.length ? ' → ' + names(o.subjects) : ''}</small></span>
-                <span className={'badge ' + STATUS[o.status].cls}>{STATUS[o.status].label}</span>
-              </button>
-            ))}
-          </div>
+          <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />
         </div>
       </div>
     </>

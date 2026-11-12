@@ -45,11 +45,13 @@ public class CaseService {
     private final CaseFileRepository fileRepo;
     private final CaseFlowService flow;
     private final AccessService access;
+    private final CaseLinkRepository linkRepo;
     private final SecureRandom random = new SecureRandom();
 
     public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
                        DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
-                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access) {
+                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo) {
+        this.linkRepo = linkRepo;
         this.cases = cases; this.partyRepo = partyRepo; this.persons = persons; this.churches = churches;
         this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow; this.access = access;
     }
@@ -267,6 +269,39 @@ public class CaseService {
         return toDetail(c);
     }
 
+    @Transactional
+    public CaseDetail linkCase(Long caseId, String code, AppUser actor) {
+        ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
+        access.assertCanView(c, actor);
+        String wanted = code.trim().toUpperCase().replace("-", "").replace(" ", "");
+        ChurchCase o = cases.findByCode(wanted).or(() -> cases.findByCode(code.trim().toUpperCase()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No case with the code " + code.trim()));
+        access.assertCanView(o, actor);
+        if (o.getId().equals(c.getId())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A case cannot be related to itself");
+        if (linkRepo.existsByCaseIdAndLinkedCaseId(c.getId(), o.getId()) || linkRepo.existsByCaseIdAndLinkedCaseId(o.getId(), c.getId()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "These cases are already linked");
+        CaseLink l = new CaseLink();
+        l.setCaseId(c.getId()); l.setLinkedCaseId(o.getId()); l.setLinkedBy(actor.getUsername());
+        linkRepo.save(l);
+        eventRepo.save(new CaseEvent(c.getId(), null, EventType.NOTE, "Linked to case " + o.getCode(), actor.getUsername()));
+        eventRepo.save(new CaseEvent(o.getId(), null, EventType.NOTE, "Linked to case " + c.getCode(), actor.getUsername()));
+        return toDetail(c);
+    }
+
+    @Transactional
+    public CaseDetail unlinkCase(Long caseId, Long otherId, AppUser actor) {
+        ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
+        access.assertCanView(c, actor);
+        for (CaseLink l : linkRepo.findByCaseIdOrLinkedCaseId(caseId, caseId)) {
+            if (l.getCaseId().equals(otherId) || l.getLinkedCaseId().equals(otherId)) {
+                linkRepo.delete(l);
+                String oc = cases.findById(otherId).map(ChurchCase::getCode).orElse("another case");
+                eventRepo.save(new CaseEvent(caseId, null, EventType.NOTE, "Link removed to case " + oc, actor.getUsername()));
+            }
+        }
+        return toDetail(c);
+    }
+
     private CaseDetail toDetail(ChurchCase c) {
         List<Person> complainants = peopleIn(c, PartyRole.COMPLAINANT);
         List<Person> subjects = peopleIn(c, PartyRole.SUBJECT);
@@ -276,8 +311,14 @@ public class CaseService {
         complainants.forEach(p -> ids.add(p.getId()));
         subjects.forEach(p -> ids.add(p.getId()));
         involved.forEach(p -> ids.add(p.id()));
-        List<CaseSummary> related = ids.isEmpty() ? List.of()
-                : cases.findRelated(ids, c.getId(), PageRequest.of(0, 10)).stream().map(this::toSummary).toList();
+        Map<Long, ChurchCase> relatedById = new LinkedHashMap<>();
+        Set<Long> linkedIds = new LinkedHashSet<>();
+        for (CaseLink l : linkRepo.findByCaseIdOrLinkedCaseId(c.getId(), c.getId())) {
+            Long other = l.getCaseId().equals(c.getId()) ? l.getLinkedCaseId() : l.getCaseId();
+            cases.findById(other).ifPresent(o -> { relatedById.put(o.getId(), o); linkedIds.add(o.getId()); });
+        }
+        if (!ids.isEmpty()) cases.findRelated(ids, c.getId(), PageRequest.of(0, 10)).forEach(o -> relatedById.putIfAbsent(o.getId(), o));
+        List<CaseSummary> related = relatedById.values().stream().map(this::toSummary).toList();
         List<IssueDto> issues = c.getIssues().stream().map(i -> new IssueDto(i.getId(), i.getCategory(), i.getDescription(), i.getStatus(),
                 i.getDepartment() == null ? null : i.getDepartment().getId(), i.getDepartment() == null ? null : i.getDepartment().getName(),
                 i.getReferredAt(), i.getReturnOn(), i.getResolutionNote(), i.getResolvedBy(), i.getResolvedAt(),
@@ -288,7 +329,7 @@ public class CaseService {
                 .map(f -> new FileDto(f.getId(), f.getIssueId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
-                subjects.stream().map(this::toPerson).toList(), involved, issues, related, events, files);
+                subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files);
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

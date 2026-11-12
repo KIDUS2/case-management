@@ -55,7 +55,7 @@ const AM = {
   'Discussion notes': 'የውይይት ማስታወሻ', 'No notes were written.': 'ምንም ማስታወሻ አልተጻፈም።', 'Letter issued': 'ደብዳቤ ተሰጥቷል', 'Letter not issued yet': 'ደብዳቤ ገና አልተሰጠም',
   'Undo': 'ቀልብስ', 'Mark as issued': 'እንደተሰጠ ምልክት አድርግ', 'History': 'ታሪክ', 'Add a note to the history…': 'በታሪኩ ላይ ማስታወሻ ጨምር…', 'Add note': 'ማስታወሻ ጨምር',
   'Reported by': 'ያቀረቡት', 'Who it is about': 'ጉዳዩ ስለ ማን ነው', 'No one in particular. This is a request or general matter.': 'የተለየ ሰው የለም። ይህ ጥያቄ ወይም አጠቃላይ ጉዳይ ነው።',
-  'Related cases': 'ተዛማጅ ጉዳዮች', 'None of these people are in another case.': 'ከእነዚህ ሰዎች ውስጥ በሌላ ጉዳይ ያለ የለም።',
+  'Related cases': 'ተዛማጅ ጉዳዮች', 'Link another case': 'ሌላ ጉዳይ አገናኝ', 'Case code, e.g. K7M-2QX': 'የጉዳይ ኮድ፣ ለምሳሌ K7M-2QX', 'Remove link': 'ግንኙነቱን አስወግድ', 'None of these people are in another case.': 'ከእነዚህ ሰዎች ውስጥ በሌላ ጉዳይ ያለ የለም።',
   'Other people involved': 'ሌሎች የተሳተፉ ሰዎች', 'No one else has been called in yet.': 'ገና ሌላ ሰው አልተጠራም።', 'Call in another person': 'ሌላ ሰው ጥራ',
   'Who are they to this case?': 'ከዚህ ጉዳይ ጋር ያላቸው ግንኙነት ምንድን ነው?', 'Called in / involved (witness, accountant, other employee…)': 'የተጠራ / የተሳተፈ (ምስክር፣ ሂሳብ ሠራተኛ፣ ሌላ ሠራተኛ…)',
   'Another person the case is about': 'ጉዳዩ የሚመለከተው ሌላ ሰው', 'Another person reporting': 'ጉዳይ የሚያቀርብ ሌላ ሰው', 'This person is': 'ይህ ሰው',

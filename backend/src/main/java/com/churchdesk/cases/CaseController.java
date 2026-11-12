@@ -105,6 +105,16 @@ public class CaseController {
         return service.addParty(id, r, current.get(auth));
     }
 
+    @PostMapping("/cases/{id}/links")
+    public CaseDetail link(@PathVariable Long id, @Valid @RequestBody LinkRequest r, Authentication auth) {
+        return service.linkCase(id, r.code(), current.get(auth));
+    }
+
+    @DeleteMapping("/cases/{id}/links/{otherId}")
+    public CaseDetail unlink(@PathVariable Long id, @PathVariable Long otherId, Authentication auth) {
+        return service.unlinkCase(id, otherId, current.get(auth));
+    }
+
     // ---- the door queue and department inbox ----
 
     @GetMapping("/queue") @PreAuthorize(STAFF)

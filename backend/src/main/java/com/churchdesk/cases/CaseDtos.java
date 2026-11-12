@@ -53,7 +53,9 @@ public final class CaseDtos {
 
     public record CaseDetail(Long id, String code, CaseStatus status, String discussionNotes, boolean letterIssued,
                              String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,
-                             List<IssueDto> issues, List<CaseSummary> relatedCases, List<EventDto> events, List<FileDto> files) {}
+                             List<IssueDto> issues, List<CaseSummary> relatedCases, List<Long> linkedCaseIds, List<EventDto> events, List<FileDto> files) {}
+
+    public record LinkRequest(@jakarta.validation.constraints.NotBlank String code) {}
 
     public record PageDto<T>(List<T> items, long total, int page, int size) {}
 
