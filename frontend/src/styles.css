@@ -487,3 +487,30 @@ aside::after{content:"";position:absolute;inset:auto 0 0 0;height:240px;backgrou
 
 .filepick{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:8px 0 14px}
 .filepick .drop{flex:1 1 240px;margin:0}
+
+/* ===== period filter, summary page, church loop ===== */
+.periodbar{display:grid;gap:10px}.periodbar.busy{opacity:.65;transition:opacity .15s}
+.period .chips{display:flex;flex-wrap:wrap;gap:8px}
+.daterange{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}.daterange label{display:grid;gap:4px;font-weight:600}.daterange input{min-height:44px}
+.sumfilters{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.sumfilters select,.sumfilters input{margin:0;min-height:44px}
+.sumhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.sumhead h2{margin:0}
+.tablewrap{overflow-x:auto;margin:12px -4px 0}
+.sumtable{width:100%;border-collapse:collapse;min-width:760px}
+.sumtable th{text-align:left;font-size:.82rem;color:var(--mute);font-weight:600;padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+.sumtable td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.sumtable tbody tr{cursor:pointer}.sumtable tbody tr:hover,.sumtable tbody tr:focus-visible{background:var(--soft);outline:0}
+.pending{border-left:4px solid var(--gold)}
+.pending .mini{width:100%}
+.inq{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:14px;padding:14px;margin:12px 0;background:var(--bg)}
+.inq.s-ref{border-left-color:var(--gold)}.inq.s-ok{border-left-color:var(--ok,#2d7a3e)}.inq.s-court{border-left-color:var(--court,#b23a2a)}
+.inqhead{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:8px}
+.inqstep{padding:10px 0;border-top:1px dashed var(--line)}.inqstep:first-of-type{border-top:0}
+.inqstep p{margin:6px 0;white-space:pre-wrap}
+.inqstep.decision.agree{background:color-mix(in srgb,#2d7a3e 9%,transparent);border-radius:10px;padding:10px}
+.inqstep.decision.disagree{background:color-mix(in srgb,#b23a2a 9%,transparent);border-radius:10px;padding:10px}
+.lfiles{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.lfile{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;cursor:pointer;max-width:100%}
+.lfile span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}.lfile:hover{border-color:var(--gold)}
+.loopform{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.loopform .btn{margin:0;justify-self:start}

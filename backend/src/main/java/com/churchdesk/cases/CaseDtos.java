@@ -42,7 +42,7 @@ public final class CaseDtos {
                            Instant courtAt, String courtAckBy, Instant courtAckAt) {}
 
     public record EventDto(Long id, Long issueId, EventType type, String message, String actor, Instant createdAt) {}
-    public record FileDto(Long id, Long issueId, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
+    public record FileDto(Long id, Long issueId, Long inquiryId, String stage, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
 
     public record CaseSummary(Long id, String code, List<String> complainants, List<String> subjects, String churchName,
                               CaseStatus status, int issueCount, int resolvedCount, List<IssueCategory> categories,

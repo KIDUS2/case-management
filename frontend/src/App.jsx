@@ -3,6 +3,7 @@ import { api } from './api.js'
 import { ROLES, NOTE_ICON } from './ui.js'
 import Login from './pages/Login.jsx'
 import Landing from './components/Landing.jsx'
+import Summary from './pages/Summary.jsx'
 import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
 import NewCase from './pages/NewCase.jsx'
@@ -28,6 +29,7 @@ const NAV = [
   { key: 'queue', icon: '🚪', label: 'Door queue', roles: DESK },
   { key: 'new', icon: '➕', label: 'Register case', roles: DESK },
   { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
+  { key: 'summary', icon: '🗂️', label: 'Summary', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
   { key: 'employees', icon: '🪪', label: 'Employees', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
@@ -136,6 +138,7 @@ export default function App() {
         {current === 'queue' && <Queue onOpen={openCase} goNew={() => go('new')} />}
         {current === 'cases' && <Cases me={user} openId={openId} setOpenId={id => { setOpenId(id); setFresh(null) }} goNew={() => go('new')} fresh={fresh} initialQuery={query} />}
         {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
+        {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches />}
         {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} />}

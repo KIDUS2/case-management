@@ -27,21 +27,29 @@ public class FileService {
     private final ChurchCaseRepository cases;
     private final CaseEventRepository events;
     private final AccessService access;
+    private final ChurchInquiryRepository inquiries;
     private final Path root;
 
-    public FileService(CaseFileRepository files, ChurchCaseRepository cases, CaseEventRepository events, AccessService access,
+    public FileService(CaseFileRepository files, ChurchCaseRepository cases, CaseEventRepository events, AccessService access, ChurchInquiryRepository inquiries,
                        @Value("${app.storage.dir:./uploads}") String dir) throws IOException {
-        this.files = files; this.cases = cases; this.events = events; this.access = access;
+        this.files = files; this.cases = cases; this.events = events; this.access = access; this.inquiries = inquiries;
         this.root = Path.of(dir).toAbsolutePath().normalize();
         Files.createDirectories(root);
     }
 
     @Transactional
     public CaseDtos.FileDto store(Long caseId, Long issueId, MultipartFile file, AppUser actor) throws IOException {
+        return store(caseId, issueId, null, null, file, actor);
+    }
+
+    @Transactional
+    public CaseDtos.FileDto store(Long caseId, Long issueId, Long inquiryId, String stage, MultipartFile file, AppUser actor) throws IOException {
         ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
         access.assertCanView(c, actor);
         if (issueId != null && c.getIssues().stream().noneMatch(i -> i.getId().equals(issueId)))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is not part of this case");
+        if (inquiryId != null && inquiries.findById(inquiryId).filter(q -> q.getCaseId().equals(caseId)).isEmpty())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That comment is not part of this case");
         if (file == null || file.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a file");
         String original = cleanName(file.getOriginalFilename());
         String ext = original.contains(".") ? original.substring(original.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT) : "";
@@ -51,11 +59,11 @@ public class FileService {
         Files.copy(file.getInputStream(), root.resolve(stored), StandardCopyOption.REPLACE_EXISTING);
 
         CaseFile f = new CaseFile();
-        f.setCaseId(caseId); f.setIssueId(issueId); f.setOriginalName(original); f.setStoredName(stored);
+        f.setCaseId(caseId); f.setIssueId(issueId); f.setInquiryId(inquiryId); f.setStage(stage); f.setOriginalName(original); f.setStoredName(stored);
         f.setContentType(file.getContentType()); f.setSizeBytes(file.getSize()); f.setUploadedBy(actor.getUsername());
         f = files.save(f);
         events.save(new CaseEvent(caseId, null, EventType.FILE, "File added: " + original + (issueId == null ? "" : " (to issue " + (issueNo(c, issueId)) + ")"), actor.getUsername()));
-        return new CaseDtos.FileDto(f.getId(), f.getIssueId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt());
+        return new CaseDtos.FileDto(f.getId(), f.getIssueId(), f.getInquiryId(), f.getStage(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt());
     }
 
     public record Download(Resource resource, String name, String contentType) {}

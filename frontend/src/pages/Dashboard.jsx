@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t as tt, locale } from '../i18n.js'
 import { STATUS, CATEGORY, fmtDate, initial, fmtCode, names } from '../ui.js'
+import PeriodFilter, { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 
 const STATUS_COLOR = { OPEN: '#1b7f7a', REFERRED: '#c99a2e', COURT: '#b23a2a', RESOLVED: '#2d7a3e' }
 const CAT_COLOR = { HR: '#2d7a3e', FINANCE: '#c99a2e', MANAGEMENT: '#1b7f7a', COURT: '#b23a2a', UNCLEAR: '#8a8099' }
@@ -31,7 +32,7 @@ function AreaChart({ data }) {
   const ticks = [0, Math.round(max / 2), max]
   const label = d => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' })
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="area" role="img" aria-label="Cases per day, last 30 days">
+    <svg viewBox={`0 0 ${W} ${H}`} className="area" role="img" aria-label="Cases per day">
       <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2d7a3e" stopOpacity=".4" /><stop offset="100%" stopColor="#2d7a3e" stopOpacity="0" /></linearGradient></defs>
       {ticks.map(t => <g key={t}><line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className="grid" /><text x={L - 6} y={y(t) + 4} textAnchor="end" className="axis">{t}</text></g>)}
       <path d={area} fill="url(#ag)" />
@@ -89,11 +90,15 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
   const [d, setD] = useState(null)
   const [recent, setRecent] = useState([])
   const [err, setErr] = useState('')
+  const [period, setPeriod] = useState(() => periodOf('30d'))
+  const [busy, setBusy] = useState(false)
 
+  useEffect(() => { api('/cases?size=6').then(r => setRecent(r.items)).catch(() => {}) }, [])
   useEffect(() => {
-    api('/reports/overview').then(setD).catch(e => setErr(e.message))
-    api('/cases?size=6').then(r => setRecent(r.items)).catch(() => {})
-  }, [])
+    if (period.key === 'custom' && (!period.from || !period.to)) return
+    setBusy(true)
+    api('/reports/overview' + (periodQuery(period) ? '?' + periodQuery(period) : '')).then(x => { setD(x); setErr('') }).catch(e => setErr(e.message)).finally(() => setBusy(false))
+  }, [period])
 
   if (err) return <div className="err">{err}</div>
   if (!d) return <div className="muted">Loading your reports…</div>
@@ -101,7 +106,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
   const t = d.totals
   const active = d.byStatus.OPEN + d.byStatus.REFERRED + d.byStatus.COURT
   const rate = t.cases ? Math.round((d.byStatus.RESOLVED / t.cases) * 100) : 0
-  const week = d.daily.slice(-7).reduce((s, x) => s + x.count, 0)
+  const rangeLabel = period.key === 'all' ? tt('last 30 days') : d.daily.length === 1 ? d.daily[0].date : d.daily[0].date + ' → ' + d.daily[d.daily.length - 1].date
   const cats = Object.entries(d.byCategory).map(([k, n]) => ({ name: CATEGORY[k].icon + ' ' + CATEGORY[k].label, count: n, color: CAT_COLOR[k] }))
   const first = (me.fullName || '').split(' ')[0]
 
@@ -111,9 +116,14 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
         <img className="seal" src="/logo.png" alt="" />
         <div style={{ flex: 1 }}>
           <h1>{tt(greeting()) + ', ' + first + ' 👋'}</h1>
-          <p>{t.cases === 0 ? tt('Welcome! Register the first case to see your reports come alive.') : tt('{a} new cases this week · {b} still being handled.', { a: week, b: active })}</p>
+          <p>{t.cases === 0 ? tt('Welcome! Register the first case to see your reports come alive.') : tt('{a} cases in this period · {b} still being handled.', { a: t.cases, b: active })}</p>
         </div>
         <button className="btn light" onClick={goNew}>➕ Register case</button>
+      </div>
+
+      <div className={'card periodbar' + (busy ? ' busy' : '')}>
+        <PeriodFilter value={period} onChange={setPeriod} />
+        <small className="muted">{period.key === 'all' ? tt('Showing all cases since the start.') : tt('Showing cases registered {r}.', { r: rangeLabel })}</small>
       </div>
 
       {(d.flow.overdue > 0 || d.flow.courtUnacknowledged > 0 || d.flow.expectedToday > 0) && (
@@ -125,7 +135,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
       )}
 
       <div className="kpis">
-        <Kpi icon="📚" label="Total cases" value={t.cases} sub={tt('{n} in the last 7 days', { n: week })} tone="k1" />
+        <Kpi icon="📚" label="Total cases" value={t.cases} sub={rangeLabel} tone="k1" />
         <Kpi icon="🟦" label="Still active" value={active} sub={tt('{n} in court', { n: d.byStatus.COURT })} tone="k2" />
         <Kpi icon="✅" label="Resolved" value={d.byStatus.RESOLVED} sub={tt('{n}% resolution rate', { n: rate })} tone="k3" />
         <Kpi icon="📥" label="Waiting in departments" value={d.flow.waitingInDepartments} sub="issues sent, not yet resolved" tone="k2" />
@@ -140,7 +150,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
       </div>
 
       <div className="dgrid">
-        <div className="card wide"><h2>Cases per day <small className="inl">last 30 days</small></h2><AreaChart data={d.daily} /></div>
+        <div className="card wide"><h2>Cases per day <small className="inl">{rangeLabel}</small></h2><AreaChart data={d.daily} /></div>
         <div className="card"><h2>Cases by status</h2><Donut byStatus={d.byStatus} total={t.cases} /></div>
         <div className="card"><h2>What people bring <small className="inl">issues by type</small></h2><Bars items={cats} /></div>
         <div className="card"><h2>Issues by department <small className="inl">waiting vs resolved</small></h2>

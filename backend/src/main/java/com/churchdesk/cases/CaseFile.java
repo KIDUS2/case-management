@@ -9,6 +9,8 @@ public class CaseFile {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "case_id", nullable = false) private Long caseId;
     @Column(name = "issue_id") private Long issueId;
+    @Column(name = "inquiry_id") private Long inquiryId;
+    @Column(name = "stage") private String stage;
     @Column(name = "original_name", nullable = false) private String originalName;
     @Column(name = "stored_name", nullable = false, unique = true) private String storedName;
     @Column(name = "content_type") private String contentType;
@@ -19,6 +21,10 @@ public class CaseFile {
     public Long getId() { return id; }
     public Long getIssueId() { return issueId; }
     public void setIssueId(Long v) { issueId = v; }
+    public Long getInquiryId() { return inquiryId; }
+    public void setInquiryId(Long v) { inquiryId = v; }
+    public String getStage() { return stage; }
+    public void setStage(String v) { stage = v; }
     public Long getCaseId() { return caseId; }
     public void setCaseId(Long v) { caseId = v; }
     public String getOriginalName() { return originalName; }

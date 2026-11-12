@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { askConfirm } from '../dialog.js'
 import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
+import ChurchLoop from '../components/ChurchLoop.jsx'
 import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
@@ -406,7 +407,7 @@ function Files({ c, me, onChange, setErr }) {
       {c.files.map(f => (
         <div className="filerow" key={f.id}>
           <span className="iicon">📄</span>
-          <div className="grow"><div className="fname">{f.originalName}</div><small>{f.issueId ? 'Issue ' + (c.issues.findIndex(i => i.id === f.issueId) + 1) + ' · ' : ''}{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
+          <div className="grow"><div className="fname">{f.originalName}</div><small>{f.stage === 'REQUEST' ? t('Comment to the church') + ' · ' : f.stage === 'FINDING' ? t('Church reply') + ' · ' : ''}{f.issueId ? 'Issue ' + (c.issues.findIndex(i => i.id === f.issueId) + 1) + ' · ' : ''}{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
           <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button>
           {['ADMIN', 'OFFICER'].includes(me.role) && <button className="btn x" onClick={() => remove(f)} aria-label="Remove file">🗑️</button>}
         </div>
@@ -503,6 +504,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
             <small style={{ marginTop: 12 }}>{t('Registered {d} by @{u}', { d: fmtDate(c.createdAt), u: c.createdBy })}</small>
           </div>
+          <ChurchLoop c={c} me={me} setErr={setErr} onChanged={() => api('/cases/' + c.id).then(setC).catch(() => {})} />
           <Timeline c={c} onChange={setC} setErr={setErr} />
         </div>
         <div>

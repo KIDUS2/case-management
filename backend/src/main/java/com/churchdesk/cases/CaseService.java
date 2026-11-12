@@ -258,7 +258,7 @@ public class CaseService {
         return c.getParties().stream().filter(p -> p.getRole() == role).map(CaseParty::getPerson).toList();
     }
 
-    private CaseSummary toSummary(ChurchCase c) {
+    public CaseSummary toSummary(ChurchCase c) {
         List<Person> complainants = peopleIn(c, PartyRole.COMPLAINANT);
         List<IssueCategory> cats = c.getIssues().stream().map(CaseIssue::getCategory).distinct().toList();
         String church = complainants.isEmpty() ? "" : complainants.get(0).getChurch().getName();
@@ -378,7 +378,7 @@ public class CaseService {
         List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
                 .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
         List<FileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()
-                .map(f -> new FileDto(f.getId(), f.getIssueId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
+                .map(f -> new FileDto(f.getId(), f.getIssueId(), f.getInquiryId(), f.getStage(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
                 subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files);

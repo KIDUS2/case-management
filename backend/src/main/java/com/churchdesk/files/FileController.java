@@ -24,8 +24,12 @@ public class FileController {
 
     @PostMapping("/cases/{id}/files") @ResponseStatus(HttpStatus.CREATED)
     public FileDto upload(@PathVariable Long id, @RequestParam("file") MultipartFile file,
-                          @RequestParam(value = "issueId", required = false) Long issueId, Authentication auth) throws IOException {
-        return service.store(id, issueId, file, current.get(auth));
+                          @RequestParam(value = "issueId", required = false) Long issueId,
+                          @RequestParam(value = "inquiryId", required = false) Long inquiryId,
+                          @RequestParam(value = "stage", required = false) String stage, Authentication auth) throws IOException {
+        if (stage != null && !stage.equals("REQUEST") && !stage.equals("FINDING"))
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown file stage");
+        return service.store(id, issueId, inquiryId, inquiryId == null ? null : stage, file, current.get(auth));
     }
 
     @GetMapping("/files/{id}")
