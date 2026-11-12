@@ -98,14 +98,16 @@ public class CaseService {
         Church church = churches.findById(in.churchId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a church from the list for " + in.fullName().trim()));
         String name = in.fullName().trim();
-        String empId = blankToNull(in.employeeId());
-        Person person = empId == null ? null : persons.findFirstByEmployeeIdIgnoreCase(empId).orElse(null);
+        String typed = blankToNull(in.employeeId());
+        Person person = typed == null ? null : findByAnyId(typed);
         if (person == null) person = persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId()).orElseGet(Person::new);
-        if (empId != null) person.setEmployeeId(empId);
+        if (typed != null && person.getId() == null && !EmployeeIds.looksLikeId(typed)) person.setChurchRef(typed);
         person.setFullName(name);
         person.setChurch(church);
         person.setWorkingStatus(in.workingStatus());
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
+        if (person.getEmployeeId() == null && in.workingStatus() != WorkingStatus.CHURCH_MEMBER)
+            person.setEmployeeId(EmployeeIds.generate(persons::existsByEmployeeId));
         person = persons.save(person);
 
         if (!seen.add(person.getId() + ":" + role)) return order; // same person listed twice in the same role
@@ -229,9 +231,20 @@ public class CaseService {
         return persons.search(pattern, PageRequest.of(0, 5)).stream().map(this::toPerson).toList();
     }
 
-    /** The church gave each employee an ID; typing it brings back everything we know about that person. */
+    /** Finds a person by the system ID (12 digits, spaces allowed) or by the number the church used before. */
+    private Person findByAnyId(String typed) {
+        String n = EmployeeIds.normalize(typed);
+        if (EmployeeIds.looksLikeId(n)) return persons.findFirstByEmployeeIdIgnoreCase(n).orElse(null);
+        return persons.findFirstByChurchRefIgnoreCase(typed.trim()).orElse(null);
+    }
+
+    /** Typing an employee ID brings back everything we know about that person. */
     public PersonInfo byEmployeeId(String id) {
-        return id == null || id.isBlank() ? null : persons.findFirstByEmployeeIdIgnoreCase(id.trim()).map(this::toPerson).orElse(null);
+        if (id == null || id.isBlank()) return null;
+        if (EmployeeIds.looksLikeId(id) && !EmployeeIds.isValid(id))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This ID number is not valid. Please check the digits.");
+        Person p = findByAnyId(id);
+        return p == null ? null : toPerson(p);
     }
 
     private static String normalizeCode(String s) { return s == null ? "" : s.toUpperCase().replaceAll("[^A-Z0-9]", ""); }

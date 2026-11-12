@@ -21,6 +21,7 @@ public class Person {
     @Column(name = "email") private String email;
     @Column(name = "notes") private String notes;
     @Column(name = "employee_id") private String employeeId;
+    @Column(name = "church_ref") private String churchRef;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "church_id", nullable = false) private Church church;
     @Enumerated(EnumType.STRING) @Column(name = "working_status", nullable = false) private WorkingStatus workingStatus;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
@@ -28,6 +29,8 @@ public class Person {
     public Long getId() { return id; }
     public String getFullName() { return fullName; }
     public void setFullName(String v) { fullName = v; }
+    public String getChurchRef() { return churchRef; }
+    public void setChurchRef(String v) { churchRef = v; }
     public String getEmployeeId() { return employeeId; }
     public void setEmployeeId(String v) { employeeId = v; }
     public String getProfession() { return profession; }

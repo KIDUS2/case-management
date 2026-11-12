@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
-import { CATEGORY, WORKING, addDays, todayStr, fmtSize } from '../ui.js'
+import { CATEGORY, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
 const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', workingStatus: status })
@@ -29,7 +29,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
     try {
       const m = await api('/persons/by-employee-id?id=' + encodeURIComponent(id))
       setFound(m); set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
-    } catch { setIdMsg(t('No one with this ID yet. Fill in the details below and they will be saved with this ID.')) }
+    } catch (x) { setIdMsg(x.message && x.message.includes('valid') ? x.message : t('No one with this number yet. Fill in the details below; a new employee ID is created when the case is saved.')) }
   }
 
   const exact = matches.filter(m => m.fullName.toLowerCase() === party.fullName.trim().toLowerCase())
@@ -38,13 +38,13 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
   return (
     <div className="issue">
       <div className="top"><b>{title}</b>{onRemove && <button type="button" className="btn x" onClick={onRemove}>Remove</button>}</div>
-      <label>{t('Employee ID (given by the church)')}</label>
+      <label>{t('Employee ID (12 digits) or the church’s own number')}</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="e.g. EMP-0123" autoCapitalize="characters" />
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" />
         <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
       </div>
-      {found && <div className="banner"><b>✅ {t('Employee found')}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: found.fullName, b: found.churchName, c: found.totalCases, d: found.openCases })}
+      {found && <div className="banner"><b>✅ {t('Employee found')} 🪪 {fmtId(found.employeeId)}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: found.fullName, b: found.churchName, c: found.totalCases, d: found.openCases })}
         {found.complaintsAgainst > 0 && <div className="warn">⚠️ {t('{n} earlier cases are about this person', { n: found.complaintsAgainst })}</div>}</div>}
       {idMsg && <small className="muted">{idMsg}</small>}
       <label>Full name</label>

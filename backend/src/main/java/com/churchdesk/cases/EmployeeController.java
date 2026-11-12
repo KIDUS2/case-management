@@ -26,11 +26,11 @@ public class EmployeeController {
     private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
 
-    public record EmployeeDto(Long id, String employeeId, String fullName, Long churchId, String churchName, String phone, String email,
+    public record EmployeeDto(Long id, String employeeId, String churchRef, String fullName, Long churchId, String churchName, String phone, String email,
                               String profession, String position, String gender, LocalDate birthDate, LocalDate hireDate, String address,
                               String notes, WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst) {}
 
-    public record EmployeeRequest(@Size(max = 40) String employeeId, @NotBlank @Size(max = 160) String fullName, @NotNull Long churchId,
+    public record EmployeeRequest(@Size(max = 40) String churchRef, @NotBlank @Size(max = 160) String fullName, @NotNull Long churchId,
                                   @Size(max = 40) String phone, @Size(max = 120) String email, @Size(max = 120) String profession,
                                   @Size(max = 120) String position, @Size(max = 10) String gender, LocalDate birthDate, LocalDate hireDate,
                                   @Size(max = 255) String address, @Size(max = 4000) String notes, @NotNull WorkingStatus workingStatus) {}
@@ -59,26 +59,20 @@ public class EmployeeController {
 
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize(WRITE) @Transactional
     public EmployeeDto create(@Valid @RequestBody EmployeeRequest r) {
-        String eid = blank(r.employeeId());
-        if (eid != null && persons.findFirstByEmployeeIdIgnoreCase(eid).isPresent())
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee ID " + eid + " already exists");
         Person p = new Person();
         apply(p, r);
         return dto(persons.save(p));
     }
 
+    /** The ID never changes after it is created. */
     @PutMapping("/{id}") @PreAuthorize(WRITE) @Transactional
     public EmployeeDto update(@PathVariable Long id, @Valid @RequestBody EmployeeRequest r) {
         Person p = find(id);
-        String eid = blank(r.employeeId());
-        if (eid != null) persons.findFirstByEmployeeIdIgnoreCase(eid).filter(o -> !o.getId().equals(id)).ifPresent(o -> {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee ID " + eid + " already belongs to " + o.getFullName());
-        });
         apply(p, r);
         return dto(persons.save(p));
     }
 
-    /** Bulk load from the church's list. Rows with a known employee ID are updated, the rest are created. */
+    /** Bulk load from the church's list. Someone already known (by system ID or the church's own number) is updated; everyone else gets a new ID. */
     @PostMapping("/import") @PreAuthorize(WRITE) @Transactional
     public ImportResult importRows(@RequestBody List<@Valid EmployeeRequest> rows) {
         int created = 0, updated = 0;
@@ -87,8 +81,12 @@ public class EmployeeController {
         for (EmployeeRequest r : rows) {
             n++;
             try {
-                String eid = blank(r.employeeId());
-                Person p = eid == null ? null : persons.findFirstByEmployeeIdIgnoreCase(eid).orElse(null);
+                String ref = blank(r.churchRef());
+                Person p = null;
+                if (ref != null) {
+                    p = EmployeeIds.looksLikeId(ref) ? persons.findFirstByEmployeeIdIgnoreCase(EmployeeIds.normalize(ref)).orElse(null)
+                            : persons.findFirstByChurchRefIgnoreCase(ref).orElse(null);
+                }
                 if (p == null) { p = new Person(); created++; } else updated++;
                 apply(p, r);
                 persons.save(p);
@@ -101,7 +99,8 @@ public class EmployeeController {
 
     private void apply(Person p, EmployeeRequest r) {
         Church church = churches.findById(r.churchId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Church not found"));
-        p.setEmployeeId(blank(r.employeeId()));
+        String ref = blank(r.churchRef());
+        if (ref != null && !EmployeeIds.looksLikeId(ref)) p.setChurchRef(ref); else if (ref == null) p.setChurchRef(null);
         p.setFullName(r.fullName().trim());
         p.setChurch(church);
         p.setPhone(blank(r.phone())); p.setEmail(blank(r.email()));
@@ -110,13 +109,15 @@ public class EmployeeController {
         p.setBirthDate(r.birthDate()); p.setHireDate(r.hireDate());
         p.setAddress(blank(r.address())); p.setNotes(blank(r.notes()));
         p.setWorkingStatus(r.workingStatus());
+        if (p.getEmployeeId() == null && r.workingStatus() != WorkingStatus.CHURCH_MEMBER)
+            p.setEmployeeId(EmployeeIds.generate(persons::existsByEmployeeId));
     }
 
     private Person find(Long id) { return persons.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found")); }
     private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 
     private EmployeeDto dto(Person p) {
-        return new EmployeeDto(p.getId(), p.getEmployeeId(), p.getFullName(), p.getChurch().getId(), p.getChurch().getName(), p.getPhone(), p.getEmail(),
+        return new EmployeeDto(p.getId(), p.getEmployeeId(), p.getChurchRef(), p.getFullName(), p.getChurch().getId(), p.getChurch().getName(), p.getPhone(), p.getEmail(),
                 p.getProfession(), p.getPosition(), p.getGender(), p.getBirthDate(), p.getHireDate(), p.getAddress(), p.getNotes(), p.getWorkingStatus(),
                 partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), java.util.List.of(CaseStatus.OPEN, CaseStatus.REFERRED, CaseStatus.COURT)),
                 partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT));

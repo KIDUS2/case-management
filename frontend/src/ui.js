@@ -54,3 +54,6 @@ export function ago(iso) {
   return new Date(iso).toLocaleDateString(locale(), { month: 'short', day: 'numeric' })
 }
 export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB')
+
+/** 123456789012 -> 1234 5678 9012, like a national ID */
+export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d)/g, '$1 ') : id || '')

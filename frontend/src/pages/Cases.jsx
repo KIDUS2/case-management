@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
-import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff } from '../ui.js'
+import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -86,7 +86,7 @@ function PersonRow({ p }) {
       <div className="avatar">{initial(p.fullName)}</div>
       <div className="grow">
         <b>{p.fullName}</b>
-        <small>{p.employeeId ? '🪪 ' + p.employeeId + ' · ' : ''}⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
+        <small>{p.employeeId ? '🪪 ' + fmtId(p.employeeId) + ' · ' : ''}⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
         {p.involvement && <small className="about">📌 {p.involvement}</small>}
         {p.complaintsAgainst > 1 && <small className="warn">⚠️ {t('{n} cases are about this person', { n: p.complaintsAgainst })}</small>}
         {p.totalCases > 1 && p.complaintsAgainst <= 1 && <small>{t('In {n} cases on record', { n: p.totalCases })}</small>}
