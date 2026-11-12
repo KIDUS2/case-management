@@ -228,8 +228,12 @@ public class CaseService {
     @Transactional(readOnly = true)
     public List<PersonInfo> lookup(String name) {
         if (name == null || name.trim().length() < 3) return List.of();
-        String pattern = "%" + name.trim().toLowerCase() + "%";
-        return persons.search(pattern, PageRequest.of(0, 5)).stream().map(this::toPerson).toList();
+        String q = name.trim().toLowerCase();
+        String pattern = "%" + q + "%";
+        // an ID or phone may be typed with spaces or dashes: "0123 4567", "+251 91-1"
+        String compact = q.replaceAll("[\\s-]", "");
+        String digits = compact.matches("\\+?\\d{3,}") ? "%" + compact + "%" : "%@@no-digits@@%";
+        return persons.search(pattern, digits, PageRequest.of(0, 6)).stream().map(this::toPerson).toList();
     }
 
     /** Finds a person by the system ID (12 digits, spaces allowed) or by the number the church used before. */

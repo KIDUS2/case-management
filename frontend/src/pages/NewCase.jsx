@@ -32,12 +32,31 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
     } catch (x) { setIdMsg(x.message && x.message.includes('valid') ? x.message : t('No one with this number yet. Fill in the details below; a new employee ID is created when the case is saved.')) }
   }
 
+  const [q, setQ] = useState('')
+  const [hits, setHits] = useState([])
+  useEffect(() => {
+    if (q.trim().length < 3) { setHits([]); return }
+    const h = setTimeout(() => api('/persons/lookup?name=' + encodeURIComponent(q.trim())).then(setHits).catch(() => {}), 350)
+    return () => clearTimeout(h)
+  }, [q])
+  const pick = m => {
+    setFound(m); setIdMsg(''); setQ(''); setHits([])
+    set({ employeeId: m.employeeId || party.employeeId, fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
+  }
+
   const exact = matches.filter(m => m.fullName.toLowerCase() === party.fullName.trim().toLowerCase())
   const use = m => set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
 
   return (
     <div className="issue">
       <div className="top"><b>{title}</b>{onRemove && <button type="button" className="btn x" onClick={onRemove}>Remove</button>}</div>
+      <label>{t('Find an existing person')}</label>
+      <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={t('Name, phone or ID number')} maxLength={80} />
+      {hits.length > 0 && <div className="pickbox">{hits.map(m =>
+        <button type="button" key={m.id} className="pickrow" onClick={() => pick(m)}>
+          <b>{m.fullName}</b><span>{[m.employeeId && fmtId(m.employeeId), m.churchName, m.phone].filter(Boolean).join(' · ')}</span>
+        </button>)}</div>}
+      {q.trim().length >= 3 && hits.length === 0 && <small className="muted">{t('No one found. Fill in the details below to add a new person.')}</small>}
       <label>{t('Employee ID (12 digits) or the church’s own number')}</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
