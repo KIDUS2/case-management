@@ -99,14 +99,9 @@ public class CaseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a church from the list for " + in.fullName().trim()));
         String name = in.fullName().trim();
         String empId = blankToNull(in.employeeId());
-        Person person = (empId == null ? java.util.Optional.<Person>empty() : persons.findFirstByEmployeeIdIgnoreCase(empId))
-                .or(() -> persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId())).orElseGet(Person::new);
-        if (empId != null) {
-            persons.findFirstByEmployeeIdIgnoreCase(empId).filter(o -> person.getId() != null && !o.getId().equals(person.getId())).ifPresent(o -> {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Employee ID " + empId + " already belongs to " + o.getFullName());
-            });
-            person.setEmployeeId(empId);
-        }
+        Person person = empId == null ? null : persons.findFirstByEmployeeIdIgnoreCase(empId).orElse(null);
+        if (person == null) person = persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId()).orElseGet(Person::new);
+        if (empId != null) person.setEmployeeId(empId);
         person.setFullName(name);
         person.setChurch(church);
         person.setWorkingStatus(in.workingStatus());
