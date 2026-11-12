@@ -2,6 +2,8 @@ package com.churchdesk.report;
 
 import com.churchdesk.cases.CaseStatus;
 import com.churchdesk.cases.IssueCategory;
+import com.churchdesk.cases.PartyRole;
+import com.churchdesk.cases.WorkingStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,8 @@ public class ReportService {
 
     public record NameCount(String name, long count) {}
     public record DayCount(String date, long count) {}
-    public record Totals(long cases, long people, long returningPeople, long churches, long letters) {}
+    public record Totals(long cases, long people, long returningPeople, long churches, long letters,
+                         long churchMembers, long reportedOn, long repeatReportedOn) {}
     public record Overview(Totals totals, Map<String, Long> byStatus, Map<String, Long> byCategory,
                            List<NameCount> topChurches, List<DayCount> daily) {}
 
@@ -31,8 +34,14 @@ public class ReportService {
     public Overview overview() {
         long cases = count("select count(c) from ChurchCase c");
         long people = count("select count(p) from Person p");
-        long returning = count("select count(p) from Person p where (select count(c) from ChurchCase c where c.person = p) > 1");
-        long churches = count("select count(distinct ch.id) from ChurchCase c join c.person p join p.church ch");
+        long returning = count("select count(p) from Person p where (select count(distinct cp.churchCase.id) from CaseParty cp where cp.person = p) > 1");
+        long churches = count("select count(distinct ch.id) from CaseParty cp join cp.person p join p.church ch");
+        long churchMembers = em.createQuery("select count(distinct cp.person.id) from CaseParty cp where cp.person.workingStatus = :ws", Long.class)
+                .setParameter("ws", WorkingStatus.CHURCH_MEMBER).getSingleResult();
+        long reportedOn = em.createQuery("select count(distinct cp.person.id) from CaseParty cp where cp.role = :role", Long.class)
+                .setParameter("role", PartyRole.SUBJECT).getSingleResult();
+        long repeatReportedOn = em.createQuery("select count(p) from Person p where (select count(distinct cp.churchCase.id) from CaseParty cp where cp.person = p and cp.role = :role) > 1", Long.class)
+                .setParameter("role", PartyRole.SUBJECT).getSingleResult();
         long letters = count("select count(c) from ChurchCase c where c.letterIssued = true");
 
         Map<String, Long> byStatus = new LinkedHashMap<>();
@@ -47,7 +56,7 @@ public class ReportService {
 
         List<NameCount> top = new ArrayList<>();
         for (Object[] row : em.createQuery(
-                "select ch.name, count(c) from ChurchCase c join c.person p join p.church ch group by ch.name order by count(c) desc, ch.name",
+                "select ch.name, count(distinct cp.churchCase.id) from CaseParty cp join cp.person p join p.church ch group by ch.name order by count(distinct cp.churchCase.id) desc, ch.name",
                 Object[].class).setMaxResults(8).getResultList())
             top.add(new NameCount((String) row[0], (Long) row[1]));
 
@@ -62,7 +71,7 @@ public class ReportService {
             perDay.merge(at.atZone(ZONE).toLocalDate(), 1L, Long::sum);
         List<DayCount> daily = perDay.entrySet().stream().map(e -> new DayCount(e.getKey().toString(), e.getValue())).toList();
 
-        return new Overview(new Totals(cases, people, returning, churches, letters), byStatus, byCategory, top, daily);
+        return new Overview(new Totals(cases, people, returning, churches, letters, churchMembers, reportedOn, repeatReportedOn), byStatus, byCategory, top, daily);
     }
 
     private long count(String jpql) { return em.createQuery(jpql, Long.class).getSingleResult(); }

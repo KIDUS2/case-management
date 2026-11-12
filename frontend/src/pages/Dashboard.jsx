@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import { STATUS, CATEGORY, fmtDate, initial } from '../ui.js'
+import { STATUS, CATEGORY, fmtDate, initial, fmtCode, names } from '../ui.js'
 
 const STATUS_COLOR = { OPEN: '#8b6fe0', REFERRED: '#e5a23b', COURT: '#e07a52', RESOLVED: '#3fb585' }
 const CAT_COLOR = { HR: '#8b6fe0', FINANCE: '#3fb585', MANAGEMENT: '#4f9fe0', COURT: '#e07a52', UNCLEAR: '#9a97a8' }
@@ -121,6 +121,9 @@ export default function Dashboard({ me, onOpen, goNew }) {
         <Kpi icon="🙋" label="People served" value={t.people} sub={`${t.returningPeople} came back`} tone="k4" />
         <Kpi icon="⛪" label="Churches reached" value={t.churches} tone="k5" />
         <Kpi icon="✉️" label="Letters issued" value={t.letters} tone="k6" />
+        <Kpi icon="🙏" label="Church members reporting" value={t.churchMembers} sub="not employees" tone="k4" />
+        <Kpi icon="👤" label="Employees reported on" value={t.reportedOn} tone="k5" />
+        <Kpi icon="⚠️" label="Repeat complaints" value={t.repeatReportedOn} sub="employees in 2+ cases" tone="k2" />
       </div>
 
       <div className="dgrid">
@@ -132,7 +135,7 @@ export default function Dashboard({ me, onOpen, goNew }) {
           {recent.length === 0 && <p className="muted">No cases yet.</p>}
           {recent.map(c => (
             <button key={c.id} className="mini" onClick={() => onOpen(c.id)}>
-              <span className="mrow"><span className="avatar sm">{initial(c.personName)}</span><span><b>{c.personName}</b><small>{c.churchName} · {fmtDate(c.createdAt)}</small></span></span>
+              <span className="mrow"><span className="avatar sm">{initial(c.complainants[0])}</span><span><b>{names(c.complainants)}</b><small>{fmtCode(c.code)} · {c.churchName} · {fmtDate(c.createdAt)}</small></span></span>
               <span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>
             </button>
           ))}

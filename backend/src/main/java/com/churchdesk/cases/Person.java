@@ -2,10 +2,12 @@ package com.churchdesk.cases;
 
 import com.churchdesk.church.Church;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
 
 @Entity
 @Table(name = "person")
+@BatchSize(size = 50)
 public class Person {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "full_name", nullable = false) private String fullName;

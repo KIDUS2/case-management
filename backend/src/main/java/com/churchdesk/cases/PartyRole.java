@@ -1,0 +1,4 @@
+package com.churchdesk.cases;
+
+/** COMPLAINANT = reports or requests; SUBJECT = the person the report is about. */
+public enum PartyRole { COMPLAINANT, SUBJECT }

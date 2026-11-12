@@ -17,7 +17,7 @@ First login: **admin / admin123** (change it under Users). Set `JWT_SECRET` in p
 
 ## Roadmap (one feature at a time)
 - [x] 1. Login + user management (ADMIN, RECEPTION, OFFICER)
-- [x] 2. Churches + cases (register, list, detail)
+- [x] 2. Churches + cases (register, list, detail), short case code, groups of people reporting, church members, people a case is about
 - [x] 3. Admin dashboard with reports
 - [ ] 4. Case flow: referral, return week, court acknowledgment, history
 - [ ] 5. File attachments

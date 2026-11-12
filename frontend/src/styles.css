@@ -101,3 +101,13 @@ dl{margin:0}dt{font-size:.78rem;color:var(--mute);margin-top:10px}dd{margin:0;fo
 .mrow{display:flex;align-items:center;gap:10px;min-width:0}.avatar.sm{width:34px;height:34px;font-size:.9rem}
 @media(max-width:820px){.kpis{grid-template-columns:1fr 1fr}.dgrid{grid-template-columns:1fr}}
 @media(max-width:480px){.kpis{grid-template-columns:1fr}}
+
+/* case code, parties, lookup */
+.codechip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;letter-spacing:.08em;padding:3px 10px;border-radius:8px;background:var(--soft);color:var(--pri)}
+.bigcode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2.4rem;font-weight:800;letter-spacing:.12em;line-height:1.15}
+.heroside{display:flex;flex-direction:column;align-items:flex-end;gap:10px}.heroside .btn{margin:0}
+.fresh{padding:14px 16px;border-radius:14px;margin-bottom:14px;background:#2e9e6b22;color:var(--ok);font-weight:600}
+.prow{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.prow:last-child{border:0}
+.about{color:var(--pri);font-weight:600}
+.lookup{padding:0 8px 12px}.lookup label{margin:0 0 4px;font-size:.78rem;color:var(--mute)}
+.lrow{display:flex;gap:6px}.lrow input{padding:9px 11px;font-family:ui-monospace,Menlo,monospace;letter-spacing:.06em}.lrow .btn{margin:0;padding:9px 14px}

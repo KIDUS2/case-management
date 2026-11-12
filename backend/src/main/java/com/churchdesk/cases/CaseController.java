@@ -24,6 +24,9 @@ public class CaseController {
     @GetMapping("/cases/summary")
     public Summary summary() { return service.summary(); }
 
+    @GetMapping("/cases/code/{code}")
+    public CaseDetail byCode(@PathVariable String code) { return service.getByCode(code); }
+
     @GetMapping("/cases/{id}")
     public CaseDetail get(@PathVariable Long id) { return service.get(id); }
 
