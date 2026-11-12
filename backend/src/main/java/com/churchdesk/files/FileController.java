@@ -23,8 +23,9 @@ public class FileController {
     public FileController(FileService service, CurrentUser current) { this.service = service; this.current = current; }
 
     @PostMapping("/cases/{id}/files") @ResponseStatus(HttpStatus.CREATED)
-    public FileDto upload(@PathVariable Long id, @RequestParam("file") MultipartFile file, Authentication auth) throws IOException {
-        return service.store(id, file, current.get(auth));
+    public FileDto upload(@PathVariable Long id, @RequestParam("file") MultipartFile file,
+                          @RequestParam(value = "issueId", required = false) Long issueId, Authentication auth) throws IOException {
+        return service.store(id, issueId, file, current.get(auth));
     }
 
     @GetMapping("/files/{id}")

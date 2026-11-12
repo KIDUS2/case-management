@@ -10,6 +10,7 @@ public class CaseParty {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "person_id", nullable = false) private Person person;
     @Enumerated(EnumType.STRING) @Column(name = "party_role", nullable = false) private PartyRole role;
     @Column(name = "sort_order", nullable = false) private int sortOrder;
+    @Column(columnDefinition = "text") private String involvement;
 
     public Long getId() { return id; }
     public ChurchCase getChurchCase() { return churchCase; }
@@ -18,6 +19,8 @@ public class CaseParty {
     public void setPerson(Person v) { person = v; }
     public PartyRole getRole() { return role; }
     public void setRole(PartyRole v) { role = v; }
+    public String getInvolvement() { return involvement; }
+    public void setInvolvement(String v) { involvement = v; }
     public int getSortOrder() { return sortOrder; }
     public void setSortOrder(int v) { sortOrder = v; }
 }

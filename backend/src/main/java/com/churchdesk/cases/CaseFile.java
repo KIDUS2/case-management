@@ -8,6 +8,7 @@ import java.time.Instant;
 public class CaseFile {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "case_id", nullable = false) private Long caseId;
+    @Column(name = "issue_id") private Long issueId;
     @Column(name = "original_name", nullable = false) private String originalName;
     @Column(name = "stored_name", nullable = false, unique = true) private String storedName;
     @Column(name = "content_type") private String contentType;
@@ -16,6 +17,8 @@ public class CaseFile {
     @Column(name = "uploaded_at", nullable = false) private Instant uploadedAt = Instant.now();
 
     public Long getId() { return id; }
+    public Long getIssueId() { return issueId; }
+    public void setIssueId(Long v) { issueId = v; }
     public Long getCaseId() { return caseId; }
     public void setCaseId(Long v) { caseId = v; }
     public String getOriginalName() { return originalName; }

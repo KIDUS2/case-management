@@ -19,7 +19,11 @@ public final class CaseDtos {
     public record PartyIn(@NotBlank @Size(max = 160) String fullName,
                           @NotNull Long churchId,
                           @Size(max = 40) String phone,
-                          @NotNull WorkingStatus workingStatus) {}
+                          @NotNull WorkingStatus workingStatus,
+                          @Size(max = 1000) String involvement) {}
+
+    /** Add someone to a case that already exists. role is COMPLAINANT, SUBJECT or INVOLVED. */
+    public record AddPartyRequest(@NotNull PartyRole role, @NotNull @Valid PartyIn person) {}
 
     public record CreateCaseRequest(@NotEmpty @Valid List<PartyIn> complainants,
                                     @Valid List<PartyIn> subjects,
@@ -37,7 +41,7 @@ public final class CaseDtos {
                            Instant courtAt, String courtAckBy, Instant courtAckAt) {}
 
     public record EventDto(Long id, Long issueId, EventType type, String message, String actor, Instant createdAt) {}
-    public record FileDto(Long id, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
+    public record FileDto(Long id, Long issueId, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
 
     public record CaseSummary(Long id, String code, List<String> complainants, List<String> subjects, String churchName,
                               CaseStatus status, int issueCount, int resolvedCount, List<IssueCategory> categories,
@@ -45,10 +49,10 @@ public final class CaseDtos {
 
     /** totalCases counts every case the person is in; complaintsAgainst counts cases where they are the one reported on. */
     public record PersonInfo(Long id, String fullName, String phone, Long churchId, String churchName,
-                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst) {}
+                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement) {}
 
     public record CaseDetail(Long id, String code, CaseStatus status, String discussionNotes, boolean letterIssued,
-                             String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects,
+                             String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,
                              List<IssueDto> issues, List<CaseSummary> relatedCases, List<EventDto> events, List<FileDto> files) {}
 
     public record PageDto<T>(List<T> items, long total, int page, int size) {}

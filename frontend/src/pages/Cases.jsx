@@ -86,6 +86,7 @@ function PersonRow({ p }) {
       <div className="grow">
         <b>{p.fullName}</b>
         <small>⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
+        {p.involvement && <small className="about">📌 {p.involvement}</small>}
         {p.complaintsAgainst > 1 && <small className="warn">⚠️ {p.complaintsAgainst} cases are about this person</small>}
         {p.totalCases > 1 && p.complaintsAgainst <= 1 && <small>In {p.totalCases} cases on record</small>}
       </div>
@@ -100,6 +101,8 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
   const [ret, setRet] = useState(addDays(todayStr(), 7))
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [picked, setPicked] = useState([])
+  const myFiles = c.files.filter(f => f.issueId === i.id)
   useEffect(() => { if (!dept && suggested) setDept(suggested.id) }, [suggested]) // eslint-disable-line react-hooks/exhaustive-deps
   const st = ISSUE_STATUS[i.status]
   const done = i.status === 'RESOLVED'
@@ -114,7 +117,32 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
     try { onChange(await api(`/cases/${c.id}/issues/${i.id}/${path}`, { method: 'POST', body })); setPanel(null); setNote('') }
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
-  const open = p => { setPanel(panel === p ? null : p); setNote('') }
+  const open = p => { setPanel(panel === p ? null : p); setNote(''); setPicked([]) }
+
+  const send = async list => {
+    const failed = []
+    for (const f of list) { try { await upload(`/cases/${c.id}/files?issueId=${i.id}`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
+    return failed
+  }
+  const resolveNow = async () => {
+    setBusy(true); setErr('')
+    try {
+      let d = await api(`/cases/${c.id}/issues/${i.id}/resolve`, { method: 'POST', body: { note } })
+      let failed = []
+      if (picked.length) { failed = await send(picked); d = await api('/cases/' + c.id) }
+      onChange(d); setPanel(null); setNote(''); setPicked([])
+      if (failed.length) setErr('Resolved, but these files were not saved: ' + failed.join(' · '))
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const attach = async e => {
+    const list = [...e.target.files]; e.target.value = ''
+    if (!list.length) return
+    setBusy(true); setErr('')
+    const failed = await send(list)
+    try { onChange(await api('/cases/' + c.id)) } catch { /* shown on next open */ }
+    if (failed.length) setErr(failed.join(' · '))
+    setBusy(false)
+  }
 
   return (
     <div className="issue-row">
@@ -125,6 +153,15 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 Returns {fmtDay(i.returnOn)}{d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : ''}</span>}</div>
         <p>{i.description || <span className="muted">No detail written yet.</span>}</p>
         {done && <div className="resbox">✅ Resolved {ago(i.resolvedAt)}{i.departmentName ? ' by ' + i.departmentName : ''} (@{i.resolvedBy}){i.resolutionNote ? ' — ' + i.resolutionNote : ''}</div>}
+        {myFiles.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            {myFiles.map(f => (
+              <div className="filerow" key={f.id}><span className="iicon" style={{ width: 32, height: 32 }}>📄</span>
+                <div className="grow"><div className="fname">{f.originalName}</div><small>{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
+                <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button></div>
+            ))}
+          </div>
+        )}
         {i.courtAt && (
           <div className="courtbox">⚖️ In court since {fmtDate(i.courtAt)} ·{' '}
             {i.courtAckAt ? <b>acknowledged by @{i.courtAckBy}</b> : <b className="warn">waiting for the admin to acknowledge</b>}
@@ -135,6 +172,7 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           {canRefer && <button className="btn ghost sm" onClick={() => open('refer')}>{i.departmentId ? '🔁 Send to another department' : '📤 Send to department'}</button>}
           {canResolve && <button className="btn ok sm" onClick={() => open('resolve')}>✅ Mark resolved</button>}
           {canCourt && <button className="btn court sm" onClick={() => open('court')}>⚖️ Take to court</button>}
+          {(desk || me.role === 'DEPARTMENT') && <label className="btn ghost sm" style={{ margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>📎 Attach file<input type="file" multiple hidden disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={attach} /></label>}
         </div>
         {panel === 'refer' && (
           <div className="panel">
@@ -157,7 +195,9 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           <div className="panel">
             <label>What was done? (the desk and admin are notified)</label>
             <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} />
-            <div className="iact"><button className="btn ok sm" disabled={busy} onClick={() => run('resolve', { note })}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button>
+            <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
+              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setPicked(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
+            <div className="iact"><button className="btn ok sm" disabled={busy} onClick={resolveNow}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button>
               <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
           </div>
         )}
@@ -171,6 +211,58 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function AddPerson({ c, churches, onChange, setErr, onDone }) {
+  const blank = { role: 'INVOLVED', fullName: '', churchName: '', phone: '', workingStatus: 'ACTIVE_EMPLOYEE', involvement: '' }
+  const [f, setF] = useState(blank)
+  const [busy, setBusy] = useState(false)
+  const set = patch => setF(x => ({ ...x, ...patch }))
+  const save = async e => {
+    e.preventDefault(); setErr('')
+    const church = churches.find(x => x.name.toLowerCase() === f.churchName.trim().toLowerCase())
+    if (!church) return setErr('Please choose the church from the list (start typing its name).')
+    setBusy(true)
+    try {
+      onChange(await api(`/cases/${c.id}/parties`, { method: 'POST', body: { role: f.role, person: { fullName: f.fullName.trim(), churchId: church.id, phone: f.phone, workingStatus: f.workingStatus, involvement: f.involvement } } }))
+      setF(blank); onDone()
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <form className="panel" onSubmit={save}>
+      <label>Who are they to this case?</label>
+      <select value={f.role} onChange={e => set({ role: e.target.value })}>
+        <option value="INVOLVED">Called in / involved (witness, accountant, other employee…)</option>
+        <option value="SUBJECT">Another person the case is about</option>
+        <option value="COMPLAINANT">Another person reporting</option>
+      </select>
+      <label>Full name</label><input value={f.fullName} onChange={e => set({ fullName: e.target.value })} required maxLength={160} autoFocus />
+      <div className="two">
+        <div><label>Church</label><input list="church-list-detail" value={f.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" required /></div>
+        <div><label>Phone (optional)</label><input value={f.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} /></div>
+      </div>
+      <label>This person is</label>
+      <select value={f.workingStatus} onChange={e => set({ workingStatus: e.target.value })}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+      <label>What are they involved in? (what they said or provided)</label>
+      <textarea rows={3} value={f.involvement} maxLength={1000} onChange={e => set({ involvement: e.target.value })} placeholder="e.g. Cashier in 2024, handed over the cash book." />
+      <div className="iact"><button className="btn sm" disabled={busy}>{busy ? 'Adding…' : '➕ Add to case'}</button><button type="button" className="btn ghost sm" onClick={onDone}>Cancel</button></div>
+      <small>Add their paper afterwards with “Attach file” on the issue, or in Documents.</small>
+    </form>
+  )
+}
+
+function InvolvedCard({ c, churches, onChange, setErr }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="card">
+      <h2>Other people involved <span className="count">{c.involved.length}</span></h2>
+      {c.involved.length === 0 && !open && <p className="muted">No one else has been called in yet.</p>}
+      {c.involved.map(p => <PersonRow key={p.id} p={p} />)}
+      <datalist id="church-list-detail">{churches.map(x => <option key={x.id} value={x.name} />)}</datalist>
+      {open ? <AddPerson c={c} churches={churches} onChange={onChange} setErr={setErr} onDone={() => setOpen(false)} />
+        : <button className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => setOpen(true)}>➕ Call in another person</button>}
     </div>
   )
 }
@@ -198,7 +290,7 @@ function Files({ c, me, onChange, setErr }) {
       {c.files.map(f => (
         <div className="filerow" key={f.id}>
           <span className="iicon">📄</span>
-          <div className="grow"><div className="fname">{f.originalName}</div><small>{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
+          <div className="grow"><div className="fname">{f.originalName}</div><small>{f.issueId ? 'Issue ' + (c.issues.findIndex(i => i.id === f.issueId) + 1) + ' · ' : ''}{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
           <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button>
           {['ADMIN', 'OFFICER'].includes(me.role) && <button className="btn x" onClick={() => remove(f)} aria-label="Remove file">🗑️</button>}
         </div>
@@ -242,10 +334,11 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
   const [fatal, setFatal] = useState('')
   const [copied, setCopied] = useState(false)
   const [departments, setDepartments] = useState([])
+  const [churches, setChurches] = useState([])
   const desk = isStaff(me.role) && me.role !== 'DEPARTMENT'
 
   useEffect(() => { setC(null); setFatal(''); api('/cases/' + id).then(setC).catch(e => setFatal(e.message)) }, [id])
-  useEffect(() => { api('/departments').then(setDepartments).catch(() => {}) }, [])
+  useEffect(() => { api('/departments').then(setDepartments).catch(() => {}); api('/churches').then(setChurches).catch(() => {}) }, [])
 
   if (fatal) return <><button className="btn ghost" onClick={onBack}>← Back</button><div className="err">{fatal}</div></>
   if (!c) return <div className="muted">Loading…</div>
@@ -283,7 +376,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
       <div className="cols">
         <div>
           <div className="card">
-            <h2>Issues <span className="count">{c.issues.length}</span></h2>
+            <h2>Issues <span className="count">{c.issues.length}</span> <small className="inl">each issue is a sub-case with its own status, department and files</small></h2>
             {c.issues.map((i, k) => <IssueCard key={i.id} i={i} k={k} c={c} me={me} departments={departments} onChange={setC} setErr={setErr} />)}
           </div>
           <div className="card">
@@ -305,6 +398,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
             {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
+          <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />
           <Files c={c} me={me} onChange={setC} setErr={setErr} />
           <div className="card">
             <h2>Related cases</h2>

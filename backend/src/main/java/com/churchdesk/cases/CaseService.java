@@ -108,6 +108,7 @@ public class CaseService {
         p.setPerson(person);
         p.setRole(role);
         p.setSortOrder(order);
+        p.setInvolvement(blankToNull(in.involvement()));
         c.getParties().add(p);
         return order + 1;
     }
@@ -241,18 +242,41 @@ public class CaseService {
                 (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt());
     }
 
-    private PersonInfo toPerson(Person p) {
+    private PersonInfo toPerson(Person p) { return toPerson(p, null); }
+
+    private PersonInfo toPerson(Person p, String involvement) {
         return new PersonInfo(p.getId(), p.getFullName(), p.getPhone(), p.getChurch().getId(), p.getChurch().getName(),
                 p.getWorkingStatus(), partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), ACTIVE),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT));
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement);
+    }
+
+    /** Calls another person into a case that is already open (a witness, the accountant, another employee...). */
+    @Transactional
+    public CaseDetail addParty(Long caseId, AddPartyRequest r, AppUser actor) {
+        ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
+        CaseAccess.assertCanView(c, actor);
+        Set<String> seen = new HashSet<>();
+        for (CaseParty p : c.getParties()) seen.add(p.getPerson().getId() + ":" + p.getRole());
+        int before = c.getParties().size();
+        addParty(c, r.person(), r.role(), before, seen);
+        if (c.getParties().size() == before)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, r.person().fullName().trim() + " is already in this case in that role");
+        cases.save(c);
+        String what = switch (r.role()) { case COMPLAINANT -> "also reporting"; case SUBJECT -> "the case is about them"; case INVOLVED -> "involved"; };
+        String extra = blankToNull(r.person().involvement()) == null ? "" : ": " + r.person().involvement().trim();
+        eventRepo.save(new CaseEvent(c.getId(), null, EventType.NOTE, "Person added: " + r.person().fullName().trim() + " (" + what + ")" + extra, actor.getUsername()));
+        return toDetail(c);
     }
 
     private CaseDetail toDetail(ChurchCase c) {
         List<Person> complainants = peopleIn(c, PartyRole.COMPLAINANT);
         List<Person> subjects = peopleIn(c, PartyRole.SUBJECT);
+        List<PersonInfo> involved = c.getParties().stream().filter(p -> p.getRole() == PartyRole.INVOLVED)
+                .map(p -> toPerson(p.getPerson(), p.getInvolvement())).toList();
         Set<Long> ids = new LinkedHashSet<>();
         complainants.forEach(p -> ids.add(p.getId()));
         subjects.forEach(p -> ids.add(p.getId()));
+        involved.forEach(p -> ids.add(p.id()));
         List<CaseSummary> related = ids.isEmpty() ? List.of()
                 : cases.findRelated(ids, c.getId(), PageRequest.of(0, 10)).stream().map(this::toSummary).toList();
         List<IssueDto> issues = c.getIssues().stream().map(i -> new IssueDto(i.getId(), i.getCategory(), i.getDescription(), i.getStatus(),
@@ -262,10 +286,10 @@ public class CaseService {
         List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
                 .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
         List<FileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()
-                .map(f -> new FileDto(f.getId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
+                .map(f -> new FileDto(f.getId(), f.getIssueId(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
-                subjects.stream().map(this::toPerson).toList(), issues, related, events, files);
+                subjects.stream().map(this::toPerson).toList(), involved, issues, related, events, files);
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

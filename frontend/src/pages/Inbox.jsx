@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, upload } from '../api.js'
 import { CATEGORY, ISSUE_STATUS, ago, dayDiff, fmtCode, fmtDay, initial, names } from '../ui.js'
 
 /** What has been sent to a department. Its staff resolve issues here; the person who registered the case is notified. */
@@ -14,6 +14,7 @@ export default function Inbox({ me, onOpen }) {
   const [ok, setOk] = useState('')
   const [open, setOpen] = useState(null) // issue id with the resolve form open
   const [note, setNote] = useState('')
+  const [picked, setPicked] = useState([])
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -34,8 +35,11 @@ export default function Inbox({ me, onOpen }) {
     setBusy(true); setErr(''); setOk('')
     try {
       await api(`/cases/${it.caseId}/issues/${it.issueId}/resolve`, { method: 'POST', body: { note } })
+      const failed = []
+      for (const f of picked) { try { await upload(`/cases/${it.caseId}/files?issueId=${it.issueId}`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
       setOk('Resolved. The person who registered the case and the admin have been notified. ✅')
-      setOpen(null); setNote(''); load()
+      if (failed.length) setErr('These files were not saved: ' + failed.join(' · '))
+      setOpen(null); setNote(''); setPicked([]); load()
     } catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
 
@@ -79,11 +83,13 @@ export default function Inbox({ me, onOpen }) {
               <div className="panel">
                 <label>What was done? (this is sent to the desk)</label>
                 <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} placeholder="e.g. Salary difference paid on 12 Nov." />
+                <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
+                  <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setPicked(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
                 <div className="iact"><button className="btn ok sm" disabled={busy} onClick={() => resolve(it)}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button><button className="btn ghost sm" onClick={() => setOpen(null)}>Cancel</button></div>
               </div>
             )}
             <div className="iact">
-              {it.status === 'REFERRED' && open !== it.issueId && <button className="btn ok sm" onClick={() => { setOpen(it.issueId); setNote('') }}>✅ Resolve</button>}
+              {it.status === 'REFERRED' && open !== it.issueId && <button className="btn ok sm" onClick={() => { setOpen(it.issueId); setNote(''); setPicked([]) }}>✅ Resolve</button>}
               <button className="btn ghost sm" onClick={() => onOpen(it.caseId)}>Open case</button>
             </div>
           </div>

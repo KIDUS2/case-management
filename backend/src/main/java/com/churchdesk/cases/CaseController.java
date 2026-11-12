@@ -100,6 +100,11 @@ public class CaseController {
         return service.get(id, u);
     }
 
+    @PostMapping("/cases/{id}/parties")
+    public CaseDetail addParty(@PathVariable Long id, @Valid @RequestBody AddPartyRequest r, Authentication auth) {
+        return service.addParty(id, r, current.get(auth));
+    }
+
     // ---- the door queue and department inbox ----
 
     @GetMapping("/queue") @PreAuthorize(STAFF)
