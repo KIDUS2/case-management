@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api } from '../api.js'
 import Prefs from '../components/Prefs.jsx'
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onBack }) {
   const [username, setU] = useState('')
   const [password, setP] = useState('')
   const [err, setErr] = useState('')
@@ -16,6 +16,7 @@ export default function Login({ onLogin }) {
   return (
     <div className="center loginhero">
       <div className="loginprefs"><Prefs /></div>
+      {onBack && <button className="loginback" onClick={onBack}>← Home</button>}
       <form className="card login" onSubmit={submit}>
         <img className="loginlogo" src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church – Addis Ababa Diocese" />
         <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>

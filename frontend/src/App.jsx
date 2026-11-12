@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api.js'
 import { ROLES, NOTE_ICON } from './ui.js'
 import Login from './pages/Login.jsx'
+import Landing from './components/Landing.jsx'
 import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
 import NewCase from './pages/NewCase.jsx'
@@ -47,6 +48,7 @@ export default function App() {
   const [ring, setRing] = useState(false)
   const [toast, setToast] = useState(null)
   const lastUnread = useRef(0)
+  const [signIn, setSignIn] = useState(() => !!new URLSearchParams(location.search).get('emp'))
   const [focusEmp, setFocusEmp] = useState(() => new URLSearchParams(location.search).get('emp'))
 
   useEffect(() => {
@@ -95,7 +97,9 @@ export default function App() {
   const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
 
   if (!ready) return <div className="center">Loading…</div>
-  if (!user) return <Login onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
+  if (!user) return signIn
+    ? <Login onBack={() => setSignIn(false)} onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
+    : <Landing onLogin={() => setSignIn(true)} />
 
   const items = NAV.filter(n => n.roles.includes(user.role))
   const current = items.some(n => n.key === page) ? page : HOME[user.role]
