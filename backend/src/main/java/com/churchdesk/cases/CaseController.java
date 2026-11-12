@@ -105,6 +105,11 @@ public class CaseController {
         return service.addParty(id, r, current.get(auth));
     }
 
+    @PostMapping("/cases/{id}/issues") @PreAuthorize(STAFF)
+    public CaseDetail addIssue(@PathVariable Long id, @Valid @RequestBody IssueIn r, Authentication auth) {
+        return service.addIssue(id, r, current.get(auth));
+    }
+
     @PostMapping("/cases/{id}/links")
     public CaseDetail link(@PathVariable Long id, @Valid @RequestBody LinkRequest r, Authentication auth) {
         return service.linkCase(id, r.code(), current.get(auth));

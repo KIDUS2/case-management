@@ -269,6 +269,32 @@ public class CaseService {
         return toDetail(c);
     }
 
+    /** A new sub-case (issue) on a case that already exists. */
+    @Transactional
+    public CaseDetail addIssue(Long caseId, IssueIn in, AppUser actor) {
+        ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
+        access.assertCanView(c, actor);
+        if (in.category() != IssueCategory.UNCLEAR && blankToNull(in.description()) == null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please describe the new sub-case, or mark it “Not clear yet”");
+        CaseIssue i = new CaseIssue();
+        i.setChurchCase(c);
+        i.setCategory(in.category());
+        i.setDescription(blankToNull(in.description()));
+        i.setSortOrder(c.getIssues().size());
+        c.getIssues().add(i);
+        c = cases.saveAndFlush(c);
+        CaseIssue saved = c.getIssues().get(c.getIssues().size() - 1);
+        eventRepo.save(new CaseEvent(c.getId(), saved.getId(), EventType.NOTE, "Sub-case added: " + saved.getCategory() + (saved.getDescription() == null ? "" : " — " + saved.getDescription()), actor.getUsername()));
+        if (in.departmentId() != null) {
+            Department d = departments.findById(in.departmentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
+            flow.applyReferral(c, saved, d, in.returnOn(), null, actor);
+        } else {
+            flow.refreshStatus(c);
+        }
+        return toDetail(c);
+    }
+
     @Transactional
     public CaseDetail linkCase(Long caseId, String code, AppUser actor) {
         ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));

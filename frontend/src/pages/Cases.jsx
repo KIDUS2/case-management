@@ -308,6 +308,45 @@ function AccessCard({ c, setErr }) {
   )
 }
 
+function AddIssue({ c, departments, onChange, setErr }) {
+  const [open, setOpen] = useState(false)
+  const [cat, setCat] = useState('HR')
+  const [desc, setDesc] = useState('')
+  const [dept, setDept] = useState('')
+  const [ret, setRet] = useState(addDays(todayStr(), 7))
+  const [busy, setBusy] = useState(false)
+  const save = async e => {
+    e.preventDefault(); setErr('')
+    if (cat !== 'UNCLEAR' && !desc.trim()) return setErr(t('Please describe the new sub-case, or mark it “Not clear yet”'))
+    setBusy(true)
+    try {
+      onChange(await api(`/cases/${c.id}/issues`, { method: 'POST', body: { category: cat, description: desc, departmentId: dept ? Number(dept) : null, returnOn: dept ? ret || null : null } }))
+      setDesc(''); setDept(''); setOpen(false)
+    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  if (!open) return <button className="btn ghost" onClick={() => setOpen(true)}>➕ Add a sub-case</button>
+  return (
+    <form className="panel" onSubmit={save}>
+      <h2>New sub-case</h2>
+      <select value={cat} onChange={e => setCat(e.target.value)}>
+        {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+      </select>
+      <textarea rows={3} placeholder="Describe the cause…" value={desc} maxLength={4000} onChange={e => setDesc(e.target.value)} autoFocus />
+      {departments.length > 0 && (
+        <div className="grid" style={{ marginTop: 8 }}>
+          <div><label>Send to a department now? (optional)</label>
+            <select value={dept} onChange={e => setDept(e.target.value)}>
+              <option value="">Keep with the desk for now</option>
+              {departments.filter(d => d.active).map(d => <option key={d.id} value={d.id}>{d.name}{d.handlesCategory === cat ? ' ★' : ''}</option>)}
+            </select></div>
+          {dept && <div><label>Person comes back on</label><input type="date" min={todayStr()} value={ret} onChange={e => setRet(e.target.value)} /></div>}
+        </div>
+      )}
+      <div className="iact"><button className="btn sm" disabled={busy}>💾 Add sub-case</button><button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>Cancel</button></div>
+    </form>
+  )
+}
+
 function RelatedCard({ c, onOpen, onChange, setErr }) {
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -454,6 +493,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
           <div className="card">
             <h2>Issues <span className="count">{c.issues.length}</span> <small className="inl">each issue is a sub-case with its own status, department and files</small></h2>
             {c.issues.map((i, k) => <IssueCard key={i.id} i={i} k={k} c={c} me={me} departments={departments} onChange={setC} setErr={setErr} />)}
+            {desk && <AddIssue c={c} departments={departments} onChange={setC} setErr={setErr} />}
           </div>
           <div className="card">
             <h2>Discussion notes</h2>
