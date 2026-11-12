@@ -90,6 +90,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
       <datalist id="church-list">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
       {churches.length === 0 && <div className="banner warn">No churches yet. {me.role === 'ADMIN' ? <a href="#" onClick={e => { e.preventDefault(); goChurches() }}>Add the church list first →</a> : 'Ask an administrator to add the church list.'}</div>}
 
+      <div className="formgrid">
       <div className="card">
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
@@ -131,6 +132,8 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <label>Discussion notes</label>
         <textarea rows={4} value={notes} maxLength={8000} onChange={e => setNotes(e.target.value)} placeholder="What was discussed and agreed…" />
         <label className="check"><input type="checkbox" checked={letter} onChange={e => setLetter(e.target.checked)} /> ✉️ A letter has been issued</label>
+      </div>
+
       </div>
 
       <button className="btn big" disabled={busy}>{busy ? 'Saving…' : '💾 Save case and get code'}</button>

@@ -58,16 +58,21 @@ export default function App() {
   return (
     <div className="shell">
       <aside>
-        <div className="brand">🕊️ Case Desk</div>
+        <div className="topline">
+          <div className="brand">🕊️ Case Desk</div>
+          <div className="aside-foot">
+            <div className="me"><b>{user.fullName}</b><small>{user.role}</small></div>
+            <button className="nav" onClick={logout}>↩️ Log out</button>
+          </div>
+        </div>
         <CodeLookup onFound={id => openCase(id)} />
-        {NAV.filter(n => !n.admin || user.role === 'ADMIN').map(n => (
-          <button key={n.key} disabled={n.soon} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
-            <span>{n.icon}</span> {n.label} {n.soon && <small>soon</small>}
-          </button>
-        ))}
-        <div className="grow" />
-        <div className="me"><b>{user.fullName}</b><small>{user.role}</small></div>
-        <button className="nav" onClick={logout}>↩️ Log out</button>
+        <nav className="navlist">
+          {NAV.filter(n => !n.admin || user.role === 'ADMIN').map(n => (
+            <button key={n.key} disabled={n.soon} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
+              <span>{n.icon}</span> {n.label} {n.soon && <small>soon</small>}
+            </button>
+          ))}
+        </nav>
       </aside>
       <main>
         {current === 'dashboard' && <Dashboard me={user} onOpen={openCase} goNew={() => go('new')} />}
