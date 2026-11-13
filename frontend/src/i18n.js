@@ -110,6 +110,15 @@ const AM = {
   'This case is not assigned to your department': 'ይህ ጉዳይ ለመምሪያዎ አልተመደበም', 'Please write a note': 'እባክዎ ማስታወሻ ይጻፉ', 'A department with that name already exists': 'ይህ ስም ያለው መምሪያ አስቀድሞ አለ',
   'Please choose a file': 'እባክዎ ፋይል ይምረጡ', 'That file is too large (the limit is 10 MB)': 'ፋይሉ በጣም ትልቅ ነው (ገደቡ 10 MB ነው)', 'That file type is not allowed. Use PDF, image, Word, Excel or text files.': 'ይህ የፋይል ዓይነት አይፈቀድም። PDF፣ ምስል፣ Word፣ Excel ወይም የጽሑፍ ፋይሎችን ይጠቀሙ።',
   'Case not found': 'ጉዳዩ አልተገኘም', 'File not found': 'ፋይሉ አልተገኘም', 'You can’t deactivate or demote your own account': 'የራስዎን መለያ ማቦዘን ወይም ደረጃ መቀነስ አይችሉም',
+  'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
+  'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
+  'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',
+  'Name in English': 'ስም በእንግሊዝኛ', 'Name in Amharic (optional)': 'ስም በአማርኛ (አማራጭ)', 'Added. It now shows in every list.': 'ተጨምሯል። አሁን በሁሉም ዝርዝር ይታያል።', 'Saved': 'ተቀምጧል',
+  'Delete “{n}”?': '“{n}” ይሰረዝ?', 'Delete': 'ሰርዝ', 'used {n} times': '{n} ጊዜ ጥቅም ላይ ውሏል', 'switched off': 'ጠፍቷል', 'built in': 'አብሮ የተሰራ', 'Edit': 'አስተካክል', 'Switch off': 'አጥፋ', 'Switch on': 'አብራ', 'Nothing here yet.': 'ገና ምንም የለም።', 'Cancel': 'ተው', 'Save': 'አስቀምጥ',
+  'Phone number': 'ስልክ ቁጥር', 'Another phone number (optional)': 'ሌላ ስልክ ቁጥር (አማራጭ)', 'Add another phone number': 'ሌላ ስልክ ቁጥር ጨምር', 'Remove': 'አስወግድ',
+  'This person has no phone (admin allows it)': 'ይህ ሰው ስልክ የለውም (አስተዳዳሪው ፈቅዷል)', '{x}: please enter a phone number.': '{x}፦ እባክዎ ስልክ ቁጥር ይጻፉ።', 'No phone (allowed by admin)': 'ስልክ የለም (አስተዳዳሪው ፈቅዷል)', '{n} have no phone number yet.': '{n} ሰዎች ገና ስልክ ቁጥር የላቸውም።',
+  'Kefle ketema: {x}': 'ክፍለ ከተማ፦ {x}', 'Kefle ketema not set for this church yet. Ask the administrator to set it in Churches.': 'ለዚህ ቤተ ክርስቲያን ክፍለ ከተማ ገና አልተገለጸም። አስተዳዳሪው በቤተ ክርስቲያናት ገጽ እንዲያስቀምጠው ይጠይቁ።',
+  'Which kefle ketema has the most issues': 'ብዙ ጉዳይ ያለው ክፍለ ከተማ የትኛው ነው', 'by the church of the person who came': 'በመጣው ሰው ቤተ ክርስቲያን መሠረት', 'Churches with the most issues': 'ብዙ ጉዳይ ያላቸው አብያተ ክርስቲያናት', 'Issues': 'ጉዳዮች', 'Cases': 'ጉዳዮች', 'Resolved': 'የተፈቱ', 'What kind of issues': 'ምን ዓይነት ጉዳዮች', 'Church': 'ቤተ ክርስቲያን', 'No cases yet.': 'ገና ጉዳይ የለም።',
 }
 
 const CATEGORY_AM = { HR: 'ሰው ሀብት', Finance: 'ፋይናንስ', Management: 'አስተዳደር', Court: 'ፍርድ ቤት', Unclear: 'ገና ግልጽ ያልሆነ' }

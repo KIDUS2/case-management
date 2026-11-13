@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
-import { CATEGORY } from '../ui.js'
+import { CATEGORY, catOptions } from '../ui.js'
 
 const empty = { name: '', handlesCategory: '' }
 
@@ -33,7 +33,7 @@ export default function Departments() {
   const catSelect = (value, onChange) => (
     <select value={value || ''} onChange={e => onChange(e.target.value)}>
       <option value="">Any kind of issue</option>
-      {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+      {catOptions().map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
     </select>
   )
 

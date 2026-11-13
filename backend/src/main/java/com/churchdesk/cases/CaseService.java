@@ -45,12 +45,14 @@ public class CaseService {
     private final CaseFileRepository fileRepo;
     private final CaseFlowService flow;
     private final AccessService access;
+    private final com.churchdesk.option.OptionService options;
     private final CaseLinkRepository linkRepo;
     private final SecureRandom random = new SecureRandom();
 
     public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
                        DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
-                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo) {
+                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo, com.churchdesk.option.OptionService options) {
+        this.options = options;
         this.linkRepo = linkRepo;
         this.cases = cases; this.partyRepo = partyRepo; this.persons = persons; this.churches = churches;
         this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow; this.access = access;
@@ -66,16 +68,16 @@ public class CaseService {
 
         Set<String> seen = new HashSet<>();
         int order = 0;
-        for (PartyIn in : r.complainants()) order = addParty(c, in, PartyRole.COMPLAINANT, order, seen);
+        for (PartyIn in : r.complainants()) order = addParty(c, in, PartyRole.COMPLAINANT, order, seen, actor);
         if (r.subjects() != null) {
-            for (PartyIn in : r.subjects()) order = addParty(c, in, PartyRole.SUBJECT, order, seen);
+            for (PartyIn in : r.subjects()) order = addParty(c, in, PartyRole.SUBJECT, order, seen, actor);
         }
 
         int issueOrder = 0;
         for (IssueIn in : r.issues()) {
             CaseIssue i = new CaseIssue();
             i.setChurchCase(c);
-            i.setCategory(in.category());
+            i.setCategory(options.requireIssueType(in.category()));
             i.setDescription(blankToNull(in.description()));
             i.setSortOrder(issueOrder++);
             c.getIssues().add(i);
@@ -94,7 +96,7 @@ public class CaseService {
     }
 
     /** The same person at the same church is reused, so all their cases are linked together. */
-    private int addParty(ChurchCase c, PartyIn in, PartyRole role, int order, Set<String> seen) {
+    private int addParty(ChurchCase c, PartyIn in, PartyRole role, int order, Set<String> seen, AppUser actor) {
         Church church = churches.findById(in.churchId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a church from the list for " + in.fullName().trim()));
         String name = in.fullName().trim();
@@ -107,6 +109,11 @@ public class CaseService {
         person.setChurch(church);
         person.setWorkingStatus(in.workingStatus());
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
+        if (in.extraPhones() != null) person.setExtraPhoneList(in.extraPhones());
+        // the phone number is mandatory; only the administrator can allow a person to have none
+        if (in.phoneExempt() != null && actor.getRole() == Role.ADMIN) person.setPhoneExempt(in.phoneExempt());
+        if (person.getPhone() == null && !person.isPhoneExempt())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a phone number for " + name + ". Only the administrator can allow a person without one.");
         if (person.getEmployeeId() == null && in.workingStatus() != WorkingStatus.CHURCH_MEMBER)
             person.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         person = persons.save(person);
@@ -269,7 +276,7 @@ public class CaseService {
 
     public CaseSummary toSummary(ChurchCase c) {
         List<Person> complainants = peopleIn(c, PartyRole.COMPLAINANT);
-        List<IssueCategory> cats = c.getIssues().stream().map(CaseIssue::getCategory).distinct().toList();
+        List<String> cats = c.getIssues().stream().map(CaseIssue::getCategory).distinct().toList();
         String church = complainants.isEmpty() ? "" : complainants.get(0).getChurch().getName();
         return new CaseSummary(c.getId(), c.getCode(),
                 complainants.stream().map(Person::getFullName).toList(),
@@ -283,7 +290,7 @@ public class CaseService {
     private PersonInfo toPerson(Person p, String involvement) {
         return new PersonInfo(p.getId(), p.getFullName(), p.getPhone(), p.getChurch().getId(), p.getChurch().getName(),
                 p.getWorkingStatus(), partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), ACTIVE),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId(), p.getProfession(), p.getPosition());
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId(), p.getProfession(), p.getPosition(), p.getExtraPhoneList(), p.isPhoneExempt());
     }
 
     /** Calls another person into a case that is already open (a witness, the accountant, another employee...). */
@@ -294,7 +301,7 @@ public class CaseService {
         Set<String> seen = new HashSet<>();
         for (CaseParty p : c.getParties()) seen.add(p.getPerson().getId() + ":" + p.getRole());
         int before = c.getParties().size();
-        addParty(c, r.person(), r.role(), before, seen);
+        addParty(c, r.person(), r.role(), before, seen, actor);
         if (c.getParties().size() == before)
             throw new ResponseStatusException(HttpStatus.CONFLICT, r.person().fullName().trim() + " is already in this case in that role");
         cases.save(c);
@@ -309,17 +316,17 @@ public class CaseService {
     public CaseDetail addIssue(Long caseId, IssueIn in, AppUser actor) {
         ChurchCase c = cases.findById(caseId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Case not found"));
         access.assertCanView(c, actor);
-        if (in.category() != IssueCategory.UNCLEAR && blankToNull(in.description()) == null)
+        if (!"UNCLEAR".equals(in.category()) && blankToNull(in.description()) == null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please describe the new sub-case, or mark it “Not clear yet”");
         CaseIssue i = new CaseIssue();
         i.setChurchCase(c);
-        i.setCategory(in.category());
+        i.setCategory(options.requireIssueType(in.category()));
         i.setDescription(blankToNull(in.description()));
         i.setSortOrder(c.getIssues().size());
         c.getIssues().add(i);
         c = cases.saveAndFlush(c);
         CaseIssue saved = c.getIssues().get(c.getIssues().size() - 1);
-        eventRepo.save(new CaseEvent(c.getId(), saved.getId(), EventType.NOTE, "Sub-case added: " + saved.getCategory() + (saved.getDescription() == null ? "" : " — " + saved.getDescription()), actor.getUsername()));
+        eventRepo.save(new CaseEvent(c.getId(), saved.getId(), EventType.NOTE, "Sub-case added: " + options.issueTypeLabel(saved.getCategory()) + (saved.getDescription() == null ? "" : " — " + saved.getDescription()), actor.getUsername()));
         if (in.departmentId() != null) {
             Department d = departments.findById(in.departmentId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));

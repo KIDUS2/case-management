@@ -24,7 +24,8 @@ public class ChurchController {
     public record BulkResult(int added, int skipped, int updated) {}
 
     private final ChurchRepository repo;
-    public ChurchController(ChurchRepository repo) { this.repo = repo; }
+    private final com.churchdesk.option.OptionService options;
+    public ChurchController(ChurchRepository repo, com.churchdesk.option.OptionService options) { this.repo = repo; this.options = options; }
 
     @GetMapping
     public List<ChurchDto> list() {
@@ -37,7 +38,7 @@ public class ChurchController {
         if (repo.existsByNameIgnoreCase(name)) throw new ResponseStatusException(HttpStatus.CONFLICT, "That church is already in the list");
         Church c = new Church();
         c.setName(name);
-        c.setSubCity(blank(r.subCity()));
+        c.setSubCity(options.requireSubCity(r.subCity()));
         c = repo.save(c);
         return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
     }
@@ -45,7 +46,7 @@ public class ChurchController {
     @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')") @Transactional
     public ChurchDto update(@PathVariable Long id, @Valid @RequestBody UpdateChurch r) {
         Church c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Church not found"));
-        c.setSubCity(blank(r.subCity()));
+        c.setSubCity(options.requireSubCity(r.subCity()));
         return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
     }
 
@@ -60,7 +61,7 @@ public class ChurchController {
         for (BulkItem it : items) {
             String name = it.name() == null ? "" : it.name().trim();
             if (name.isEmpty()) continue;
-            String sub = blank(it.subCity());
+            String sub = options.matchSubCity(it.subCity());
             if (name.length() > 160 || !seen.add(name.toLowerCase())) { skipped++; continue; }
             Church existing = repo.findFirstByNameIgnoreCase(name).orElse(null);
             if (existing != null) {

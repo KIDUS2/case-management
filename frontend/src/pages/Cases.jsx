@@ -4,7 +4,7 @@ import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
 import ChurchLoop from '../components/ChurchLoop.jsx'
 import IssueFlags from '../components/IssueFlags.jsx'
-import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
+import { STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -341,7 +341,7 @@ function AddIssue({ c, departments, onChange, setErr }) {
     <form className="panel" onSubmit={save}>
       <h2>New sub-case</h2>
       <select value={cat} onChange={e => setCat(e.target.value)}>
-        {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+        {catOptions().map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
       </select>
       <textarea rows={3} placeholder="Describe the cause…" value={desc} maxLength={4000} onChange={e => setDesc(e.target.value)} autoFocus />
       {departments.length > 0 && (

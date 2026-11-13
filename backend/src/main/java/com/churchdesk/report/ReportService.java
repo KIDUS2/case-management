@@ -1,11 +1,12 @@
 package com.churchdesk.report;
 
 import com.churchdesk.cases.CaseStatus;
-import com.churchdesk.cases.IssueCategory;
 import com.churchdesk.cases.IssueStatus;
 import com.churchdesk.cases.Times;
 import com.churchdesk.cases.PartyRole;
 import com.churchdesk.cases.WorkingStatus;
+import com.churchdesk.option.OptionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class ReportService {
     private static final ZoneId ZONE = ZoneId.of("Africa/Addis_Ababa");
     private static final int DAYS = 30;
+    @Autowired private OptionService options;
 
     public record NameCount(String name, long count) {}
     public record DayCount(String date, long count) {}
@@ -30,8 +32,10 @@ public class ReportService {
     /** Work still to do: people expected at the door, and court cases the admin has not yet acknowledged. */
     public record Flow(long expectedToday, long overdue, long courtUnacknowledged, long waitingInDepartments) {}
     public record DeptCount(String name, long pending, long resolved) {}
+    /** Where the trouble is: one row per kefle ketema or per church, with its issue types. Cases and issues are counted by the church of the person who brought the case. */
+    public record Hotspot(String name, String subCity, long cases, long issues, long resolved, Map<String, Long> byCategory) {}
     public record Overview(Totals totals, Flow flow, List<DeptCount> byDepartment, Map<String, Long> byStatus, Map<String, Long> byCategory,
-                           List<NameCount> topChurches, List<DayCount> daily) {}
+                           List<NameCount> topChurches, List<DayCount> daily, List<Hotspot> bySubCity, List<Hotspot> churchesByIssues) {}
 
     @PersistenceContext private EntityManager em;
 
@@ -64,10 +68,10 @@ public class ReportService {
             byStatus.put(((CaseStatus) row[0]).name(), (Long) row[1]);
 
         Map<String, Long> byCategory = new LinkedHashMap<>();
-        for (IssueCategory k : IssueCategory.values()) byCategory.put(k.name(), 0L);
+        for (String k : options.issueTypeLabels().keySet()) byCategory.put(k, 0L);
         for (Object[] row : em.createQuery("select i.category, count(i) from CaseIssue i join i.churchCase cc where" + inRange + " group by i.category", Object[].class)
                 .setParameter("s", s).setParameter("u", u).getResultList())
-            byCategory.put(((IssueCategory) row[0]).name(), (Long) row[1]);
+            byCategory.merge((String) row[0], (Long) row[1], Long::sum);
 
         List<NameCount> top = new ArrayList<>();
         for (Object[] row : em.createQuery(
@@ -111,8 +115,31 @@ public class ReportService {
         }
         List<DeptCount> byDept = dept.entrySet().stream().map(e -> new DeptCount(e.getKey(), e.getValue()[0], e.getValue()[1])).toList();
 
+        List<Hotspot> bySub = hotspots(true, inRange, s, u, 0);
+        List<Hotspot> byChurch = hotspots(false, inRange, s, u, 10);
+
         return new Overview(new Totals(cases, people, returning, churches, letters, churchMembers, reportedOn, repeatReportedOn),
-                new Flow(expectedToday, overdue, courtOpen, waiting), byDept, byStatus, byCategory, top, daily);
+                new Flow(expectedToday, overdue, courtOpen, waiting), byDept, byStatus, byCategory, top, daily, bySub, byChurch);
+    }
+
+    private List<Hotspot> hotspots(boolean bySubCity, String inRange, Instant s, Instant u, int limit) {
+        record Acc(String sub, java.util.Set<Long> cases, long[] n, Map<String, Long> cats) {}
+        Map<String, Acc> acc = new LinkedHashMap<>();
+        for (Object[] r : em.createQuery("select ch.name, ch.subCity, cc.id, i.category, i.status from CaseIssue i join i.churchCase cc, CaseParty cp join cp.person p join p.church ch"
+                + " where cp.churchCase = cc and cp.role = :role and" + inRange, Object[].class)
+                .setParameter("role", PartyRole.COMPLAINANT).setParameter("s", s).setParameter("u", u).getResultList()) {
+            String sub = r[1] == null || ((String) r[1]).isBlank() ? "—" : (String) r[1];
+            String key = bySubCity ? sub : (String) r[0];
+            Acc a = acc.computeIfAbsent(key, k -> new Acc(sub, new java.util.HashSet<>(), new long[2], new LinkedHashMap<>()));
+            a.cases().add((Long) r[2]);
+            a.n()[0]++;
+            if (r[4] == IssueStatus.RESOLVED) a.n()[1]++;
+            a.cats().merge((String) r[3], 1L, Long::sum);
+        }
+        return acc.entrySet().stream()
+                .map(e -> new Hotspot(e.getKey(), e.getValue().sub(), e.getValue().cases().size(), e.getValue().n()[0], e.getValue().n()[1], e.getValue().cats()))
+                .sorted((x, y) -> y.issues() != x.issues() ? Long.compare(y.issues(), x.issues()) : x.name().compareTo(y.name()))
+                .limit(limit == 0 ? Long.MAX_VALUE : limit).toList();
     }
 
     private long count(String jpql, Instant s, Instant u) {

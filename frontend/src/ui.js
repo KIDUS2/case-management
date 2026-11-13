@@ -11,13 +11,20 @@ export const ISSUE_STATUS = {
   COURT: { label: 'In court', cls: 's-court', icon: '⚖️' },
   RESOLVED: { label: 'Resolved', cls: 's-ok', icon: '✅' },
 }
-export const CATEGORY = {
-  HR: { label: 'HR management', icon: '👥' },
-  FINANCE: { label: 'Finance', icon: '💰' },
-  MANAGEMENT: { label: 'Management', icon: '🏛️' },
-  COURT: { label: 'Court matter', icon: '⚖️' },
-  UNCLEAR: { label: 'Not clear yet', icon: '❓' },
+/** Types of issue and kefle ketema come from Settings (loaded once after sign-in); these are what shows before that. */
+const catStore = {
+  HR: { label: 'HR management', icon: '👥', active: true },
+  FINANCE: { label: 'Finance', icon: '💰', active: true },
+  MANAGEMENT: { label: 'Management', icon: '🏛️', active: true },
+  COURT: { label: 'Court matter', icon: '⚖️', active: true },
+  UNCLEAR: { label: 'Not clear yet', icon: '❓', active: true },
 }
+/** Every issue type by code (switched-off ones too, so old cases still show). An unknown code shows as itself. */
+export const CATEGORY = new Proxy(catStore, {
+  get: (t0, k) => (k in t0 ? t0[k] : typeof k === 'string' ? { label: k, icon: '🗂️', active: false } : undefined),
+})
+/** The issue types that can be chosen right now, as [code, {label, icon}]. */
+export const catOptions = () => Object.entries(catStore).filter(([, v]) => v.active)
 export const WORKING = {
   ACTIVE_EMPLOYEE: 'Active employee', LEADER_PRIEST: 'Leader / priest', RETIRED: 'Retired',
   SUSPENDED: 'Suspended', CONTRACT: 'Contract', VOLUNTEER: 'Volunteer',
@@ -29,7 +36,7 @@ export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', A
 
 export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION'].includes(role)
 
-import { t, locale } from './i18n.js'
+import { t, locale, getLang } from './i18n.js'
 export const fmtDate = iso => new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
 export const initial = s => (s || '?').trim()[0]?.toUpperCase() || '?'
 /** K7M2QX -> K7M-2QX, easier to read out and write down */
@@ -58,5 +65,19 @@ export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFi
 /** 123456789012 -> 1234 5678 9012, like a national ID */
 export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d)/g, '$1 ') : id || '')
 
-/** The kefle ketema (sub-cities) of Addis Ababa. */
+/** The kefle ketema (sub-cities) that can be chosen right now; filled from Settings. */
 export const SUB_CITIES = ['Addis Ketema', 'Akaki Kaliti', 'Arada', 'Bole', 'Gullele', 'Kirkos', 'Kolfe Keranio', 'Lideta', 'Lemi Kura', 'Nifas Silk-Lafto', 'Yeka']
+/** The full lists as the server has them (with ids, both languages and use counts), for the Settings page. */
+export const OPTION_LISTS = { issueTypes: [], subCities: [] }
+
+/** Put the lists from /api/options in place. Names show in Amharic when that language is on and an Amharic name exists. */
+export function applyOptions(o) {
+  const am = getLang() === 'am'
+  const name = x => (am && x.labelAm ? x.labelAm : x.label)
+  Object.keys(catStore).forEach(k => delete catStore[k])
+  o.issueTypes.forEach(x => { catStore[x.code] = { label: name(x), icon: x.icon || '🗂️', active: x.active } })
+  SUB_CITIES.length = 0
+  o.subCities.filter(x => x.active).forEach(x => SUB_CITIES.push(x.code))
+  OPTION_LISTS.issueTypes = o.issueTypes
+  OPTION_LISTS.subCities = o.subCities
+}

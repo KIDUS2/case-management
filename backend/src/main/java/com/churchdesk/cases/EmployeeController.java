@@ -31,7 +31,8 @@ public class EmployeeController {
                               String gender, LocalDate birthDate, LocalDate hireDate, String address, String notes,
                               String christianName, String fatherConfessor, String spiritualRank, LocalDate ordainedOn,
                               WorkingStatus workingStatus, boolean hasPhoto, LocalDate idIssuedOn, LocalDate idExpiresOn, boolean idExpired,
-                              long totalCases, long openCases, long complaintsAgainst, long documents) {}
+                              long totalCases, long openCases, long complaintsAgainst, long documents,
+                              List<String> extraPhones, boolean phoneExempt) {}
 
     public record EmployeeRequest(@Size(max = 40) String churchRef, @Size(max = 80) String firstName, @Size(max = 80) String middleName,
                                   @Size(max = 80) String lastName, @Size(max = 160) String motherName, @NotNull Long churchId,
@@ -39,9 +40,10 @@ public class EmployeeController {
                                   @Size(max = 120) String position, @Size(max = 10) String gender, LocalDate birthDate, LocalDate hireDate,
                                   @Size(max = 255) String address, @Size(max = 4000) String notes,
                                   @Size(max = 120) String christianName, @Size(max = 160) String fatherConfessor, @Size(max = 40) String spiritualRank,
-                                  LocalDate ordainedOn, @NotNull WorkingStatus workingStatus, LocalDate idExpiresOn) {}
+                                  LocalDate ordainedOn, @NotNull WorkingStatus workingStatus, LocalDate idExpiresOn,
+                                  @Size(max = 5) List<@Size(max = 40) String> extraPhones, Boolean phoneExempt) {}
 
-    public record ImportResult(int created, int updated, List<String> errors) {}
+    public record ImportResult(int created, int updated, List<String> errors, int missingPhone) {}
 
     private final PersonRepository persons;
     private final ChurchRepository churches;
@@ -77,9 +79,9 @@ public class EmployeeController {
     }
 
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize(WRITE) @Transactional
-    public EmployeeDto create(@Valid @RequestBody EmployeeRequest r) {
+    public EmployeeDto create(@Valid @RequestBody EmployeeRequest r, org.springframework.security.core.Authentication auth) {
         Person p = new Person();
-        apply(p, r, true);
+        apply(p, r, true, isAdmin(auth));
         persons.findFirstByFullNameIgnoreCaseAndMotherNameIgnoreCase(p.getFullName(), p.getMotherName()).ifPresent(o -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT, p.getFullName() + " (mother: " + p.getMotherName() + ") is already registered, ID "
                     + (o.getEmployeeId() == null ? "-" : o.getEmployeeId()));
@@ -91,11 +93,11 @@ public class EmployeeController {
 
     /** The ID number never changes after it is created. */
     @PutMapping("/{id}") @PreAuthorize(WRITE) @Transactional
-    public EmployeeDto update(@PathVariable Long id, @Valid @RequestBody EmployeeRequest r) {
+    public EmployeeDto update(@PathVariable Long id, @Valid @RequestBody EmployeeRequest r, org.springframework.security.core.Authentication auth) {
         Person p = find(id);
         Long oldChurch = p.getChurch().getId();
         String oldPosition = p.getPosition();
-        apply(p, r, true);
+        apply(p, r, true, isAdmin(auth));
         p = persons.save(p);
         recordPosting(p, oldChurch, oldPosition);
         return dto(p);
@@ -128,7 +130,7 @@ public class EmployeeController {
     /** Bulk load from the church's list. Someone already known (by system ID or the church's own number) is updated; everyone else gets a new ID. */
     @PostMapping("/import") @PreAuthorize(WRITE) @Transactional
     public ImportResult importRows(@RequestBody List<@Valid EmployeeRequest> rows) {
-        int created = 0, updated = 0;
+        int created = 0, updated = 0, missingPhone = 0;
         List<String> errors = new ArrayList<>();
         int n = 0;
         for (EmployeeRequest r : rows) {
@@ -142,18 +144,19 @@ public class EmployeeController {
                 }
                 boolean isNew = p == null;
                 if (isNew) p = new Person();
-                apply(p, r, false);
+                apply(p, r, false, false);
                 persons.save(p);
+                if (p.getPhone() == null && !p.isPhoneExempt()) missingPhone++;
                 if (isNew) created++; else updated++;
             } catch (ResponseStatusException e) {
                 errors.add("Row " + n + ": " + e.getReason());
             }
         }
-        return new ImportResult(created, updated, errors);
+        return new ImportResult(created, updated, errors, missingPhone);
     }
 
     /** strict = a person at the desk is registering someone, so the full identity is required. */
-    private void apply(Person p, EmployeeRequest r, boolean strict) {
+    private void apply(Person p, EmployeeRequest r, boolean strict, boolean admin) {
         Church church = churches.findById(r.churchId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Church not found"));
         String first = blank(r.firstName()), middle = blank(r.middleName()), last = blank(r.lastName()), mother = blank(r.motherName());
         if (first == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the first name");
@@ -166,6 +169,11 @@ public class EmployeeController {
         if (ref != null && !EmployeeIds.looksLikeId(ref)) p.setChurchRef(ref); else if (ref == null) p.setChurchRef(null);
         p.setChurch(church);
         p.setPhone(blank(r.phone())); p.setEmail(blank(r.email()));
+        if (r.extraPhones() != null) p.setExtraPhoneList(r.extraPhones());
+        if (r.phoneExempt() != null && admin) p.setPhoneExempt(r.phoneExempt());
+        // the phone number is mandatory; only the administrator can allow a person to have none
+        if (strict && p.getPhone() == null && !p.isPhoneExempt())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a phone number. Only the administrator can allow a person without one.");
         p.setProfession(blank(r.profession())); p.setPosition(blank(r.position()));
         p.setGender(blank(r.gender()));
         p.setBirthDate(r.birthDate()); p.setHireDate(r.hireDate());
@@ -176,6 +184,10 @@ public class EmployeeController {
         if (p.getEmployeeId() == null && r.workingStatus() != WorkingStatus.CHURCH_MEMBER)
             p.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         if (p.getEmployeeId() != null && r.idExpiresOn() != null) p.setIdExpiresOn(r.idExpiresOn());
+    }
+
+    private static boolean isAdmin(org.springframework.security.core.Authentication auth) {
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 
     private Person find(Long id) { return persons.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found")); }
@@ -189,6 +201,7 @@ public class EmployeeController {
                 p.getChristianName(), p.getFatherConfessor(), p.getSpiritualRank(), p.getOrdainedOn(),
                 p.getWorkingStatus(), p.getPhotoFile() != null, p.getIdIssuedOn(), exp, exp != null && exp.isBefore(Times.today()),
                 partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), java.util.List.of(CaseStatus.OPEN, CaseStatus.REFERRED, CaseStatus.COURT)),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), docs.countByPersonId(p.getId()));
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), docs.countByPersonId(p.getId()),
+                p.getExtraPhoneList(), p.isPhoneExempt());
     }
 }

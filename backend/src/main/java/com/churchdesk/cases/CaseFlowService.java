@@ -24,11 +24,12 @@ public class CaseFlowService {
     private final UserRepository users;
     private final NotificationService notifier;
     private final AccessService access;
+    private final com.churchdesk.option.OptionService options;
     private final CaseIssueRepository issueRepo;
 
     public CaseFlowService(ChurchCaseRepository cases, CaseEventRepository events, DepartmentRepository departments,
-                           UserRepository users, NotificationService notifier, AccessService access, CaseIssueRepository issueRepo) {
-        this.issueRepo = issueRepo; this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
+                           UserRepository users, NotificationService notifier, AccessService access, CaseIssueRepository issueRepo, com.churchdesk.option.OptionService options) {
+        this.options = options; this.issueRepo = issueRepo; this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
     }
 
     // ---- used while registering a new case ----
@@ -212,9 +213,7 @@ public class CaseFlowService {
 
     private static String code(ChurchCase c) { return c.getCode().length() == 6 ? c.getCode().substring(0, 3) + "-" + c.getCode().substring(3) : c.getCode(); }
 
-    private static String label(IssueCategory k) {
-        return switch (k) { case HR -> "HR"; case FINANCE -> "Finance"; case MANAGEMENT -> "Management"; case COURT -> "Court"; case UNCLEAR -> "Unclear"; };
-    }
+    private String label(String k) { return options.issueTypeLabel(k); }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 }

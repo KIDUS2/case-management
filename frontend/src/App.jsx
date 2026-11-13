@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api.js'
-import { ROLES, NOTE_ICON } from './ui.js'
+import { ROLES, NOTE_ICON, applyOptions } from './ui.js'
 import Login from './pages/Login.jsx'
 import Landing from './components/Landing.jsx'
 import Summary from './pages/Summary.jsx'
@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Queue from './pages/Queue.jsx'
 import Inbox from './pages/Inbox.jsx'
 import Departments from './pages/Departments.jsx'
+import Settings from './pages/Settings.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Account from './pages/Account.jsx'
 import SearchBar from './components/SearchBar.jsx'
@@ -35,15 +36,20 @@ const NAV = [
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
+  { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
   { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
 ]
+/** Switching language reloads the page; remember where the person was so they come back to the same place. */
+const readView = () => { try { return JSON.parse(sessionStorage.getItem('view') || 'null') } catch { return null } }
+const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(v)) : sessionStorage.removeItem('view') } catch { /* private mode */ } }
 const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases' }
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
-  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'employees' : null))
-  const [openId, setOpenId] = useState(null)
+  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'employees' : localStorage.getItem('token') ? readView()?.page || null : null))
+  const [openId, setOpenId] = useState(() => (localStorage.getItem('token') ? readView()?.openId || null : null))
+  const [optsReady, setOptsReady] = useState(false)
   const [fresh, setFresh] = useState(null)
   const [query, setQuery] = useState('')
   const [unread, setUnread] = useState(0)
@@ -52,6 +58,14 @@ export default function App() {
   const lastUnread = useRef(0)
   const [signIn, setSignIn] = useState(() => !!new URLSearchParams(location.search).get('emp'))
   const [focusEmp, setFocusEmp] = useState(() => new URLSearchParams(location.search).get('emp'))
+
+  useEffect(() => { if (user) saveView({ page, openId }) }, [user, page, openId])
+
+  // the dropdown lists (issue types, kefle ketema) come from Settings
+  useEffect(() => {
+    if (!user) { setOptsReady(false); return }
+    api('/options').then(applyOptions).catch(() => {}).finally(() => setOptsReady(true))
+  }, [user])
 
   useEffect(() => {
     if (!localStorage.getItem('token')) return setReady(true)
@@ -88,17 +102,17 @@ export default function App() {
   }, [toast])
 
   useEffect(() => {
-    const h = () => { setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0); notify(t('Your session has ended. Please sign in again.'), 'info') }
+    const h = () => { saveView(null); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0); notify(t('Your session has ended. Please sign in again.'), 'info') }
     window.addEventListener('session-expired', h)
     return () => window.removeEventListener('session-expired', h)
   }, [])
 
-  const logout = () => { localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
+  const logout = () => { saveView(null); localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
   const go = key => { setOpenId(null); setFresh(null); setQuery(''); setPage(key) }
   const openCase = (id, isNew = false, failed = []) => { setOpenId(id); setFresh(isNew ? { failed } : null); setPage('cases') }
   const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
 
-  if (!ready) return <div className="center">Loading…</div>
+  if (!ready || (user && !optsReady)) return <div className="center">Loading…</div>
   if (!user) return signIn
     ? <Login onBack={() => setSignIn(false)} onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
     : <Landing onLogin={() => setSignIn(true)} />
@@ -143,6 +157,7 @@ export default function App() {
         {current === 'churches' && <Churches />}
         {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} />}
         {current === 'departments' && <Departments />}
+        {current === 'settings' && <Settings />}
         {current === 'users' && <Users me={user} />}
         {current === 'account' && <Account me={user} onUser={setUser} />}
       </main>

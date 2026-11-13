@@ -10,7 +10,7 @@ import java.time.LocalDate;
 public class CaseIssue {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "case_id", nullable = false) private ChurchCase churchCase;
-    @Enumerated(EnumType.STRING) @Column(nullable = false) private IssueCategory category;
+    @Column(nullable = false) private String category;
     @Column(columnDefinition = "text") private String description;
     @Column(name = "sort_order", nullable = false) private int sortOrder;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private IssueStatus status = IssueStatus.NEW;
@@ -33,8 +33,8 @@ public class CaseIssue {
     public Long getId() { return id; }
     public ChurchCase getChurchCase() { return churchCase; }
     public void setChurchCase(ChurchCase v) { churchCase = v; }
-    public IssueCategory getCategory() { return category; }
-    public void setCategory(IssueCategory v) { category = v; }
+    public String getCategory() { return category; }
+    public void setCategory(String v) { category = v; }
     public String getDescription() { return description; }
     public void setDescription(String v) { description = v; }
     public int getSortOrder() { return sortOrder; }

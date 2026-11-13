@@ -8,7 +8,7 @@ import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet
 
 const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
-const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
+const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
 const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
 
 /** Turns rows of cells (first row = column names, any order) into employee records. */
@@ -238,7 +238,7 @@ function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, o
             <Row k="Mother’s name" v={e.motherName} />
             <Row k="Gender" v={e.gender ? (e.gender === 'MALE' ? 'Male' : 'Female') : ''} />
             <Row k="Date of birth" v={e.birthDate ? fmtDay(e.birthDate) + (age != null ? ` (${age})` : '') : ''} />
-            <Row k="Phone" v={e.phone} /><Row k="Email" v={e.email} /><Row k="Address" v={e.address} />
+            <Row k="Phone" v={[e.phone, ...(e.extraPhones || [])].filter(Boolean).join(' · ') || (e.phoneExempt ? t('No phone (allowed by admin)') : '')} /><Row k="Email" v={e.email} /><Row k="Address" v={e.address} />
           </div>
           <div className="card"><h2>Spiritual life</h2>
             <Row k="Christian name" v={e.christianName} /><Row k="Father confessor" v={e.fatherConfessor} />
@@ -296,7 +296,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     if (!ch) throw new Error(t('Please choose the church from the list (start typing its name).'))
     const { churchName, ...rest } = f
     const nul = v => v || null
-    return { ...rest, churchId: ch.id, birthDate: nul(f.birthDate), hireDate: nul(f.hireDate), ordainedOn: nul(f.ordainedOn), idExpiresOn: nul(f.idExpiresOn) }
+    return { ...rest, extraPhones: (f.extraPhones || []).map(x => x.trim()).filter(Boolean), churchId: ch.id, birthDate: nul(f.birthDate), hireDate: nul(f.hireDate), ordainedOn: nul(f.ordainedOn), idExpiresOn: nul(f.idExpiresOn) }
   }
   const save = async e => {
     e.preventDefault(); setErr(''); setOk('')
@@ -311,7 +311,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     } catch (x) { setErr(x.message) }
   }
   const edit = e => {
-    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
+    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', extraPhones: e.extraPhones || [], phoneExempt: !!e.phoneExempt, email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
     setPhoto(null); setView(null); window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const pickFile = async ev => {
@@ -329,7 +329,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     try {
       const body = good.map(r => ({ churchRef: r.churchRef, firstName: r.firstName, middleName: r.middleName, lastName: r.lastName, motherName: r.motherName, churchId: byName.get(r.church.toLowerCase()), phone: r.phone, email: r.email, profession: r.profession, position: r.position, gender: r.gender.toUpperCase().startsWith('F') ? 'FEMALE' : r.gender.toUpperCase().startsWith('M') ? 'MALE' : '', birthDate: r.birthDate || null, hireDate: r.hireDate || null, address: r.address, notes: '', christianName: r.christianName, fatherConfessor: r.fatherConfessor, workingStatus: 'ACTIVE_EMPLOYEE' }))
       const res = body.length ? await api('/employees/import', { method: 'POST', body }) : { created: 0, updated: 0, errors: [] }
-      setOk(t('{a} added, {b} updated.', { a: res.created, b: res.updated }))
+      setOk(t('{a} added, {b} updated.', { a: res.created, b: res.updated }) + (res.missingPhone ? ' ' + t('{n} have no phone number yet.', { n: res.missingPhone }) : ''))
       const problems = [...res.errors, ...(unknown.length ? [t('Church not found: {x}', { x: unknown.slice(0, 5).join(', ') })] : [])]
       if (problems.length) setErr(problems.join(' · ')); else setBulk('')
       load()
@@ -404,7 +404,19 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
             <div><label>Working status</label><select value={form.workingStatus} onChange={f('workingStatus')}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
             <div><label>Profession</label><input value={form.profession} onChange={f('profession')} maxLength={120} placeholder="e.g. Accountant, Teacher, Priest" /></div>
             <div><label>Position at the church</label><input value={form.position} onChange={f('position')} maxLength={120} /></div>
-            <div><label>Phone</label><input value={form.phone} onChange={f('phone')} inputMode="tel" maxLength={40} /></div>
+            <div><label>{t('Phone number')}{!form.phoneExempt && <span className="req"> *</span>}</label><input value={form.phone} onChange={f('phone')} inputMode="tel" maxLength={40} required={!form.phoneExempt} /></div>
+            <div className="span">
+              {(form.extraPhones || []).map((ph, k) => (
+                <div className="phrow" key={k}>
+                  <input value={ph} onChange={e => setForm({ ...form, extraPhones: form.extraPhones.map((x, j) => (j === k ? e.target.value : x)) })} inputMode="tel" maxLength={40} placeholder={t('Another phone number (optional)')} />
+                  <button type="button" className="btn ghost sm" onClick={() => setForm({ ...form, extraPhones: form.extraPhones.filter((_, j) => j !== k) })}>✕</button>
+                </div>
+              ))}
+              <div className="phtools">
+                {(form.extraPhones || []).length < 5 && <button type="button" className="btn ghost sm" onClick={() => setForm({ ...form, extraPhones: [...(form.extraPhones || []), ''] })}>➕ {t('Add another phone number')}</button>}
+                {me.role === 'ADMIN' && <label className="chk"><input type="checkbox" checked={!!form.phoneExempt} onChange={e => setForm({ ...form, phoneExempt: e.target.checked })} /> {t('This person has no phone (admin allows it)')}</label>}
+              </div>
+            </div>
             <div><label>Email</label><input type="email" value={form.email} onChange={f('email')} maxLength={120} /></div>
             <div><label>Hired on</label><input type="date" value={form.hireDate} onChange={f('hireDate')} /></div>
             <div><label>Address</label><input value={form.address} onChange={f('address')} maxLength={255} /></div>

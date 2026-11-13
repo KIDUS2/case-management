@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
-import { CATEGORY, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
+import { CATEGORY, catOptions, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
-const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', workingStatus: status })
+const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status })
 
 function Chips({ options, value, onChange }) {
   return <div className="chips">{Object.entries(options).map(([k, v]) =>
     <button type="button" key={k} className={'chip' + (value === k ? ' on' : '')} onClick={() => onChange(k)}>{v}</button>)}</div>
 }
 
-function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) {
+function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin }) {
   const [matches, setMatches] = useState([])
   const set = patch => onChange({ ...party, ...patch })
 
@@ -28,7 +28,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
     if (!id) return
     try {
       const m = await api('/persons/by-employee-id?id=' + encodeURIComponent(id))
-      setFound(m); set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
+      setFound(m); set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, extraPhones: m.extraPhones?.length ? m.extraPhones : party.extraPhones, phoneExempt: !!m.phoneExempt, workingStatus: m.workingStatus })
     } catch (x) { setIdMsg(x.message && x.message.includes('valid') ? x.message : t('No one with this number yet. Fill in the details below; a new employee ID is created when the case is saved.')) }
   }
 
@@ -41,11 +41,12 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
   }, [q])
   const pick = m => {
     setFound(m); setIdMsg(''); setQ(''); setHits([])
-    set({ employeeId: m.employeeId || party.employeeId, fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
+    set({ employeeId: m.employeeId || party.employeeId, fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, extraPhones: m.extraPhones?.length ? m.extraPhones : party.extraPhones, phoneExempt: !!m.phoneExempt, workingStatus: m.workingStatus })
   }
 
+  const chosen = churches.find(c => c.name.toLowerCase() === party.churchName.trim().toLowerCase())
   const exact = matches.filter(m => m.fullName.toLowerCase() === party.fullName.trim().toLowerCase())
-  const use = m => set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, workingStatus: m.workingStatus })
+  const use = m => set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, extraPhones: m.extraPhones?.length ? m.extraPhones : party.extraPhones, phoneExempt: !!m.phoneExempt, workingStatus: m.workingStatus })
 
   return (
     <div className="issue">
@@ -76,8 +77,20 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus }) 
         </div>
       ))}
       <div className="grid">
-        <div><label>Church</label><input list="church-list" value={party.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" /></div>
-        <div><label>Phone (optional)</label><input value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} /></div>
+        <div><label>Church</label><input list="church-list" value={party.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" />
+          {chosen && <small className={'subnote' + (chosen.subCity ? '' : ' warn')}>📍 {chosen.subCity ? t('Kefle ketema: {x}', { x: chosen.subCity }) : t('Kefle ketema not set for this church yet. Ask the administrator to set it in Churches.')}</small>}</div>
+        <div><label>{t('Phone number')}{!party.phoneExempt && <span className="req"> *</span>}</label>
+          <input value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} required={!party.phoneExempt} placeholder="09…" /></div>
+      </div>
+      {(party.extraPhones || []).map((ph, k) => (
+        <div className="phrow" key={k}>
+          <input value={ph} onChange={e => set({ extraPhones: party.extraPhones.map((x, j) => (j === k ? e.target.value : x)) })} inputMode="tel" maxLength={40} placeholder={t('Another phone number (optional)')} aria-label={t('Another phone number (optional)')} />
+          <button type="button" className="btn ghost sm" onClick={() => set({ extraPhones: party.extraPhones.filter((_, j) => j !== k) })} aria-label={t('Remove')}>✕</button>
+        </div>
+      ))}
+      <div className="phtools">
+        {(party.extraPhones || []).length < 5 && <button type="button" className="btn ghost sm" onClick={() => set({ extraPhones: [...(party.extraPhones || []), ''] })}>➕ {t('Add another phone number')}</button>}
+        {isAdmin && <label className="chk"><input type="checkbox" checked={!!party.phoneExempt} onChange={e => set({ phoneExempt: e.target.checked })} /> {t('This person has no phone (admin allows it)')}</label>}
       </div>
       <label>This person is</label>
       <Chips options={WORKING} value={party.workingStatus} onChange={v => set({ workingStatus: v })} />
@@ -110,7 +123,8 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const toPayload = (p, label) => {
     const church = findChurch(p.churchName)
     if (!church) throw new Error(t('{x}: please choose the church from the list (start typing its name).', { x: label }))
-    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone, workingStatus: p.workingStatus, employeeId: p.employeeId.trim() || null }
+    if (!p.phoneExempt && !p.phone.trim()) throw new Error(t('{x}: please enter a phone number.', { x: label }))
+    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.employeeId.trim() || null }
   }
 
   const submit = async e => {
@@ -140,7 +154,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
     <form onSubmit={submit}>
       <h1>Register a case</h1><p className="muted">Listen first, then record. A short code is created when you save.</p>
       {err && <div className="err">{err}</div>}
-      <datalist id="church-list">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
+      <datalist id="church-list">{churches.map(c => <option key={c.id} value={c.name} label={c.subCity || ''} />)}</datalist>
       {churches.length === 0 && <div className="banner warn">No churches yet. {me.role === 'ADMIN' ? <a href="#" onClick={e => { e.preventDefault(); goChurches() }}>Add the church list first →</a> : 'Ask an administrator to add the church list.'}</div>}
 
       <div className="formgrid">
@@ -148,7 +162,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
         {complainants.map((p, i) => (
-          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} autoFocus={i === 0}
+          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} autoFocus={i === 0}
             onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setComplainants(l => [...l, blankParty(l[0]?.workingStatus)])}>➕ Add another person (group)</button>
@@ -158,7 +172,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">2</span>Who is it about? <small className="inl">(optional)</small></h2>
         <p className="hint">If the report is about an employee or a leader, add them here. Leave empty for a request or general matter.</p>
         {subjects.map((p, i) => (
-          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches}
+          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches} isAdmin={me.role === 'ADMIN'}
             onChange={setAt(setSubjects, i)} onRemove={removeAt(setSubjects, i)} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setSubjects(l => [...l, blankParty()])}>➕ Add an employee or leader</button>
@@ -171,7 +185,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
           <div className="issue" key={i}>
             <div className="top"><b>{t('Issue {n}', { n: i + 1 })}</b>{issues.length > 1 && <button type="button" className="btn x" onClick={() => setIssues(l => l.filter((_, k) => k !== i))}>Remove</button>}</div>
             <select value={it.category} onChange={e => setIssue(i, { category: e.target.value })}>
-              {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+              {catOptions().map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
             </select>
             <textarea rows={3} placeholder="Describe the cause…" value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
             {departments.length > 0 && (

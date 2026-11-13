@@ -5,6 +5,7 @@ import { STATUS, CATEGORY, fmtDate, initial, fmtCode, names } from '../ui.js'
 import PeriodFilter, { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 
 const STATUS_COLOR = { OPEN: '#1b7f7a', REFERRED: '#c99a2e', COURT: '#b23a2a', RESOLVED: '#2d7a3e' }
+const EXTRA = ['#6b4fa0', '#d0702f', '#3a7ca5', '#a14b6e', '#5f8a2d']
 const CAT_COLOR = { HR: '#2d7a3e', FINANCE: '#c99a2e', MANAGEMENT: '#1b7f7a', COURT: '#b23a2a', UNCLEAR: '#8a8099' }
 
 function greeting() {
@@ -107,7 +108,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
   const active = d.byStatus.OPEN + d.byStatus.REFERRED + d.byStatus.COURT
   const rate = t.cases ? Math.round((d.byStatus.RESOLVED / t.cases) * 100) : 0
   const rangeLabel = period.key === 'all' ? tt('last 30 days') : d.daily.length === 1 ? d.daily[0].date : d.daily[0].date + ' → ' + d.daily[d.daily.length - 1].date
-  const cats = Object.entries(d.byCategory).map(([k, n]) => ({ name: CATEGORY[k].icon + ' ' + CATEGORY[k].label, count: n, color: CAT_COLOR[k] }))
+  const cats = Object.entries(d.byCategory).map(([k, n]) => ({ name: CATEGORY[k].icon + ' ' + CATEGORY[k].label, count: n, color: CAT_COLOR[k] || EXTRA[Math.abs([...k].reduce((a, ch) => a + ch.charCodeAt(0), 0)) % EXTRA.length] }))
   const first = (me.fullName || '').split(' ')[0]
 
   return (
@@ -171,6 +172,33 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
               <span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="dgrid">
+        <div className="card wide"><h2>{tt('Which kefle ketema has the most issues')} <small className="inl">{tt('by the church of the person who came')}</small></h2>
+          {d.bySubCity.length === 0 && <p className="muted">{tt('No cases yet.')}</p>}
+          <table className="rank">
+            <thead><tr><th>{tt('Kefle ketema')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('Resolved')}</th><th>{tt('What kind of issues')}</th></tr></thead>
+            <tbody>{d.bySubCity.map((r, i) => (
+              <tr key={r.name}><td><b>{i + 1}. {r.name === '—' ? tt('Not set') : r.name}</b></td>
+                <td><div className="rbar"><i style={{ width: (r.issues / Math.max(1, d.bySubCity[0].issues)) * 100 + '%' }} /><span>{r.issues}</span></div></td>
+                <td>{r.cases}</td><td>{r.resolved}</td>
+                <td><div className="catchips">{Object.entries(r.byCategory).sort((a, b) => b[1] - a[1]).map(([k, n]) => <span key={k} className="catchip" title={CATEGORY[k].label}>{CATEGORY[k].icon} {CATEGORY[k].label} {n}</span>)}</div></td></tr>))}
+            </tbody>
+          </table>
+        </div>
+        <div className="card wide"><h2>{tt('Churches with the most issues')}</h2>
+          {d.churchesByIssues.length === 0 && <p className="muted">{tt('No cases yet.')}</p>}
+          <table className="rank">
+            <thead><tr><th>{tt('Church')}</th><th>{tt('Kefle ketema')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('What kind of issues')}</th></tr></thead>
+            <tbody>{d.churchesByIssues.map((r, i) => (
+              <tr key={r.name}><td><b>{i + 1}. {r.name}</b></td><td>{r.subCity === '—' ? '—' : r.subCity}</td>
+                <td><div className="rbar"><i style={{ width: (r.issues / Math.max(1, d.churchesByIssues[0].issues)) * 100 + '%' }} /><span>{r.issues}</span></div></td>
+                <td>{r.cases}</td>
+                <td><div className="catchips">{Object.entries(r.byCategory).sort((a, b) => b[1] - a[1]).map(([k, n]) => <span key={k} className="catchip" title={CATEGORY[k].label}>{CATEGORY[k].icon} {CATEGORY[k].label} {n}</span>)}</div></td></tr>))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

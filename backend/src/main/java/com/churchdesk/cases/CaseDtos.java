@@ -13,7 +13,7 @@ public final class CaseDtos {
     private CaseDtos() {}
 
     /** departmentId/returnOn are optional: the desk can send an issue to a department right at registration. */
-    public record IssueIn(@NotNull IssueCategory category, @Size(max = 4000) String description, Long departmentId, LocalDate returnOn) {}
+    public record IssueIn(@NotBlank @Size(max = 40) String category, @Size(max = 4000) String description, Long departmentId, LocalDate returnOn) {}
 
     /** One person in a case: who reports it, or who it is about. */
     public record PartyIn(@NotBlank @Size(max = 160) String fullName,
@@ -21,7 +21,9 @@ public final class CaseDtos {
                           @Size(max = 40) String phone,
                           @NotNull WorkingStatus workingStatus,
                           @Size(max = 1000) String involvement,
-                          @Size(max = 40) String employeeId) {}
+                          @Size(max = 40) String employeeId,
+                          @Size(max = 5) List<@Size(max = 40) String> extraPhones,
+                          Boolean phoneExempt) {}
 
     /** Add someone to a case that already exists. role is COMPLAINANT, SUBJECT or INVOLVED. */
     public record AddPartyRequest(@NotNull PartyRole role, @NotNull @Valid PartyIn person) {}
@@ -36,7 +38,7 @@ public final class CaseDtos {
     public record NoteRequest(@Size(max = 4000) String note) {}
     public record LetterRequest(boolean issued) {}
 
-    public record IssueDto(Long id, IssueCategory category, String description, IssueStatus status,
+    public record IssueDto(Long id, String category, String description, IssueStatus status,
                            Long departmentId, String departmentName, Instant referredAt, LocalDate returnOn,
                            String resolutionNote, String resolvedBy, Instant resolvedAt,
                            Instant courtAt, String courtAckBy, Instant courtAckAt,
@@ -46,12 +48,13 @@ public final class CaseDtos {
     public record FileDto(Long id, Long issueId, Long inquiryId, String stage, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
 
     public record CaseSummary(Long id, String code, List<String> complainants, List<String> subjects, String churchName,
-                              CaseStatus status, int issueCount, int resolvedCount, List<IssueCategory> categories,
+                              CaseStatus status, int issueCount, int resolvedCount, List<String> categories,
                               boolean letterIssued, Instant createdAt) {}
 
     /** totalCases counts every case the person is in; complaintsAgainst counts cases where they are the one reported on. */
     public record PersonInfo(Long id, String fullName, String phone, Long churchId, String churchName,
-                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement, String employeeId, String profession, String position) {}
+                             WorkingStatus workingStatus, long totalCases, long openCases, long complaintsAgainst, String involvement, String employeeId, String profession, String position,
+                             List<String> extraPhones, boolean phoneExempt) {}
 
     public record CaseDetail(Long id, String code, CaseStatus status, String discussionNotes, boolean letterIssued,
                              String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,
@@ -68,7 +71,7 @@ public final class CaseDtos {
                             List<String> departments, int issues) {}
 
     /** One issue waiting in (or finished by) a department. */
-    public record InboxItem(Long issueId, Long caseId, String code, IssueCategory category, String description, IssueStatus status,
+    public record InboxItem(Long issueId, Long caseId, String code, String category, String description, IssueStatus status,
                             String departmentName, Instant referredAt, LocalDate returnOn, List<String> complainants,
                             List<String> subjects, String churchName, Instant resolvedAt, String resolvedBy, String resolutionNote,
                             String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition, String subCity) {}

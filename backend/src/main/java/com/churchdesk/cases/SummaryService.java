@@ -1,6 +1,7 @@
 package com.churchdesk.cases;
 
 import com.churchdesk.cases.InquiryService.InquiryDto;
+import com.churchdesk.option.OptionService;
 import com.churchdesk.user.AppUser;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -24,14 +25,14 @@ public class SummaryService {
     public record Count(String name, long count) {}
     public record Day(String date, long count) {}
     public record Row(Long id, String code, List<String> complainants, List<String> subjects, String churchName, String subCity, CaseStatus status,
-                      int issueCount, int resolvedCount, List<IssueCategory> categories, List<String> departments, int openInquiries,
+                      int issueCount, int resolvedCount, List<String> categories, List<String> departments, int openInquiries,
                       boolean letterIssued, Instant createdAt) {}
     /** One kefle ketema (sub-city): how many cases and issues, and what kind of issues. */
     public record SubCityRow(String name, long cases, long issues, long resolved, Map<String, Long> byCategory) {}
-    public record Escalated(Long caseId, String code, String department, IssueCategory category, String churchName, String subCity,
+    public record Escalated(Long caseId, String code, String department, String category, String churchName, String subCity,
                             long daysLate, int level, boolean urgent) {}
     public record LeaderRow(Long caseId, String code, String leader, String roleInCase, String churchName, String subCity, CaseStatus status,
-                            List<IssueCategory> categories, int issueCount, int resolvedCount, Instant createdAt) {}
+                            List<String> categories, int issueCount, int resolvedCount, Instant createdAt) {}
     public record Result(long cases, long issues, long issuesResolved, long letters, long withOpenInquiry, long lateIssues, long urgentIssues, boolean truncated,
                          List<SubCityRow> subCities, List<Escalated> escalations, List<LeaderRow> leaders,
                          Map<String, Long> byStatus, Map<String, Long> byCategory, List<Count> byDepartment, List<Count> byChurch, List<Day> daily,
@@ -41,9 +42,10 @@ public class SummaryService {
     private final ChurchInquiryRepository inquiries;
     private final InquiryService inquiryService;
     private final AccessService access;
+    private final OptionService options;
 
-    public SummaryService(ChurchCaseRepository cases, ChurchInquiryRepository inquiries, InquiryService inquiryService, AccessService access) {
-        this.cases = cases; this.inquiries = inquiries; this.inquiryService = inquiryService; this.access = access;
+    public SummaryService(ChurchCaseRepository cases, ChurchInquiryRepository inquiries, InquiryService inquiryService, AccessService access, OptionService options) {
+        this.options = options; this.cases = cases; this.inquiries = inquiries; this.inquiryService = inquiryService; this.access = access;
     }
 
     @Transactional(readOnly = true)
@@ -84,7 +86,7 @@ public class SummaryService {
         Map<String, Long> byStatus = new LinkedHashMap<>();
         for (CaseStatus s : CaseStatus.values()) byStatus.put(s.name(), 0L);
         Map<String, Long> byCategory = new LinkedHashMap<>();
-        for (IssueCategory k : IssueCategory.values()) byCategory.put(k.name(), 0L);
+        for (String k : options.issueTypeLabels().keySet()) byCategory.put(k, 0L);
         Map<String, Long> byDept = new TreeMap<>(), byChurch = new HashMap<>();
         Map<LocalDate, Long> perDay = new TreeMap<>();
         long issues = 0, resolved = 0, letters = 0, withOpen = 0, late = 0, urgent = 0;
@@ -110,7 +112,7 @@ public class SummaryService {
             }
             if (!church.isEmpty()) byChurch.merge(church, 1L, Long::sum);
             Set<String> depts = new TreeSet<>();
-            Set<IssueCategory> cats = new LinkedHashSet<>();
+            Set<String> cats = new LinkedHashSet<>();
             int done = 0;
             String subKey = sub == null || sub.isBlank() ? "—" : sub;
             long[] st = subTotals.computeIfAbsent(subKey, k -> new long[3]);
@@ -118,7 +120,7 @@ public class SummaryService {
             Map<String, Long> sc = subCats.computeIfAbsent(subKey, k -> new LinkedHashMap<>());
             for (CaseIssue i : c.getIssues()) {
                 issues++; st[1]++;
-                sc.merge(i.getCategory().name(), 1L, Long::sum);
+                sc.merge(i.getCategory(), 1L, Long::sum);
                 if (i.isUrgent() && i.getStatus() != IssueStatus.RESOLVED) urgent++;
                 long dl = Escalation.daysLate(i, today);
                 if (dl > 0) {

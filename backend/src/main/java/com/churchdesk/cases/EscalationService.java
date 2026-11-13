@@ -19,8 +19,10 @@ public class EscalationService {
     private final CaseEventRepository events;
     private final UserRepository users;
     private final NotificationService notifier;
+    private final com.churchdesk.option.OptionService options;
 
-    public EscalationService(CaseIssueRepository issues, CaseEventRepository events, UserRepository users, NotificationService notifier) {
+    public EscalationService(CaseIssueRepository issues, CaseEventRepository events, UserRepository users, NotificationService notifier, com.churchdesk.option.OptionService options) {
+        this.options = options;
         this.issues = issues; this.events = events; this.users = users; this.notifier = notifier;
     }
 
@@ -47,7 +49,7 @@ public class EscalationService {
             List<AppUser> who = new ArrayList<>(users.findByRoleAndActiveTrue(Role.ADMIN));
             users.findByUsername(c.getCreatedBy()).ifPresent(who::add);
             notifier.send(who, "ESCALATION", dept + " is " + late + (late == 1 ? " day" : " days") + " late · case " + code,
-                    "A " + i.getCategory().name().toLowerCase() + " issue was due " + Escalation.dueOn(i) + " and is still not solved.",
+                    "A " + options.issueTypeLabel(i.getCategory()) + " issue was due " + Escalation.dueOn(i) + " and is still not solved.",
                     c.getId(), c.getCode(), "system");
             // the department is reminded too
             notifier.send(users.findByDepartmentIdAndActiveTrue(i.getDepartment().getId()), "ESCALATION", "Overdue · case " + code,

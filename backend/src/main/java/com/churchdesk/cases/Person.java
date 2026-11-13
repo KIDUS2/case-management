@@ -12,6 +12,8 @@ public class Person {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "full_name", nullable = false) private String fullName;
     private String phone;
+    @Column(name = "extra_phones", columnDefinition = "text") private String extraPhones;
+    @Column(name = "phone_exempt", nullable = false) private boolean phoneExempt;
     @Column(name = "first_name") private String firstName;
     @Column(name = "middle_name") private String middleName;
     @Column(name = "last_name") private String lastName;
@@ -100,6 +102,17 @@ public class Person {
     }
     public String getPhone() { return phone; }
     public void setPhone(String v) { phone = v; }
+    public boolean isPhoneExempt() { return phoneExempt; }
+    public void setPhoneExempt(boolean v) { phoneExempt = v; }
+    /** The other numbers, one per line in the database. */
+    public java.util.List<String> getExtraPhoneList() {
+        if (extraPhones == null || extraPhones.isBlank()) return java.util.List.of();
+        return java.util.Arrays.stream(extraPhones.split("\\n")).map(String::trim).filter(x -> !x.isEmpty()).toList();
+    }
+    public void setExtraPhoneList(java.util.List<String> list) {
+        java.util.List<String> clean = list == null ? java.util.List.of() : list.stream().filter(x -> x != null).map(String::trim).filter(x -> !x.isEmpty()).distinct().limit(5).toList();
+        extraPhones = clean.isEmpty() ? null : String.join("\n", clean);
+    }
     public Church getChurch() { return church; }
     public void setChurch(Church v) { church = v; }
     public WorkingStatus getWorkingStatus() { return workingStatus; }
