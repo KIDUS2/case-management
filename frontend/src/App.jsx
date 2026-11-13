@@ -8,13 +8,12 @@ import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
 import NewCase from './pages/NewCase.jsx'
 import Churches from './pages/Churches.jsx'
-import Employees from './pages/Employees.jsx'
+import Hr from './pages/Hr.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Queue from './pages/Queue.jsx'
 import Inbox from './pages/Inbox.jsx'
 import Departments from './pages/Departments.jsx'
 import Settings from './pages/Settings.jsx'
-import Workforce from './pages/Workforce.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Account from './pages/Account.jsx'
 import SearchBar from './components/SearchBar.jsx'
@@ -33,8 +32,7 @@ const NAV = [
   { key: 'new', icon: '➕', label: 'Register case', roles: DESK },
   { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
-  { key: 'employees', icon: '🪪', label: 'Employees', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
-  { key: 'workforce', icon: '🧑‍💼', label: 'Staff & payroll', roles: ['ADMIN'] },
+  { key: 'hr', icon: '👥', label: 'HR management', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
@@ -42,14 +40,14 @@ const NAV = [
   { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
 ]
 /** Switching language reloads the page; remember where the person was so they come back to the same place. */
-const readView = () => { try { return JSON.parse(sessionStorage.getItem('view') || 'null') } catch { return null } }
+const readView = () => { try { const v = JSON.parse(sessionStorage.getItem('view') || 'null'); if (v && (v.page === 'employees' || v.page === 'workforce')) v.page = 'hr'; return v } catch { return null } }
 const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(v)) : sessionStorage.removeItem('view') } catch { /* private mode */ } }
 const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases' }
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
-  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'employees' : localStorage.getItem('token') ? readView()?.page || null : null))
+  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'hr' : localStorage.getItem('token') ? readView()?.page || null : null))
   const [openId, setOpenId] = useState(() => (localStorage.getItem('token') ? readView()?.openId || null : null))
   const [optsReady, setOptsReady] = useState(false)
   const [fresh, setFresh] = useState(null)
@@ -157,8 +155,7 @@ export default function App() {
         {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches me={user} />}
-        {current === 'workforce' && <Workforce onOpenEmployees={() => go('employees')} />}
-        {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} onOpenCase={id => openCase(id)} />}
+        {current === 'hr' && <Hr me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} onOpenCase={id => openCase(id)} />}
         {current === 'departments' && <Departments />}
         {current === 'settings' && <Settings />}
         {current === 'users' && <Users me={user} />}

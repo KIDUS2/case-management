@@ -50,7 +50,6 @@ export default function Workforce({ onOpenEmployees }) {
     <>
       <div className="chx-head">
         <div><h1>{t('Staff & payroll')}</h1><p className="muted">{t('Who works in each church, in what position, and what the church costs every month. Only you can see salaries.')}</p></div>
-        <button className="btn ghost" onClick={onOpenEmployees}>🪪 {t('Employees')}</button>
       </div>
       <div className="chx-stats">
         <div className="chx-stat"><b>{tot.employees}</b><span>{t('Employees on staff')}</span></div>
