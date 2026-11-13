@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
 import { SUB_CITIES } from '../ui.js'
+import ChurchProfile from './ChurchProfile.jsx'
 
 const NAME_COLS = ['name', 'church', 'churchname', 'ስም', 'ቤተክርስቲያን']
 const SUB_COLS = ['subcity', 'kefleketema', 'kefle', 'kefletema', 'ክፍለከተማ', 'ክፍለከተማ']
@@ -22,7 +23,9 @@ function toItems(grid) {
 
 const PAGE = 25
 
-export default function Churches() {
+export default function Churches({ me }) {
+  const [openId, setOpenId] = useState(null)
+  const admin = me?.role === 'ADMIN'
   const [list, setList] = useState([])
   const [name, setName] = useState('')
   const [sub, setSub] = useState('')
@@ -83,14 +86,22 @@ export default function Churches() {
   const rows = shown.slice(cur * PAGE, cur * PAGE + PAGE)
   const toggle = p => setPanel(x => (x === p ? null : p))
 
+  const opened = openId && list.find(c => c.id === openId)
+  if (opened) return (
+    <>
+      {err && <div className="err">{err}</div>}
+      <ChurchProfile church={opened} canWrite={['ADMIN', 'OFFICER'].includes(me?.role)} isAdmin={me?.role === 'ADMIN'} onBack={() => setOpenId(null)} onChanged={load} setErr={setErr} />
+    </>
+  )
+
   return (
     <>
       <div className="chx-head">
         <div><h1>{t('Churches')}</h1><p className="muted">{t('These appear when registering a case.')}</p></div>
-        <div className="chx-actions">
+        {admin && <div className="chx-actions">
           <button className={'btn ghost' + (panel === 'file' || panel === 'paste' ? ' on' : '')} onClick={() => toggle('file')}>📥 {t('Import')}</button>
           <button className="btn" style={{ margin: 0 }} onClick={() => toggle('one')}>➕ {t('Add church')}</button>
-        </div>
+        </div>}
       </div>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
 
@@ -100,7 +111,7 @@ export default function Churches() {
         <button type="button" className={'chx-stat' + (missing ? ' alert' : '')} onClick={() => { setSubFilter('-'); setPage(0) }}><b>{missing}</b><span>{t('Without a sub-city')}</span></button>
       </div>
 
-      {panel && (
+      {admin && panel && (
         <div className="card chx-panel">
           <div className="chx-tabs" role="tablist">
             <button role="tab" className={panel === 'one' ? 'on' : ''} onClick={() => setPanel('one')}>{t('One church')}</button>
@@ -150,8 +161,8 @@ export default function Churches() {
             {rows.map((c, i) => (
               <tr key={c.id}>
                 <td className="n">{cur * PAGE + i + 1}</td>
-                <td><span className="chx-name">⛪ {c.name}</span></td>
-                <td><select className={'chx-sub' + (c.subCity ? '' : ' none')} aria-label={t('Sub-city')} value={c.subCity || ''} onChange={e => setSubCity(c, e.target.value)}>
+                <td><button type="button" className="chx-link" onClick={() => setOpenId(c.id)}>⛪ {c.name}{c.located && <span title={t('Has a location on the map')}> 📍</span>}</button></td>
+                <td><select disabled={!admin} className={'chx-sub' + (c.subCity ? '' : ' none')} aria-label={t('Sub-city')} value={c.subCity || ''} onChange={e => setSubCity(c, e.target.value)}>
                   <option value="">{t('Not set')}</option>{known.map(k => <option key={k}>{k}</option>)}</select></td>
               </tr>))}
           </tbody>

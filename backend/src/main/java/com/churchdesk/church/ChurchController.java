@@ -16,7 +16,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/churches")
 public class ChurchController {
-    public record ChurchDto(Long id, String name, String subCity) {}
+    public record ChurchDto(Long id, String name, String subCity, boolean located) {}
     public record CreateChurch(@NotBlank @Size(max = 160) String name, @Size(max = 80) String subCity) {}
     public record UpdateChurch(@Size(max = 80) String subCity) {}
     public record BulkItem(@NotBlank @Size(max = 160) String name, @Size(max = 80) String subCity) {}
@@ -29,7 +29,7 @@ public class ChurchController {
 
     @GetMapping
     public List<ChurchDto> list() {
-        return repo.findAllByOrderByNameAsc().stream().map(c -> new ChurchDto(c.getId(), c.getName(), c.getSubCity())).toList();
+        return repo.findAllByOrderByNameAsc().stream().map(c -> new ChurchDto(c.getId(), c.getName(), c.getSubCity(), c.getLatitude() != null)).toList();
     }
 
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMIN')")
@@ -40,14 +40,14 @@ public class ChurchController {
         c.setName(name);
         c.setSubCity(options.requireSubCity(r.subCity()));
         c = repo.save(c);
-        return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
+        return new ChurchDto(c.getId(), c.getName(), c.getSubCity(), c.getLatitude() != null);
     }
 
     @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')") @Transactional
     public ChurchDto update(@PathVariable Long id, @Valid @RequestBody UpdateChurch r) {
         Church c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Church not found"));
         c.setSubCity(options.requireSubCity(r.subCity()));
-        return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
+        return new ChurchDto(c.getId(), c.getName(), c.getSubCity(), c.getLatitude() != null);
     }
 
     /** Many churches at once (pasted or from a file). Names already there are skipped, but get their kefle ketema filled in if it was empty. */

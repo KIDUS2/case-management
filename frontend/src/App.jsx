@@ -35,7 +35,7 @@ const NAV = [
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
   { key: 'employees', icon: '🪪', label: 'Employees', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'workforce', icon: '🧑‍💼', label: 'Staff & payroll', roles: ['ADMIN'] },
-  { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
+  { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
   { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
@@ -156,7 +156,7 @@ export default function App() {
         {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
         {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
-        {current === 'churches' && <Churches />}
+        {current === 'churches' && <Churches me={user} />}
         {current === 'workforce' && <Workforce onOpenEmployees={() => go('employees')} />}
         {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} onOpenCase={id => openCase(id)} />}
         {current === 'departments' && <Departments />}
