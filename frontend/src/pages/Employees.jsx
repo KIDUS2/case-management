@@ -459,18 +459,21 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
 
   return (
     <>
-      <h1>Employees</h1><p className="muted">{t('{n} people on the list. Type an employee ID when registering a case to bring back all their details.', { n: data.total })}</p>
+      <div className="emp-head">
+        <div><h1>{t('Employees')}</h1><p className="muted">{t('Type an employee ID when registering a case to bring back all their details.')}</p></div>
+        {!form && <div className="chx-actions">
+          {canWrite && <button className="btn ghost" onClick={() => setShowBulk(!showBulk)}>📥 {t('Import list')}</button>}
+          {canWrite && <button className="btn" style={{ margin: 0 }} onClick={() => { setForm({ ...blank }); setPhoto(null) }}>➕ {t('Register employee')}</button>}
+        </div>}
+      </div>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <datalist id="emp-church-list">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
-      {!form && <div className="card">
-        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
-          <input style={{ flex: '2 1 200px' }} placeholder="Search by name, ID number, mother’s name, phone or profession…" value={q} onChange={e => { setQ(e.target.value); setPage(0) }} />
-          <select style={{ flex: '1 1 160px' }} value={church} onChange={e => { setChurch(e.target.value); setPage(0) }}>
-            <option value="">All churches</option>{churches.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          {canWrite && <button className="btn sm" style={{ margin: 0 }} onClick={() => { setForm({ ...blank }); setPhoto(null) }}>➕ Register employee</button>}
-          {canWrite && <button className="btn ghost sm" style={{ margin: 0 }} onClick={() => setShowBulk(!showBulk)}>📥 Import list</button>}
-        </div>
+      {!form && <div className="emp-bar">
+        <div className="emp-total"><b>{data.total}</b><span>{t(data.total === 1 ? 'person on the list' : 'people on the list')}</span></div>
+        <input className="emp-search" type="search" placeholder={t('Search by name, ID number, mother’s name, phone or profession…')} value={q} onChange={e => { setQ(e.target.value); setPage(0) }} />
+        <select className="emp-church" value={church} onChange={e => { setChurch(e.target.value); setPage(0) }} aria-label={t('Church')}>
+          <option value="">{t('All churches')}</option>{churches.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>}
 
       {showBulk && canWrite && !form && (
@@ -553,21 +556,29 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
         </form>
       )}
 
-      {!form && <div className="card list">
-        {data.items.map(e => (
-          <div className="row" key={e.id} style={{ cursor: 'pointer' }} onClick={async () => { setErr(''); setView(e) }}>
-            <div className="avatar">{initial(e.fullName)}</div>
-            <div className="grow"><b>{e.fullName}</b>
-              <small>{e.employeeId ? '🪪 ' + fmtId(e.employeeId) + ' · ' : ''}⛪ {e.churchName}{e.profession ? ' · ' + e.profession : ''}{e.motherName ? ' · ' + t('mother') + ': ' + e.motherName : ''}</small></div>
-            {e.idExpired && <span className="badge s-court">{t('Expired')}</span>}
-            {e.complaintsAgainst > 0 && <span className="badge s-ref">⚠️ {e.complaintsAgainst}</span>}
-            <span className="badge s-open">{t('{n} cases', { n: e.totalCases })}</span>
-          </div>
-        ))}
-        {data.items.length === 0 && <p className="muted">No employees match.</p>}
-        {pages > 1 && <div className="row" style={{ justifyContent: 'center', gap: 10 }}>
-          <button className="btn ghost sm" disabled={page === 0} onClick={() => setPage(page - 1)}>←</button><span>{page + 1} / {pages}</span>
-          <button className="btn ghost sm" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>→</button></div>}
+      {!form && <div className="card emp-list">
+        <table className="emp-table">
+          <thead><tr><th>{t('Employee')}</th><th>{t('Church')}</th><th>{t('Position')}</th><th>{t('Working status')}</th><th>{t('Phone number')}</th><th className="r">{t('Cases')}</th></tr></thead>
+          <tbody>
+            {data.items.map(e => (
+              <tr key={e.id} onClick={() => { setErr(''); setView(e) }} tabIndex={0} onKeyDown={ev => { if (ev.key === 'Enter') setView(e) }}>
+                <td><div className="emp-who"><div className="avatar">{initial(e.fullName)}</div>
+                  <div><b>{e.fullName}</b><small>{e.employeeId ? fmtId(e.employeeId) : t('No employee ID')}{e.idExpired && <span className="badge s-court" style={{ marginLeft: 8 }}>{t('Expired')}</span>}</small></div></div></td>
+                <td>{e.churchName}</td>
+                <td>{e.position || e.profession || '—'}</td>
+                <td><span className={'ws ws-' + e.workingStatus}>{t(WORKING[e.workingStatus])}</span></td>
+                <td>{e.phone || '—'}</td>
+                <td className="r"><span className="badge s-open">{e.totalCases}</span>{e.complaintsAgainst > 0 && <span className="badge s-ref" title={t('Reported on')} style={{ marginLeft: 6 }}>⚠️ {e.complaintsAgainst}</span>}</td>
+              </tr>))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <p className="muted" style={{ textAlign: 'center', padding: 22 }}>{t('No employees match.')}</p>}
+        <div className="chx-pager">
+          <span>{data.total ? t('Showing {a}–{b} of {c}', { a: page * data.size + 1, b: Math.min(data.total, page * data.size + data.items.length), c: data.total }) : ''}</span>
+          {pages > 1 && <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="btn ghost sm" disabled={page === 0} onClick={() => setPage(page - 1)}>‹ {t('Previous')}</button><span>{page + 1} / {pages}</span>
+            <button className="btn ghost sm" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>{t('Next')} ›</button></span>}
+        </div>
       </div>}
     </>
   )
