@@ -121,15 +121,18 @@ export default function Summary({ me, onOpen }) {
       {!d ? <div className="muted">{t('Loading…')}</div> : (
         <>
           {d.truncated && <div className="banner warn">{t('Very many cases match. Showing the newest 5000; narrow the period to see them all.')}</div>}
-          <div className="kpis">
-            <Stat icon="📚" label={t('Cases')} value={d.cases} />
-            <Stat icon="🧩" label={t('Issues')} value={d.issues} sub={t('{n}% resolved', { n: rate })} />
-            <Stat icon="✅" label={t('Issues resolved')} value={d.issuesResolved} />
-            <Stat icon="✉️" label={t('Letters issued')} value={d.letters} />
-            <Stat icon="💬" label={t('Waiting on a church comment')} value={d.withOpenInquiry} />
-            <Stat icon="⏰" label={t('Late in departments')} value={d.lateIssues} />
-            <Stat icon="🔥" label={t('Urgent right now')} value={d.urgentIssues} />
-          </div>
+          <section className="ledger">
+            <div className="lg k-total"><span className="lg-label">{t('Cases')}</span><b>{d.cases}</b></div>
+            <div className="lg k-active"><span className="lg-label">{t('Issues')}</span><b>{d.issues}</b><small>{t('{n}% resolved', { n: rate })}</small></div>
+            <div className="lg k-done"><span className="lg-label">{t('Issues resolved')}</span><b>{d.issuesResolved}</b>
+              <div className="lg-meter"><i style={{ width: rate + '%' }} /></div></div>
+            <div className="lg k-wait"><span className="lg-label">{t('Letters issued')}</span><b>{d.letters}</b></div>
+          </section>
+          <section className="minis three">
+            <div className={'mini-stat' + (d.withOpenInquiry ? ' gold' : '')}><b>{d.withOpenInquiry}</b><span>{t('Waiting on a church comment')}</span></div>
+            <div className={'mini-stat' + (d.lateIssues ? ' red' : '')}><b>{d.lateIssues}</b><span>{t('Late in departments')}</span></div>
+            <div className={'mini-stat' + (d.urgentIssues ? ' red' : '')}><b>{d.urgentIssues}</b><span>{t('Urgent right now')}</span></div>
+          </section>
 
           {d.waitingForAdmin.length > 0 && (
             <div className="card pending">

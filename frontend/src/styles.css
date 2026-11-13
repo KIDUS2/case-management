@@ -652,3 +652,14 @@ button.chx-stat{cursor:pointer}.chx-stat b{font-size:1.7rem;font-family:var(--se
 .dgrid>.card:last-child{grid-column:1/-1}
 .periodbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 18px}.periodbar small{margin:0 0 0 auto}
 .chx-stat{align-items:flex-start;text-align:left;font:inherit}.chx-stat b{font-size:2.4rem}
+
+.minis.three{grid-template-columns:repeat(3,minmax(0,1fr))}.minis.three .mini-stat{border-top:0}.minis.three .mini-stat:nth-child(n+2){border-left:1px solid var(--line)}
+.periodbar .sumfilters{flex:1 1 100%;grid-template-columns:1fr 1fr 2fr}
+/* case status tabs: one connected strip */
+.tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 6px 20px color-mix(in srgb,var(--ink) 6%,transparent)}
+.tiles .tile{border:0;border-left:1px solid var(--line);border-radius:0;box-shadow:none;background:transparent;padding:14px 18px;position:relative;align-items:flex-start;text-align:left}
+.tiles .tile:first-child{border-left:0}.tiles .tile:hover{transform:none;background:var(--soft)}
+.tiles .tile.on{background:var(--gold-soft)}.tiles .tile.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--gold)}
+.tiles .tile b{font-size:1.9rem}.tiles .tile .ti{display:none}
+@media(max-width:900px){.minis.three{grid-template-columns:1fr}.minis.three .mini-stat{border-left:0!important;border-top:1px solid var(--line)!important}.minis.three .mini-stat:first-child{border-top:0!important}
+ .periodbar .sumfilters{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles .tile:nth-child(odd){border-left:0}.tiles .tile:nth-child(n+3){border-top:1px solid var(--line)}}
