@@ -176,10 +176,10 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
       </div>
 
       <div className="dgrid">
-        <div className="card wide"><h2>{tt('Which kefle ketema has the most issues')} <small className="inl">{tt('by the church of the person who came')}</small></h2>
+        <div className="card wide"><h2>{tt('Which sub-city has the most issues')} <small className="inl">{tt('by the church of the person who came')}</small></h2>
           {d.bySubCity.length === 0 && <p className="muted">{tt('No cases yet.')}</p>}
           <table className="rank">
-            <thead><tr><th>{tt('Kefle ketema')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('Resolved')}</th><th>{tt('What kind of issues')}</th></tr></thead>
+            <thead><tr><th>{tt('Sub-city')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('Resolved')}</th><th>{tt('What kind of issues')}</th></tr></thead>
             <tbody>{d.bySubCity.map((r, i) => (
               <tr key={r.name}><td><b>{i + 1}. {r.name === '—' ? tt('Not set') : r.name}</b></td>
                 <td><div className="rbar"><i style={{ width: (r.issues / Math.max(1, d.bySubCity[0].issues)) * 100 + '%' }} /><span>{r.issues}</span></div></td>
@@ -191,7 +191,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
         <div className="card wide"><h2>{tt('Churches with the most issues')}</h2>
           {d.churchesByIssues.length === 0 && <p className="muted">{tt('No cases yet.')}</p>}
           <table className="rank">
-            <thead><tr><th>{tt('Church')}</th><th>{tt('Kefle ketema')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('What kind of issues')}</th></tr></thead>
+            <thead><tr><th>{tt('Church')}</th><th>{tt('Sub-city')}</th><th>{tt('Issues')}</th><th>{tt('Cases')}</th><th>{tt('What kind of issues')}</th></tr></thead>
             <tbody>{d.churchesByIssues.map((r, i) => (
               <tr key={r.name}><td><b>{i + 1}. {r.name}</b></td><td>{r.subCity === '—' ? '—' : r.subCity}</td>
                 <td><div className="rbar"><i style={{ width: (r.issues / Math.max(1, d.churchesByIssues[0].issues)) * 100 + '%' }} /><span>{r.issues}</span></div></td>

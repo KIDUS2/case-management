@@ -83,7 +83,7 @@ export default function Settings() {
         <div className="cols">
           <ListEditor kind="ISSUE_TYPE" withIcon title={t('Types of issue')} hint={t('Shown when registering a case or a sub-case, and when choosing what a department handles.')}
             list={lists.issueTypes} onChange={load} setErr={setErr} setOk={setOk} />
-          <ListEditor kind="SUB_CITY" title={t('Kefle ketema (sub-cities)')} hint={t('Churches are grouped by these. Renaming one moves its churches along.')}
+          <ListEditor kind="SUB_CITY" title={t('Sub-cities')} hint={t('Churches are grouped by these. Renaming one moves its churches along.')}
             list={lists.subCities} onChange={load} setErr={setErr} setOk={setOk} />
         </div>
       )}

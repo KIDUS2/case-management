@@ -78,7 +78,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
       ))}
       <div className="grid">
         <div><label>Church</label><input list="church-list" value={party.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" />
-          {chosen && <small className={'subnote' + (chosen.subCity ? '' : ' warn')}>📍 {chosen.subCity ? t('Kefle ketema: {x}', { x: chosen.subCity }) : t('Kefle ketema not set for this church yet. Ask the administrator to set it in Churches.')}</small>}</div>
+          {chosen && <small className={'subnote' + (chosen.subCity ? '' : ' warn')}>📍 {chosen.subCity ? t('Sub-city: {x}', { x: chosen.subCity }) : t('Sub-city not set for this church yet. Ask the administrator to set it in Churches.')}</small>}</div>
         <div><label>{t('Phone number')}{!party.phoneExempt && <span className="req"> *</span>}</label>
           <input value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} required={!party.phoneExempt} placeholder="09…" /></div>
       </div>

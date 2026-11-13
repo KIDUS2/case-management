@@ -11,7 +11,7 @@ export const ISSUE_STATUS = {
   COURT: { label: 'In court', cls: 's-court', icon: '⚖️' },
   RESOLVED: { label: 'Resolved', cls: 's-ok', icon: '✅' },
 }
-/** Types of issue and kefle ketema come from Settings (loaded once after sign-in); these are what shows before that. */
+/** Types of issue and sub-city come from Settings (loaded once after sign-in); these are what shows before that. */
 const catStore = {
   HR: { label: 'HR management', icon: '👥', active: true },
   FINANCE: { label: 'Finance', icon: '💰', active: true },
@@ -65,7 +65,7 @@ export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFi
 /** 123456789012 -> 1234 5678 9012, like a national ID */
 export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d)/g, '$1 ') : id || '')
 
-/** The kefle ketema (sub-cities) that can be chosen right now; filled from Settings. */
+/** The sub-city (sub-cities) that can be chosen right now; filled from Settings. */
 export const SUB_CITIES = ['Addis Ketema', 'Akaki Kaliti', 'Arada', 'Bole', 'Gullele', 'Kirkos', 'Kolfe Keranio', 'Lideta', 'Lemi Kura', 'Nifas Silk-Lafto', 'Yeka']
 /** The full lists as the server has them (with ids, both languages and use counts), for the Settings page. */
 export const OPTION_LISTS = { issueTypes: [], subCities: [] }

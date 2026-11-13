@@ -74,12 +74,12 @@ public class OptionService {
         return o.getCode();
     }
 
-    /** The saved name of a kefle ketema (matching its name in English or Amharic), or null when blank. Throws 400 when it is not in the list. */
+    /** The saved name of a sub-city (matching its name in English or Amharic), or null when blank. Throws 400 when it is not in the list. */
     @Transactional(readOnly = true)
     public String requireSubCity(String name) {
         if (name == null || name.isBlank()) return null;
         String found = matchSubCity(name);
-        if (found == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "“" + name.trim() + "” is not in the kefle ketema list. Add it in Settings first.");
+        if (found == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "“" + name.trim() + "” is not in the sub-city list. Add it in Settings first.");
         return found;
     }
 

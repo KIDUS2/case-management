@@ -7,7 +7,7 @@ import PeriodFilter, { periodOf, periodQuery } from '../components/PeriodFilter.
 
 const ROLE_IN_CASE = { SUBJECT: 'Reported on', COMPLAINANT: 'Reported' }
 
-/** Which kefle ketema brings which kind of issue (for example, Bole and finance assessments). */
+/** Which sub-city brings which kind of issue (for example, Bole and finance assessments). */
 function SubCityTable({ rows }) {
   const cats = Object.keys(CATEGORY)
   const maxIssues = Math.max(1, ...rows.map(r => r.issues))
@@ -15,7 +15,7 @@ function SubCityTable({ rows }) {
   return (
     <div className="tablewrap">
       <table className="sumtable subtable">
-        <thead><tr><th>{t('Kefle ketema')}</th><th>{t('Cases')}</th><th>{t('Issues')}</th><th>{t('Resolved')}</th><th>{t('Most common issue')}</th><th>{t('By type of issue')}</th></tr></thead>
+        <thead><tr><th>{t('Sub-city')}</th><th>{t('Cases')}</th><th>{t('Issues')}</th><th>{t('Resolved')}</th><th>{t('Most common issue')}</th><th>{t('By type of issue')}</th></tr></thead>
         <tbody>{rows.map(r => {
           const top = cats.map(k => [k, r.byCategory[k] || 0]).sort((a, b) => b[1] - a[1])[0]
           return (
@@ -89,7 +89,7 @@ export default function Summary({ me, onOpen }) {
         if (rows.length >= r.total || !r.rows.length) break
       }
       downloadCsv('case-summary.csv',
-        ['Code', 'Registered', 'Church', 'Kefle ketema', 'Reported by', 'About', 'Status', 'Issues', 'Resolved issues', 'Departments', 'Open church comments', 'Letter issued'],
+        ['Code', 'Registered', 'Church', 'Sub-city', 'Reported by', 'About', 'Status', 'Issues', 'Resolved issues', 'Departments', 'Open church comments', 'Letter issued'],
         rows.map(r => [fmtCode(r.code), r.createdAt.slice(0, 10), r.churchName, r.subCity || '', r.complainants.join('; '), r.subjects.join('; '), r.status, r.issueCount, r.resolvedCount, r.departments.join('; '), r.openInquiries, r.letterIssued ? 'yes' : 'no']))
     } catch (x) { setErr(x.message) }
   }
@@ -159,7 +159,7 @@ export default function Summary({ me, onOpen }) {
           )}
 
           <div className="card">
-            <h2>📍 {t('Issues by kefle ketema')}</h2>
+            <h2>📍 {t('Issues by sub-city')}</h2>
             <p className="hint">{t('Where the issues come from, and what kind they are.')}</p>
             <SubCityTable rows={d.subCities} />
           </div>
@@ -203,7 +203,7 @@ export default function Summary({ me, onOpen }) {
             {d.rows.length === 0 ? <p className="muted">{t('No cases match these filters.')}</p> : (
               <div className="tablewrap">
                 <table className="sumtable">
-                  <thead><tr><th>{t('Code')}</th><th>{t('Registered')}</th><th>{t('Church')}</th><th>{t('Kefle ketema')}</th><th>{t('Reported by')}</th><th>{t('Status')}</th><th>{t('Issues')}</th><th>{t('Departments')}</th><th /></tr></thead>
+                  <thead><tr><th>{t('Code')}</th><th>{t('Registered')}</th><th>{t('Church')}</th><th>{t('Sub-city')}</th><th>{t('Reported by')}</th><th>{t('Status')}</th><th>{t('Issues')}</th><th>{t('Departments')}</th><th /></tr></thead>
                   <tbody>{d.rows.map(r => (
                     <tr key={r.id} onClick={() => onOpen(r.id)} tabIndex={0} onKeyDown={e => e.key === 'Enter' && onOpen(r.id)}>
                       <td><b>{fmtCode(r.code)}</b></td>
