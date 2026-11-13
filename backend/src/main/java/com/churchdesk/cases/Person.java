@@ -27,6 +27,7 @@ public class Person {
     @Column(name = "id_expires_on") private java.time.LocalDate idExpiresOn;
     @Column(name = "profession") private String profession;
     @Column(name = "position") private String position;
+    @Column(name = "salary") private java.math.BigDecimal salary;
     @Column(name = "gender") private String gender;
     @Column(name = "birth_date") private java.time.LocalDate birthDate;
     @Column(name = "hire_date") private java.time.LocalDate hireDate;
@@ -117,4 +118,6 @@ public class Person {
     public void setChurch(Church v) { church = v; }
     public WorkingStatus getWorkingStatus() { return workingStatus; }
     public void setWorkingStatus(WorkingStatus v) { workingStatus = v; }
+    public java.math.BigDecimal getSalary() { return salary; }
+    public void setSalary(java.math.BigDecimal v) { salary = v; }
 }

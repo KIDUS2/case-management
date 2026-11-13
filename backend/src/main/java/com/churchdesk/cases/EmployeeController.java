@@ -32,7 +32,7 @@ public class EmployeeController {
                               String christianName, String fatherConfessor, String spiritualRank, LocalDate ordainedOn,
                               WorkingStatus workingStatus, boolean hasPhoto, LocalDate idIssuedOn, LocalDate idExpiresOn, boolean idExpired,
                               long totalCases, long openCases, long complaintsAgainst, long documents,
-                              List<String> extraPhones, boolean phoneExempt) {}
+                              List<String> extraPhones, boolean phoneExempt, java.math.BigDecimal salary) {}
 
     public record EmployeeRequest(@Size(max = 40) String churchRef, @Size(max = 80) String firstName, @Size(max = 80) String middleName,
                                   @Size(max = 80) String lastName, @Size(max = 160) String motherName, @NotNull Long churchId,
@@ -41,7 +41,12 @@ public class EmployeeController {
                                   @Size(max = 255) String address, @Size(max = 4000) String notes,
                                   @Size(max = 120) String christianName, @Size(max = 160) String fatherConfessor, @Size(max = 40) String spiritualRank,
                                   LocalDate ordainedOn, @NotNull WorkingStatus workingStatus, LocalDate idExpiresOn,
-                                  @Size(max = 5) List<@Size(max = 40) String> extraPhones, Boolean phoneExempt) {}
+                                  @Size(max = 5) List<@Size(max = 40) String> extraPhones, Boolean phoneExempt,
+                                  @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.Digits(integer = 10, fraction = 2) java.math.BigDecimal salary) {}
+
+    public record CaseIssueLine(String category, String status, boolean court) {}
+    public record PersonCase(Long caseId, String code, String role, String status, java.time.Instant createdAt, boolean hasCourt, List<CaseIssueLine> issues) {}
+    public record PersonCases(List<PersonCase> cases, int hidden) {}
 
     public record ImportResult(int created, int updated, List<String> errors, int missingPhone) {}
 
@@ -50,9 +55,13 @@ public class EmployeeController {
     private final CasePartyRepository partyRepo;
     private final EmployeeFileRepository docs;
     private final EmployeePostingRepository postings;
+    private final com.churchdesk.user.CurrentUser current;
+    private final AccessService access;
+    private final com.churchdesk.option.OptionService options;
 
-    public EmployeeController(PersonRepository persons, ChurchRepository churches, CasePartyRepository partyRepo, EmployeeFileRepository docs, EmployeePostingRepository postings) {
-        this.postings = postings; this.persons = persons; this.churches = churches; this.partyRepo = partyRepo; this.docs = docs;
+    public EmployeeController(PersonRepository persons, ChurchRepository churches, CasePartyRepository partyRepo, EmployeeFileRepository docs, EmployeePostingRepository postings,
+                              com.churchdesk.user.CurrentUser current, AccessService access, com.churchdesk.option.OptionService options) {
+        this.current = current; this.access = access; this.options = options; this.postings = postings; this.persons = persons; this.churches = churches; this.partyRepo = partyRepo; this.docs = docs;
     }
 
     @GetMapping @PreAuthorize(READ) @Transactional(readOnly = true)
@@ -171,6 +180,7 @@ public class EmployeeController {
         p.setPhone(blank(r.phone())); p.setEmail(blank(r.email()));
         if (r.extraPhones() != null) p.setExtraPhoneList(r.extraPhones());
         if (r.phoneExempt() != null && admin) p.setPhoneExempt(r.phoneExempt());
+        if (admin) p.setSalary(r.salary()); // salary is the administrator's alone
         // the phone number is mandatory; only the administrator can allow a person to have none
         if (strict && p.getPhone() == null && !p.isPhoneExempt())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a phone number. Only the administrator can allow a person without one.");
@@ -184,6 +194,31 @@ public class EmployeeController {
         if (p.getEmployeeId() == null && r.workingStatus() != WorkingStatus.CHURCH_MEMBER)
             p.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         if (p.getEmployeeId() != null && r.idExpiresOn() != null) p.setIdExpiresOn(r.idExpiresOn());
+    }
+
+    private static boolean adminNow() { return isAdmin(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()); }
+
+    /** Every case this person is in, with its issues; court issues are flagged. Cases the viewer may not open are only counted. */
+    @GetMapping("/{id}/cases") @PreAuthorize(READ) @Transactional(readOnly = true)
+    public PersonCases casesOf(@PathVariable Long id, org.springframework.security.core.Authentication auth) {
+        find(id);
+        var me = current.get(auth);
+        java.util.Map<Long, ChurchCase> byId = new java.util.LinkedHashMap<>();
+        java.util.Map<Long, String> role = new java.util.HashMap<>();
+        for (CaseParty cp : partyRepo.findByPersonIdOrderByIdDesc(id)) {
+            byId.putIfAbsent(cp.getChurchCase().getId(), cp.getChurchCase());
+            role.merge(cp.getChurchCase().getId(), cp.getRole().name(), (a, b) -> a.equals(b) ? a : "BOTH");
+        }
+        List<PersonCase> out = new ArrayList<>();
+        int hidden = 0;
+        for (ChurchCase c : byId.values()) {
+            if (!access.canView(c, me)) { hidden++; continue; }
+            List<CaseIssueLine> lines = c.getIssues().stream()
+                    .map(i -> new CaseIssueLine(options.issueTypeLabel(i.getCategory()), i.getStatus().name(), i.getCourtAt() != null || i.getStatus() == IssueStatus.COURT)).toList();
+            out.add(new PersonCase(c.getId(), c.getCode(), role.get(c.getId()), c.getStatus().name(), c.getCreatedAt(), lines.stream().anyMatch(CaseIssueLine::court), lines));
+        }
+        out.sort((a, b) -> Boolean.compare(b.hasCourt(), a.hasCourt()));
+        return new PersonCases(out, hidden);
     }
 
     private static boolean isAdmin(org.springframework.security.core.Authentication auth) {
@@ -202,6 +237,6 @@ public class EmployeeController {
                 p.getWorkingStatus(), p.getPhotoFile() != null, p.getIdIssuedOn(), exp, exp != null && exp.isBefore(Times.today()),
                 partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), java.util.List.of(CaseStatus.OPEN, CaseStatus.REFERRED, CaseStatus.COURT)),
                 partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), docs.countByPersonId(p.getId()),
-                p.getExtraPhoneList(), p.isPhoneExempt());
+                p.getExtraPhoneList(), p.isPhoneExempt(), adminNow() ? p.getSalary() : null);
     }
 }

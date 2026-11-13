@@ -575,3 +575,15 @@ button.chx-stat{cursor:pointer}.chx-stat b{font-size:1.7rem;font-family:var(--se
 .chx-sub{width:100%;max-width:240px;padding:7px 10px;border-radius:10px}.chx-sub.none{border-style:dashed;color:var(--mute)}
 .chx-pager{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;color:var(--mute);font-size:.9rem}
 @media(max-width:700px){.chx-stats{gap:8px}.chx-stat{padding:10px 12px}.chx-stat b{font-size:1.3rem}.chx-form{grid-template-columns:1fr}.chx-bar{flex-direction:column}.chx-sub{max-width:none}}
+
+/* staff & payroll, person cases */
+.wf-stats{grid-template-columns:repeat(4,1fr)}
+.r{text-align:right}.rank tr.click,.wf-table tr.click{cursor:pointer}.rank tr.click:hover td{background:var(--soft)}
+.wf-detail{padding:6px 4px 12px}.wf-pos{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.wf-table small.warn{display:block;font-size:.72rem}
+.pcase{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer}
+.pcase:hover{border-color:var(--pri)}.pcase.court{border-color:var(--court);background:color-mix(in srgb,var(--court) 8%,var(--bg))}
+.pc-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pc-issues{display:flex;flex-wrap:wrap;gap:6px}
+.catchip.court{border-color:var(--court);color:var(--court)}
+@media(max-width:700px){.wf-stats{grid-template-columns:repeat(2,1fr)}}
+.rank th.r,.chx-table th.r{text-align:right}

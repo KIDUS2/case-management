@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
-import { WORKING, initial, fmtId, fmtSize } from '../ui.js'
+import { WORKING, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 import { askConfirm, notify } from '../dialog.js'
 import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
 
 const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
-const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
+const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, salary: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
 const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
 
 /** Turns rows of cells (first row = column names, any order) into employee records. */
@@ -193,7 +193,30 @@ function ServiceCard({ e, churches, canWrite, setErr }) {
 
 function Row({ k, v }) { return v ? <div className="kv"><span>{k}</span><b>{v}</b></div> : null }
 
-function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases, setErr, setOk }) {
+const money = n => (n == null ? '' : Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 }) + ' ' + t('birr'))
+const ROLE = { COMPLAINANT: 'Reported the case', SUBJECT: 'Reported on', BOTH: 'Reported and reported on' }
+
+/** Every case this person is in, with its issues. Court issues stand out. */
+function CasesCard({ e, onOpenCase }) {
+  const [d, setD] = useState(null)
+  useEffect(() => { api(`/employees/${e.id}/cases`).then(setD).catch(() => setD({ cases: [], hidden: 0 })) }, [e.id])
+  return (
+    <div className="card"><h2>{t('Cases')}</h2>
+      <p>{t('{a} cases in total · {b} still active · {c} about this person', { a: e.totalCases, b: e.openCases, c: e.complaintsAgainst })}</p>
+      {d && d.cases.length === 0 && <p className="muted">{t('No cases yet.')}</p>}
+      {d && d.cases.map(c => (
+        <button type="button" key={c.caseId} className={'pcase' + (c.hasCourt ? ' court' : '')} onClick={() => onOpenCase && onOpenCase(c.caseId)}>
+          <span className="pc-top"><b>{fmtCode(c.code)}</b><span className={'badge ' + STATUS[c.status].cls}>{t(STATUS[c.status].label)}</span>{c.hasCourt && <span className="badge s-court">⚖️ {t('Court')}</span>}</span>
+          <small>{t(ROLE[c.role] || '')} · {fmtDate(c.createdAt)}</small>
+          <span className="pc-issues">{c.issues.map((i, k) => <span key={k} className={'catchip' + (i.court ? ' court' : '')}>{i.court ? '⚖️ ' : ''}{i.category}{i.status === 'RESOLVED' ? ' ✅' : ''}</span>)}</span>
+        </button>))}
+      {d && d.hidden > 0 && <p className="muted">{t('{n} more cases you do not have access to.', { n: d.hidden })}</p>}
+      {e.notes && <><h2 style={{ marginTop: 14 }}>{t('Notes')}</h2><p className="notes">{e.notes}</p></>}
+    </div>
+  )
+}
+
+function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, onSeeCases, onOpenCase, setErr, setOk }) {
   const [e, setE] = useState(e0)
   const [ver, setVer] = useState(0)
   useEffect(() => setE(e0), [e0])
@@ -248,14 +271,11 @@ function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, o
           <div className="card"><h2>Work</h2>
             <Row k="Church" v={e.churchName} /><Row k="Working status" v={WORKING[e.workingStatus]} />
             <Row k="Profession" v={e.profession} /><Row k="Position at the church" v={e.position} />
-            <Row k="Hired on" v={e.hireDate ? fmtDay(e.hireDate) : ''} /><Row k="Church’s own number" v={e.churchRef} />
+            {e.salary != null && <Row k="Monthly salary" v={money(e.salary)} />}<Row k="Hired on" v={e.hireDate ? fmtDay(e.hireDate) : ''} /><Row k="Church’s own number" v={e.churchRef} />
           </div>
         </div>
         <div>
-          <div className="card"><h2>Cases</h2>
-            <p>{t('{a} cases in total · {b} still active · {c} about this person', { a: e.totalCases, b: e.openCases, c: e.complaintsAgainst })}</p>
-            {e.notes && <><h2 style={{ marginTop: 14 }}>Notes</h2><p className="notes">{e.notes}</p></>}
-          </div>
+          <CasesCard e={e} onOpenCase={onOpenCase} />
           <EducationCard e={e} canWrite={canWrite} setErr={setErr} />
           <ServiceCard e={e} churches={churches} canWrite={canWrite} setErr={setErr} />
           {canDocs && <Docs e={e} setErr={setErr} />}
@@ -265,7 +285,7 @@ function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, o
   )
 }
 
-export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
+export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCase }) {
   const canWrite = ['ADMIN', 'OFFICER'].includes(me.role)
   const [data, setData] = useState({ items: [], total: 0, size: 20 })
   const [churches, setChurches] = useState([])
@@ -296,7 +316,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     if (!ch) throw new Error(t('Please choose the church from the list (start typing its name).'))
     const { churchName, ...rest } = f
     const nul = v => v || null
-    return { ...rest, extraPhones: (f.extraPhones || []).map(x => x.trim()).filter(Boolean), churchId: ch.id, birthDate: nul(f.birthDate), hireDate: nul(f.hireDate), ordainedOn: nul(f.ordainedOn), idExpiresOn: nul(f.idExpiresOn) }
+    return { ...rest, salary: f.salary === '' || f.salary == null ? null : Number(f.salary), extraPhones: (f.extraPhones || []).map(x => x.trim()).filter(Boolean), churchId: ch.id, birthDate: nul(f.birthDate), hireDate: nul(f.hireDate), ordainedOn: nul(f.ordainedOn), idExpiresOn: nul(f.idExpiresOn) }
   }
   const save = async e => {
     e.preventDefault(); setErr(''); setOk('')
@@ -311,7 +331,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     } catch (x) { setErr(x.message) }
   }
   const edit = e => {
-    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', extraPhones: e.extraPhones || [], phoneExempt: !!e.phoneExempt, email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
+    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', extraPhones: e.extraPhones || [], phoneExempt: !!e.phoneExempt, salary: e.salary ?? '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
     setPhoto(null); setView(null); window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const pickFile = async ev => {
@@ -342,7 +362,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
     <>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <Profile churches={churches} e0={view} canWrite={canWrite} canDocs={canWrite} onBack={() => { setView(null); setOk(''); load() }} onEdit={edit} onChanged={load}
-        onSeeCases={name => onSeeCases && onSeeCases(name)} setErr={setErr} setOk={setOk} />
+        onSeeCases={name => onSeeCases && onSeeCases(name)} onOpenCase={onOpenCase} setErr={setErr} setOk={setOk} />
     </>
   )
 
@@ -404,6 +424,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases }) {
             <div><label>Working status</label><select value={form.workingStatus} onChange={f('workingStatus')}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
             <div><label>Profession</label><input value={form.profession} onChange={f('profession')} maxLength={120} placeholder="e.g. Accountant, Teacher, Priest" /></div>
             <div><label>Position at the church</label><input value={form.position} onChange={f('position')} maxLength={120} /></div>
+            {me.role === 'ADMIN' && <div><label>{t('Monthly salary (birr)')}</label><input type="number" min="0" step="0.01" value={form.salary} onChange={f('salary')} inputMode="decimal" /></div>}
             <div><label>{t('Phone number')}{!form.phoneExempt && <span className="req"> *</span>}</label><input value={form.phone} onChange={f('phone')} inputMode="tel" maxLength={40} required={!form.phoneExempt} /></div>
             <div className="span">
               {(form.extraPhones || []).map((ph, k) => (

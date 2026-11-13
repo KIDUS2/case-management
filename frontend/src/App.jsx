@@ -14,6 +14,7 @@ import Queue from './pages/Queue.jsx'
 import Inbox from './pages/Inbox.jsx'
 import Departments from './pages/Departments.jsx'
 import Settings from './pages/Settings.jsx'
+import Workforce from './pages/Workforce.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Account from './pages/Account.jsx'
 import SearchBar from './components/SearchBar.jsx'
@@ -33,6 +34,7 @@ const NAV = [
   { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
   { key: 'employees', icon: '🪪', label: 'Employees', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
+  { key: 'workforce', icon: '🧑‍💼', label: 'Staff & payroll', roles: ['ADMIN'] },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
@@ -155,7 +157,8 @@ export default function App() {
         {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
         {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'churches' && <Churches />}
-        {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} />}
+        {current === 'workforce' && <Workforce onOpenEmployees={() => go('employees')} />}
+        {current === 'employees' && <Employees me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} onOpenCase={id => openCase(id)} />}
         {current === 'departments' && <Departments />}
         {current === 'settings' && <Settings />}
         {current === 'users' && <Users me={user} />}
