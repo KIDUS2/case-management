@@ -135,20 +135,23 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
         </div>
       )}
 
-      <div className="kpis">
-        <Kpi icon="📚" label="Total cases" value={t.cases} sub={rangeLabel} tone="k1" />
-        <Kpi icon="🟦" label="Still active" value={active} sub={tt('{n} in court', { n: d.byStatus.COURT })} tone="k2" />
-        <Kpi icon="✅" label="Resolved" value={d.byStatus.RESOLVED} sub={tt('{n}% resolution rate', { n: rate })} tone="k3" />
-        <Kpi icon="📥" label="Waiting in departments" value={d.flow.waitingInDepartments} sub="issues sent, not yet resolved" tone="k2" />
-        <Kpi icon="🚪" label="Expected today" value={d.flow.expectedToday} sub={tt('{n} overdue', { n: d.flow.overdue })} tone="k5" />
-        <Kpi icon="⚖️" label="Court, not acknowledged" value={d.flow.courtUnacknowledged} tone="k5" />
-        <Kpi icon="🙋" label="People served" value={t.people} sub={tt('{n} came back', { n: t.returningPeople })} tone="k4" />
-        <Kpi icon="⛪" label="Churches reached" value={t.churches} tone="k1" />
-        <Kpi icon="✉️" label="Letters issued" value={t.letters} tone="k6" />
-        <Kpi icon="🙏" label="Church members reporting" value={t.churchMembers} sub="not employees" tone="k4" />
-        <Kpi icon="👤" label="Employees reported on" value={t.reportedOn} tone="k5" />
-        <Kpi icon="⚠️" label="Repeat complaints" value={t.repeatReportedOn} sub="employees in 2+ cases" tone="k2" />
-      </div>
+      <section className="ledger" aria-label={tt('Totals')}>
+        <div className="lg k-total"><span className="lg-label">{tt('Total cases')}</span><b>{t.cases}</b><small>{rangeLabel}</small></div>
+        <div className="lg k-active"><span className="lg-label">{tt('Still active')}</span><b>{active}</b><small>{tt('{n} in court', { n: d.byStatus.COURT })}</small></div>
+        <div className="lg k-done"><span className="lg-label">{tt('Resolved')}</span><b>{d.byStatus.RESOLVED}</b>
+          <div className="lg-meter" role="img" aria-label={tt('{n}% resolution rate', { n: rate })}><i style={{ width: rate + '%' }} /></div><small>{tt('{n}% resolution rate', { n: rate })}</small></div>
+        <div className="lg k-wait"><span className="lg-label">{tt('Waiting in departments')}</span><b>{d.flow.waitingInDepartments}</b><small>{tt('issues sent, not yet resolved')}</small></div>
+      </section>
+      <section className="minis" aria-label={tt('More numbers')}>
+        <div className={'mini-stat' + (d.flow.expectedToday ? ' gold' : '')}><b>{d.flow.expectedToday}</b><span>{tt('Expected today')}<em>{tt('{n} overdue', { n: d.flow.overdue })}</em></span></div>
+        <div className={'mini-stat' + (d.flow.courtUnacknowledged ? ' red' : '')}><b>{d.flow.courtUnacknowledged}</b><span>{tt('Court, not acknowledged')}</span></div>
+        <div className="mini-stat"><b>{t.people}</b><span>{tt('People served')}<em>{tt('{n} came back', { n: t.returningPeople })}</em></span></div>
+        <div className="mini-stat"><b>{t.churches}</b><span>{tt('Churches reached')}</span></div>
+        <div className="mini-stat"><b>{t.letters}</b><span>{tt('Letters issued')}</span></div>
+        <div className="mini-stat"><b>{t.churchMembers}</b><span>{tt('Church members reporting')}<em>{tt('not employees')}</em></span></div>
+        <div className="mini-stat"><b>{t.reportedOn}</b><span>{tt('Employees reported on')}</span></div>
+        <div className={'mini-stat' + (t.repeatReportedOn ? ' gold' : '')}><b>{t.repeatReportedOn}</b><span>{tt('Repeat complaints')}<em>{tt('employees in 2+ cases')}</em></span></div>
+      </section>
 
       <div className="dgrid">
         <div className="card wide"><h2>Cases per day <small className="inl">{rangeLabel}</small></h2><AreaChart data={d.daily} /></div>
