@@ -191,6 +191,83 @@ function ServiceCard({ e, churches, canWrite, setErr }) {
   )
 }
 
+const STEPS = ['Identity, position and contact', 'Education', 'Places served']
+
+/** Education entered while registering: spiritual and secular, as many as needed. Saved together with the employee. */
+function EduDraft({ items, setItems }) {
+  const empty = kind => ({ kind, level: '', field: '', institution: '', startYear: '', endYear: '', completed: true })
+  const [row, setRow] = useState(null)
+  const f = k => ev => setRow({ ...row, [k]: ev.target.value })
+  const add = () => {
+    if (!row.level.trim() && !row.field.trim() && !row.institution.trim()) return
+    setItems([...items, row]); setRow(null)
+  }
+  const group = (kind, title, icon) => (
+    <div style={{ marginBottom: 14 }}>
+      <h3 className="sect" style={{ marginTop: 6 }}>{icon} {t(title)}</h3>
+      {items.map((r, i) => r.kind === kind && (
+        <div className="edu" key={i}><div className="grow"><b>{r.level || r.field || r.institution}</b>
+          <small>{[r.field, r.institution, [r.startYear, r.endYear || (r.completed ? '' : t('studying'))].filter(Boolean).join(' – ')].filter(Boolean).join(' · ')}</small></div>
+          <button type="button" className="btn x" onClick={() => setItems(items.filter((_, k) => k !== i))}>🗑️</button></div>))}
+      {!items.some(r => r.kind === kind) && <p className="muted" style={{ margin: '2px 0 6px' }}>{t('Nothing recorded yet.')}</p>}
+      {!row && <button type="button" className="btn ghost sm" onClick={() => setRow(empty(kind))}>➕ {t('Add')}</button>}
+    </div>
+  )
+  return (
+    <>
+      {group('SPIRITUAL', 'Spiritual education', '⛪')}
+      {group('SECULAR', 'Secular education', '🎓')}
+      {row && (
+        <div className="panel">
+          <h3 className="sect" style={{ marginTop: 0 }}>{t('Add')} · {t(row.kind === 'SPIRITUAL' ? 'Spiritual education' : 'Secular education')}</h3>
+          <datalist id="edu-levels">{LEVELS[row.kind].map(l => <option key={l} value={l} />)}</datalist>
+          <div className="grid">
+            <div><label>{t('Level or course')}</label><input list="edu-levels" value={row.level} onChange={f('level')} maxLength={120} autoFocus /></div>
+            <div><label>{t('Field of study')}</label><input value={row.field} onChange={f('field')} maxLength={160} /></div>
+            <div className="span"><label>{t('School or college')}</label><input value={row.institution} onChange={f('institution')} maxLength={200} /></div>
+            <div><label>{t('Start year')}</label><input inputMode="numeric" maxLength={4} value={row.startYear} onChange={f('startYear')} placeholder="2010" /></div>
+            <div><label>{t('End year')}</label><input inputMode="numeric" maxLength={4} value={row.endYear} onChange={f('endYear')} placeholder="2014" /></div>
+          </div>
+          <label className="check"><input type="checkbox" checked={row.completed} onChange={ev => setRow({ ...row, completed: ev.target.checked })} /> {t('Completed')}</label>
+          <div className="iact"><button type="button" className="btn sm" onClick={add}>{t('Add to the list')}</button><button type="button" className="btn ghost sm" onClick={() => setRow(null)}>{t('Cancel')}</button></div>
+        </div>
+      )}
+    </>
+  )
+}
+
+/** Churches and offices served, each with its own position and dates. The same church can appear again with another role. */
+function SvcDraft({ items, setItems, churches }) {
+  const [row, setRow] = useState(null)
+  const f = k => ev => setRow({ ...row, [k]: ev.target.value })
+  const add = () => { if (!row.place.trim()) return; setItems([...items, row]); setRow(null) }
+  return (
+    <>
+      <datalist id="svc-places">{churches.map(c => <option key={c.id} value={c.name} />)}</datalist>
+      <p className="hint">{t('The church and position you entered in step 1 are recorded as the current place of service. Add the places served before, and any other role held now, here. The same church can be added again with a different position.')}</p>
+      <ol className="timeline svc">
+        {items.map((r, i) => (
+          <li key={i}><span className="tdot">{r.endDate ? '⛪' : '📍'}</span>
+            <div className="grow"><b>{r.place}</b><small>{[r.position, [r.startDate, r.endDate || (r.startDate ? t('now') : '')].filter(Boolean).join(' → ')].filter(Boolean).join(' · ')}</small></div>
+            <button type="button" className="btn x" onClick={() => setItems(items.filter((_, k) => k !== i))}>🗑️</button></li>))}
+      </ol>
+      {items.length === 0 && <p className="muted">{t('No service recorded yet.')}</p>}
+      {!row && <button type="button" className="btn ghost sm" onClick={() => setRow({ place: '', position: '', startDate: '', endDate: '', notes: '' })}>➕ {t('Add a place of service')}</button>}
+      {row && (
+        <div className="panel">
+          <div className="grid">
+            <div><label>{t('Church or office')}</label><input list="svc-places" value={row.place} onChange={f('place')} maxLength={200} autoFocus /></div>
+            <div><label>{t('Position')}</label><input value={row.position} onChange={f('position')} maxLength={160} /></div>
+            <div><label>{t('From')}</label><input type="date" value={row.startDate} onChange={f('startDate')} /></div>
+            <div><label>{t('Until (leave empty if still serving)')}</label><input type="date" value={row.endDate} onChange={f('endDate')} /></div>
+          </div>
+          <div className="iact"><button type="button" className="btn sm" onClick={add}>{t('Add to the list')}</button><button type="button" className="btn ghost sm" onClick={() => setRow(null)}>{t('Cancel')}</button></div>
+        </div>
+      )}
+    </>
+  )
+}
+
 function Row({ k, v }) { return v ? <div className="kv"><span>{k}</span><b>{v}</b></div> : null }
 
 const money = n => (n == null ? '' : Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 }) + ' ' + t('birr'))
@@ -294,6 +371,9 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
   const [page, setPage] = useState(0)
   const [form, setForm] = useState(null)
   const [photo, setPhoto] = useState(null)
+  const [step, setStep] = useState(0)
+  const [eduDraft, setEduDraft] = useState([])
+  const [svcDraft, setSvcDraft] = useState([])
   const [view, setView] = useState(null) // the employee whose file is open
   const [bulk, setBulk] = useState('')
   const [showBulk, setShowBulk] = useState(false)
@@ -320,12 +400,23 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
   }
   const save = async e => {
     e.preventDefault(); setErr(''); setOk('')
+    if (!form.id && step < STEPS.length - 1) { setStep(step + 1); window.scrollTo({ top: 0 }); return }
     try {
       const body = toBody(form)
       const saved = form.id ? await api('/employees/' + form.id, { method: 'PUT', body }) : await api('/employees', { method: 'POST', body })
       let note = ''
+      if (!form.id) {
+        const missed = []
+        for (const ed of eduDraft) {
+          try { await api(`/employees/${saved.id}/education`, { method: 'POST', body: { ...ed, startYear: ed.startYear ? Number(ed.startYear) : null, endYear: ed.endYear ? Number(ed.endYear) : null } }) } catch { missed.push(ed.level || ed.field || ed.institution) }
+        }
+        for (const sv of svcDraft) {
+          try { await api(`/employees/${saved.id}/service`, { method: 'POST', body: { place: sv.place, position: sv.position, startDate: sv.startDate || null, endDate: sv.endDate || null, notes: sv.notes } }) } catch { missed.push(sv.place) }
+        }
+        if (missed.length) note += ' · ' + t('These were not saved: {f}', { f: missed.join(', ') })
+      }
       if (photo) { try { await upload(`/employees/${saved.id}/photo`, photo); saved.hasPhoto = true } catch (x) { note = ' · ' + x.message } }
-      setForm(null); setPhoto(null); setOk(t('Employee saved ✅') + note); load()
+      setForm(null); setPhoto(null); setStep(0); setEduDraft([]); setSvcDraft([]); setOk(t('Employee saved ✅') + note); load()
       setView(await api('/employees/' + saved.id))
       window.scrollTo({ top: 0 })
     } catch (x) { setErr(x.message) }
@@ -399,6 +490,10 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
         <form className="card" onSubmit={save}>
           <h2>{form.id ? 'Edit employee' : 'Register employee'}{form.employeeId && <span className="idnum sm"> 🪪 {fmtId(form.employeeId)}</span>}</h2>
           {!form.id && <p className="hint">{t('The employee ID (12 digits) is created automatically when you save.')}</p>}
+          {!form.id && (
+            <ol className="steps">{STEPS.map((x, i) => <li key={x} className={i === step ? 'on' : i < step ? 'done' : ''}><span>{i < step ? '✓' : i + 1}</span>{t(x)}</li>)}</ol>
+          )}
+          {(form.id || step === 0) && <>
           <h3 className="sect">Identity</h3>
           <div className="grid3">
             <div><label>First name</label><input value={form.firstName} onChange={f('firstName')} required maxLength={80} autoFocus /></div>
@@ -445,7 +540,16 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
             {form.id && form.employeeId && <div><label>Card valid until</label><input type="date" value={form.idExpiresOn} onChange={f('idExpiresOn')} /></div>}
           </div>
           <label>Notes</label><textarea rows={3} value={form.notes} onChange={f('notes')} maxLength={4000} />
-          <div className="iact"><button className="btn sm">Save</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>Cancel</button></div>
+          </>}
+          {!form.id && step > 0 && <div onKeyDown={ev => { if (ev.key === 'Enter' && ev.target.tagName === 'INPUT') ev.preventDefault() }}>
+            {step === 1 && <EduDraft items={eduDraft} setItems={setEduDraft} />}
+            {step === 2 && <SvcDraft items={svcDraft} setItems={setSvcDraft} churches={churches} />}
+          </div>}
+          <div className="iact">
+            {!form.id && step > 0 && <button type="button" className="btn ghost sm" onClick={() => { setStep(step - 1); window.scrollTo({ top: 0 }) }}>‹ {t('Back')}</button>}
+            <button className="btn sm">{form.id || step === STEPS.length - 1 ? t('Save') : t('Next') + ' ›'}</button>
+            <button type="button" className="btn ghost sm" onClick={() => { setForm(null); setStep(0); setEduDraft([]); setSvcDraft([]) }}>{t('Cancel')}</button>
+          </div>
         </form>
       )}
 
