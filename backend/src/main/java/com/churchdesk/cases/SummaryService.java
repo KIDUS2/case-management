@@ -128,7 +128,7 @@ public class SummaryService {
                     escalations.add(new Escalated(c.getId(), c.getCode(), i.getDepartment().getName(), i.getCategory(), church, sub, dl, i.getEscalationLevel(), i.isUrgent()));
                 }
                 if (i.getStatus() == IssueStatus.RESOLVED) st[2]++;
-                byCategory.merge(i.getCategory().name(), 1L, Long::sum);
+                byCategory.merge(i.getCategory(), 1L, Long::sum);
                 cats.add(i.getCategory());
                 if (i.getStatus() == IssueStatus.RESOLVED) { resolved++; done++; }
                 if (i.getDepartment() != null) { depts.add(i.getDepartment().getName()); byDept.merge(i.getDepartment().getName(), 1L, Long::sum); }
