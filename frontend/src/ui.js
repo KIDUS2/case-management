@@ -25,7 +25,7 @@ export const WORKING = {
 }
 export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff' }
 export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎' }
-export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', ACCESS: '🔓', INQUIRY: '💬', INQUIRY_DISPUTED: '⚠️' }
+export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', ACCESS: '🔓', INQUIRY: '💬', INQUIRY_DISPUTED: '⚠️', ESCALATION: '🚨', URGENT: '🔥' }
 
 export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION'].includes(role)
 
@@ -57,3 +57,6 @@ export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFi
 
 /** 123456789012 -> 1234 5678 9012, like a national ID */
 export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d)/g, '$1 ') : id || '')
+
+/** The kefle ketema (sub-cities) of Addis Ababa. */
+export const SUB_CITIES = ['Addis Ketema', 'Akaki Kaliti', 'Arada', 'Bole', 'Gullele', 'Kirkos', 'Kolfe Keranio', 'Lideta', 'Lemi Kura', 'Nifas Silk-Lafto', 'Yeka']

@@ -514,3 +514,19 @@ aside::after{content:"";position:absolute;inset:auto 0 0 0;height:240px;backgrou
 .lfile span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}.lfile:hover{border-color:var(--gold)}
 .loopform{display:grid;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .loopform .btn{margin:0;justify-self:start}
+
+/* ===== urgent / late / escalated, kefle ketema ===== */
+.flag{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 10px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.flag.urgent{background:#b23a2a;color:#fff}
+.flag.late{background:color-mix(in srgb,#b23a2a 14%,transparent);color:#8c2a1d}
+.flag.esc{background:#231a33;color:#f3d98b}
+.flag.pos{background:var(--soft);color:var(--ink)}
+[data-theme=dark] .flag.late{color:#f1a79b}
+.urgentcase{border-left:5px solid #b23a2a!important;box-shadow:0 0 0 1px color-mix(in srgb,#b23a2a 35%,transparent)}
+.pending.esc{border-left-color:#b23a2a}
+.subtable td:first-child{min-width:150px}
+.mbar{height:5px;border-radius:5px;background:var(--line);margin-top:6px;overflow:hidden}.mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#2d7a3e)}
+.catchips{display:flex;flex-wrap:wrap;gap:6px}
+.catchip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:3px 10px;font-size:.85rem;white-space:nowrap}
+.subsel{width:auto;min-width:140px;margin:0;padding:6px 10px;font-size:.88rem}
+.chlist .row{align-items:center;gap:10px}

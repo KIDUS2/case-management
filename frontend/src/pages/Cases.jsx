@@ -3,6 +3,7 @@ import { askConfirm } from '../dialog.js'
 import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
 import ChurchLoop from '../components/ChurchLoop.jsx'
+import IssueFlags from '../components/IssueFlags.jsx'
 import { STATUS, ISSUE_STATUS, CATEGORY, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
@@ -111,13 +112,19 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
   const done = i.status === 'RESOLVED'
   const desk = ['ADMIN', 'OFFICER', 'RECEPTION'].includes(me.role)
   const canRefer = desk && !done
-  const canResolve = !done && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId))
+  const myTurn = me.role !== 'DEPARTMENT' || i.queuePosition <= 1
+  const canResolve = !done && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId && myTurn))
   const canCourt = ['ADMIN', 'OFFICER'].includes(me.role) && !done && i.status !== 'COURT'
   const d = i.returnOn ? dayDiff(i.returnOn) : null
 
   const run = async (path, body) => {
     setBusy(true); setErr('')
     try { onChange(await api(`/cases/${c.id}/issues/${i.id}/${path}`, { method: 'POST', body })); setPanel(null); setNote('') }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const toggleUrgent = async () => {
+    setBusy(true); setErr('')
+    try { onChange(await api(`/cases/${c.id}/issues/${i.id}/urgent`, { method: 'PUT', body: { urgent: i.priority !== 'URGENT' } })) }
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
   const open = p => { setPanel(panel === p ? null : p); setNote(''); setPicked([]) }
@@ -153,6 +160,7 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
       <div className="issue-body">
         <div className="ihead"><b>{k + 1}. {CATEGORY[i.category].label}</b><span className={'badge ' + st.cls}>{st.icon} {st.label}</span>
           {i.departmentName && <span className="idept">🏢 {i.departmentName}</span>}
+          <IssueFlags i={i} />
           {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 {t('Returns {x}', { x: fmtDay(i.returnOn) + (d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : '') })}</span>}</div>
         <p>{i.description || <span className="muted">No detail written yet.</span>}</p>
         {done && <div className="resbox">✅ {t('Resolved {when}{by} (@{who}){note}', { when: ago(i.resolvedAt), by: i.departmentName ? ' by ' + i.departmentName : '', who: i.resolvedBy, note: i.resolutionNote ? ' — ' + i.resolutionNote : '' })}</div>}
@@ -173,8 +181,10 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
         )}
         <div className="iact">
           {canRefer && <button className="btn ghost sm" onClick={() => open('refer')}>{i.departmentId ? '🔁 Send to another department' : '📤 Send to department'}</button>}
+          {!done && !myTurn && me.role === 'DEPARTMENT' && i.departmentId === me.departmentId && <small className="muted">⏳ {t('Serve the cases ahead of this one first, or ask the administrator to mark it urgent.')}</small>}
           {canResolve && <button className="btn ok sm" onClick={() => open('resolve')}>✅ Mark resolved</button>}
           {canCourt && <button className="btn court sm" onClick={() => open('court')}>⚖️ Take to court</button>}
+          {me.role === 'ADMIN' && !done && i.departmentId && i.status === 'REFERRED' && <button className="btn ghost sm" disabled={busy} onClick={toggleUrgent}>{i.priority === 'URGENT' ? '↩ ' + t('Remove urgent') : '🔥 ' + t('Mark urgent')}</button>}
           {(desk || me.role === 'DEPARTMENT') && <label className="btn ghost sm" style={{ margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>📎 Attach file<input type="file" multiple hidden disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={attach} /></label>}
         </div>
         {panel === 'refer' && (
@@ -199,7 +209,7 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
             <label>What was done? (the desk and admin are notified)</label>
             <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} />
             <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
-              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setPicked(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
+              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { const f = Array.from(e.target.files); e.target.value = ''; setPicked(l => [...l, ...f]) }} /></label>
             <div className="iact"><button className="btn ok sm" disabled={busy} onClick={resolveNow}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button>
               <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
           </div>

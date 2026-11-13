@@ -16,17 +16,19 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/churches")
 public class ChurchController {
-    public record ChurchDto(Long id, String name) {}
-    public record CreateChurch(@NotBlank @Size(max = 160) String name) {}
-    public record BulkRequest(@NotNull @Size(max = 2000) List<String> names) {}
-    public record BulkResult(int added, int skipped) {}
+    public record ChurchDto(Long id, String name, String subCity) {}
+    public record CreateChurch(@NotBlank @Size(max = 160) String name, @Size(max = 80) String subCity) {}
+    public record UpdateChurch(@Size(max = 80) String subCity) {}
+    public record BulkItem(@NotBlank @Size(max = 160) String name, @Size(max = 80) String subCity) {}
+    public record BulkRequest(@Size(max = 2000) List<String> names, @Size(max = 2000) List<@jakarta.validation.Valid BulkItem> items) {}
+    public record BulkResult(int added, int skipped, int updated) {}
 
     private final ChurchRepository repo;
     public ChurchController(ChurchRepository repo) { this.repo = repo; }
 
     @GetMapping
     public List<ChurchDto> list() {
-        return repo.findAllByOrderByNameAsc().stream().map(c -> new ChurchDto(c.getId(), c.getName())).toList();
+        return repo.findAllByOrderByNameAsc().stream().map(c -> new ChurchDto(c.getId(), c.getName(), c.getSubCity())).toList();
     }
 
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMIN')")
@@ -35,24 +37,44 @@ public class ChurchController {
         if (repo.existsByNameIgnoreCase(name)) throw new ResponseStatusException(HttpStatus.CONFLICT, "That church is already in the list");
         Church c = new Church();
         c.setName(name);
+        c.setSubCity(blank(r.subCity()));
         c = repo.save(c);
-        return new ChurchDto(c.getId(), c.getName());
+        return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
     }
 
-    /** Paste many names (one per line); names that already exist are skipped. */
+    @PutMapping("/{id}") @PreAuthorize("hasRole('ADMIN')") @Transactional
+    public ChurchDto update(@PathVariable Long id, @Valid @RequestBody UpdateChurch r) {
+        Church c = repo.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Church not found"));
+        c.setSubCity(blank(r.subCity()));
+        return new ChurchDto(c.getId(), c.getName(), c.getSubCity());
+    }
+
+    /** Many churches at once (pasted or from a file). Names already there are skipped, but get their kefle ketema filled in if it was empty. */
     @PostMapping("/bulk") @PreAuthorize("hasRole('ADMIN')") @Transactional
     public BulkResult bulk(@Valid @RequestBody BulkRequest r) {
+        List<BulkItem> items = new java.util.ArrayList<>();
+        if (r.items() != null) items.addAll(r.items());
+        if (r.names() != null) for (String n : r.names()) items.add(new BulkItem(n == null ? "" : n, null));
         Set<String> seen = new HashSet<>();
-        int added = 0, skipped = 0;
-        for (String raw : r.names()) {
-            String name = raw == null ? "" : raw.trim();
+        int added = 0, skipped = 0, updated = 0;
+        for (BulkItem it : items) {
+            String name = it.name() == null ? "" : it.name().trim();
             if (name.isEmpty()) continue;
-            if (name.length() > 160 || !seen.add(name.toLowerCase()) || repo.existsByNameIgnoreCase(name)) { skipped++; continue; }
+            String sub = blank(it.subCity());
+            if (name.length() > 160 || !seen.add(name.toLowerCase())) { skipped++; continue; }
+            Church existing = repo.findFirstByNameIgnoreCase(name).orElse(null);
+            if (existing != null) {
+                if (sub != null && (existing.getSubCity() == null || existing.getSubCity().isBlank())) { existing.setSubCity(sub); updated++; } else skipped++;
+                continue;
+            }
             Church c = new Church();
             c.setName(name);
+            c.setSubCity(sub);
             repo.save(c);
             added++;
         }
-        return new BulkResult(added, skipped);
+        return new BulkResult(added, skipped, updated);
     }
+
+    private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }
 }

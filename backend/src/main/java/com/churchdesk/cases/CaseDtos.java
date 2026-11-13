@@ -39,7 +39,8 @@ public final class CaseDtos {
     public record IssueDto(Long id, IssueCategory category, String description, IssueStatus status,
                            Long departmentId, String departmentName, Instant referredAt, LocalDate returnOn,
                            String resolutionNote, String resolvedBy, Instant resolvedAt,
-                           Instant courtAt, String courtAckBy, Instant courtAckAt) {}
+                           Instant courtAt, String courtAckBy, Instant courtAckAt,
+                           String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition) {}
 
     public record EventDto(Long id, Long issueId, EventType type, String message, String actor, Instant createdAt) {}
     public record FileDto(Long id, Long issueId, Long inquiryId, String stage, String originalName, String contentType, long size, String uploadedBy, Instant uploadedAt) {}
@@ -69,7 +70,8 @@ public final class CaseDtos {
     /** One issue waiting in (or finished by) a department. */
     public record InboxItem(Long issueId, Long caseId, String code, IssueCategory category, String description, IssueStatus status,
                             String departmentName, Instant referredAt, LocalDate returnOn, List<String> complainants,
-                            List<String> subjects, String churchName, Instant resolvedAt, String resolvedBy, String resolutionNote) {}
+                            List<String> subjects, String churchName, Instant resolvedAt, String resolvedBy, String resolutionNote,
+                            String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition, String subCity) {}
 
     public record InboxDto(List<InboxItem> items, long total, int page, int size, long pending) {}
 }

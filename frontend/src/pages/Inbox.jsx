@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
+import IssueFlags from '../components/IssueFlags.jsx'
 import { CATEGORY, ISSUE_STATUS, ago, dayDiff, fmtCode, fmtDay, initial, names } from '../ui.js'
 
 /** What has been sent to a department. Its staff resolve issues here; the person who registered the case is notified. */
@@ -50,7 +51,7 @@ export default function Inbox({ me, onOpen }) {
   return (
     <>
       <div className="head"><div><h1>{deptName ? t('{x} inbox', { x: deptName }) : t('Department inbox')}</h1>
-        <p className="muted">{t('Issues sent to {x}. Resolving one tells the desk straight away.', { x: isDept ? 'your department' : 'this department' })}</p></div>
+        <p className="muted">{t('Issues sent to {x}. Resolving one tells the desk straight away.', { x: isDept ? 'your department' : 'this department' })}{tab === 'pending' ? ' ' + t('They are listed in the order they must be served: urgent first, then first come, first served.') : ''}</p></div>
         {!isDept && departments.length > 0 && (
           <select style={{ width: 'auto', minWidth: 200 }} value={deptId} onChange={e => setDeptId(e.target.value)}>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -68,11 +69,11 @@ export default function Inbox({ me, onOpen }) {
         const st = ISSUE_STATUS[it.status]
         const d = it.returnOn ? dayDiff(it.returnOn) : null
         return (
-          <div className={'case ' + st.cls} style={{ cursor: 'default', display: 'block' }} key={it.issueId}>
+          <div className={'case ' + st.cls + (it.priority === 'URGENT' && it.status !== 'RESOLVED' ? ' urgentcase' : '')} style={{ cursor: 'default', display: 'block' }} key={it.issueId}>
             <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <div className="avatar">{initial(it.complainants[0])}</div>
               <div className="grow">
-                <div className="ctitle"><b>{CATEGORY[it.category].icon} {CATEGORY[it.category].label}</b><span className={'badge ' + st.cls}>{st.label}</span></div>
+                <div className="ctitle"><b>{CATEGORY[it.category].icon} {CATEGORY[it.category].label}</b><span className={'badge ' + st.cls}>{st.label}</span><IssueFlags i={it} />{it.subCity && <span className="idept">📍 {it.subCity}</span>}</div>
                 <p style={{ margin: '4px 0', whiteSpace: 'pre-wrap' }}>{it.description || <span className="muted">No detail written.</span>}</p>
                 <small>👤 {names(it.complainants)} · ⛪ {it.churchName}{it.subjects.length ? ' · about ' + names(it.subjects) : ''}</small>
                 {it.status !== 'RESOLVED' && <small>{t('Received {x}', { x: it.referredAt ? ago(it.referredAt) : '' })}{it.returnOn ? <> · {t('person returns')} <b className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>{fmtDay(it.returnOn)}</b></> : ''}</small>}
@@ -85,12 +86,14 @@ export default function Inbox({ me, onOpen }) {
                 <label>What was done? (this is sent to the desk)</label>
                 <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} placeholder="e.g. Salary difference paid on 12 Nov." />
                 <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
-                  <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { setPicked(l => [...l, ...e.target.files]); e.target.value = '' }} /></label>
+                  <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { const f = Array.from(e.target.files); e.target.value = ''; setPicked(l => [...l, ...f]) }} /></label>
                 <div className="iact"><button className="btn ok sm" disabled={busy} onClick={() => resolve(it)}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button><button className="btn ghost sm" onClick={() => setOpen(null)}>Cancel</button></div>
               </div>
             )}
             <div className="iact">
-              {it.status === 'REFERRED' && open !== it.issueId && <button className="btn ok sm" onClick={() => { setOpen(it.issueId); setNote(''); setPicked([]) }}>✅ Resolve</button>}
+              {it.status === 'REFERRED' && open !== it.issueId && (isDept && it.queuePosition > 1
+                ? <small className="muted">⏳ {t('Serve the cases ahead of this one first, or ask the administrator to mark it urgent.')}</small>
+                : <button className="btn ok sm" onClick={() => { setOpen(it.issueId); setNote(''); setPicked([]) }}>✅ Resolve</button>)}
               <button className="btn ghost sm" onClick={() => onOpen(it.caseId)}>Open case</button>
             </div>
           </div>

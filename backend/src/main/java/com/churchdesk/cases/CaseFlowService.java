@@ -24,10 +24,11 @@ public class CaseFlowService {
     private final UserRepository users;
     private final NotificationService notifier;
     private final AccessService access;
+    private final CaseIssueRepository issueRepo;
 
     public CaseFlowService(ChurchCaseRepository cases, CaseEventRepository events, DepartmentRepository departments,
-                           UserRepository users, NotificationService notifier, AccessService access) {
-        this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
+                           UserRepository users, NotificationService notifier, AccessService access, CaseIssueRepository issueRepo) {
+        this.issueRepo = issueRepo; this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
     }
 
     // ---- used while registering a new case ----
@@ -46,6 +47,7 @@ public class CaseFlowService {
         i.setStatus(IssueStatus.REFERRED);
         i.setReferredAt(Instant.now());
         i.setReturnOn(returnOn);
+        i.setEscalationLevel(0); i.setEscalatedAt(null);
         i.setResolvedAt(null); i.setResolvedBy(null); i.setResolutionNote(null);
 
         StringBuilder msg = new StringBuilder(label(i.getCategory())).append(" issue sent to ").append(d.getName());
@@ -79,6 +81,12 @@ public class CaseFlowService {
         if (!CaseAccess.canResolve(actor, i))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the department that received this issue (or an officer) can resolve it");
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
+        // departments serve in order; only the administrator or an officer may jump the queue (or mark an issue urgent)
+        if (actor.getRole() == Role.DEPARTMENT && i.getDepartment() != null && i.getStatus() == IssueStatus.REFERRED) {
+            long ahead = issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
+            if (ahead > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Serve the cases in order. " + ahead + (ahead == 1 ? " case is" : " cases are")
+                    + " ahead of this one in your queue. If this one cannot wait, ask the administrator to mark it urgent.");
+        }
         i.setStatus(IssueStatus.RESOLVED);
         i.setResolvedAt(Instant.now());
         i.setResolvedBy(actor.getUsername());
@@ -97,6 +105,24 @@ public class CaseFlowService {
                 whole ? "Case " + code(c) + " fully resolved" : label(i.getCategory()) + " issue resolved by " + by,
                 "Case " + code(c) + " · " + complainant(c) + (i.getResolutionNote() == null ? "" : " — " + i.getResolutionNote()),
                 c.getId(), c.getCode(), actor.getUsername());
+    }
+
+    /** Only the administrator decides what jumps the queue. */
+    @Transactional
+    public void setUrgent(Long caseId, Long issueId, boolean urgent, AppUser actor) {
+        if (actor.getRole() != Role.ADMIN) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the administrator can mark an issue urgent");
+        ChurchCase c = load(caseId);
+        CaseIssue i = issue(c, issueId);
+        if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
+        if (i.isUrgent() == urgent) return;
+        i.setPriority(urgent ? "URGENT" : "NORMAL");
+        i.setUrgentBy(urgent ? actor.getUsername() : null);
+        i.setUrgentAt(urgent ? Instant.now() : null);
+        events.save(new CaseEvent(c.getId(), i.getId(), EventType.NOTE,
+                urgent ? "Marked URGENT by the administrator: served before the others" : "No longer urgent: served in order", actor.getUsername()));
+        if (urgent && i.getDepartment() != null)
+            notifier.send(users.findByDepartmentIdAndActiveTrue(i.getDepartment().getId()), "URGENT", "Urgent · case " + code(c),
+                    "The administrator marked this " + label(i.getCategory()) + " issue urgent. Serve it first.", c.getId(), c.getCode(), actor.getUsername());
     }
 
     @Transactional

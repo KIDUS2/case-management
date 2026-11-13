@@ -21,6 +21,11 @@ public class CaseIssue {
     @Column(name = "resolution_note", columnDefinition = "text") private String resolutionNote;
     @Column(name = "resolved_by") private String resolvedBy;
     @Column(name = "resolved_at") private Instant resolvedAt;
+    @Column(nullable = false) private String priority = "NORMAL";
+    @Column(name = "urgent_by") private String urgentBy;
+    @Column(name = "urgent_at") private Instant urgentAt;
+    @Column(name = "escalation_level", nullable = false) private int escalationLevel;
+    @Column(name = "escalated_at") private Instant escalatedAt;
     @Column(name = "court_at") private Instant courtAt;
     @Column(name = "court_ack_by") private String courtAckBy;
     @Column(name = "court_ack_at") private Instant courtAckAt;
@@ -48,6 +53,17 @@ public class CaseIssue {
     public void setResolvedBy(String v) { resolvedBy = v; }
     public Instant getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(Instant v) { resolvedAt = v; }
+    public String getPriority() { return priority; }
+    public void setPriority(String v) { priority = v; }
+    public boolean isUrgent() { return "URGENT".equals(priority); }
+    public String getUrgentBy() { return urgentBy; }
+    public void setUrgentBy(String v) { urgentBy = v; }
+    public Instant getUrgentAt() { return urgentAt; }
+    public void setUrgentAt(Instant v) { urgentAt = v; }
+    public int getEscalationLevel() { return escalationLevel; }
+    public void setEscalationLevel(int v) { escalationLevel = v; }
+    public Instant getEscalatedAt() { return escalatedAt; }
+    public void setEscalatedAt(Instant v) { escalatedAt = v; }
     public Instant getCourtAt() { return courtAt; }
     public void setCourtAt(Instant v) { courtAt = v; }
     public String getCourtAckBy() { return courtAckBy; }

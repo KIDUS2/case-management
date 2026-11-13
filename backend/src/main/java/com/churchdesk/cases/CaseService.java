@@ -195,19 +195,28 @@ public class CaseService {
         return out;
     }
 
+    /** 1 = next to be served in the department; 0 = not waiting in a queue. */
+    private int queuePosition(CaseIssue i) {
+        if (i.getStatus() != IssueStatus.REFERRED || i.getDepartment() == null || i.getReferredAt() == null) return 0;
+        return 1 + (int) issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
+    }
+
     /** What a department has received (pending) or already finished (resolved). */
     @Transactional(readOnly = true)
     public InboxDto inbox(Long departmentId, boolean resolved, int page, int size) {
         List<IssueStatus> statuses = resolved ? List.of(IssueStatus.RESOLVED) : List.of(IssueStatus.REFERRED, IssueStatus.COURT);
-        Page<CaseIssue> result = issueRepo.findForDepartment(departmentId, statuses,
-                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50)));
+        PageRequest pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50));
+        Page<CaseIssue> result = resolved ? issueRepo.findForDepartment(departmentId, statuses, pr) : issueRepo.findQueueForDepartment(departmentId, statuses, pr);
+        LocalDate today = Times.today();
         List<InboxItem> items = result.getContent().stream().map(i -> {
             ChurchCase c = i.getChurchCase();
             List<Person> who = peopleIn(c, PartyRole.COMPLAINANT);
             return new InboxItem(i.getId(), c.getId(), c.getCode(), i.getCategory(), i.getDescription(), i.getStatus(),
                     i.getDepartment().getName(), i.getReferredAt(), i.getReturnOn(), who.stream().map(Person::getFullName).toList(),
                     peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
-                    who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote());
+                    who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote(),
+                    i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, today), i.getEscalationLevel(), queuePosition(i),
+                    who.isEmpty() ? null : who.get(0).getChurch().getSubCity());
         }).toList();
         long pending = issueRepo.countByDepartmentIdAndStatus(departmentId, IssueStatus.REFERRED);
         return new InboxDto(items, result.getTotalElements(), result.getNumber(), result.getSize(), pending);
@@ -374,7 +383,8 @@ public class CaseService {
         List<IssueDto> issues = c.getIssues().stream().map(i -> new IssueDto(i.getId(), i.getCategory(), i.getDescription(), i.getStatus(),
                 i.getDepartment() == null ? null : i.getDepartment().getId(), i.getDepartment() == null ? null : i.getDepartment().getName(),
                 i.getReferredAt(), i.getReturnOn(), i.getResolutionNote(), i.getResolvedBy(), i.getResolvedAt(),
-                i.getCourtAt(), i.getCourtAckBy(), i.getCourtAckAt())).toList();
+                i.getCourtAt(), i.getCourtAckBy(), i.getCourtAckAt(),
+                i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, Times.today()), i.getEscalationLevel(), queuePosition(i))).toList();
         List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
                 .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
         List<FileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()

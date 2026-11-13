@@ -23,10 +23,17 @@ public class SummaryService {
 
     public record Count(String name, long count) {}
     public record Day(String date, long count) {}
-    public record Row(Long id, String code, List<String> complainants, List<String> subjects, String churchName, CaseStatus status,
+    public record Row(Long id, String code, List<String> complainants, List<String> subjects, String churchName, String subCity, CaseStatus status,
                       int issueCount, int resolvedCount, List<IssueCategory> categories, List<String> departments, int openInquiries,
                       boolean letterIssued, Instant createdAt) {}
-    public record Result(long cases, long issues, long issuesResolved, long letters, long withOpenInquiry, boolean truncated,
+    /** One kefle ketema (sub-city): how many cases and issues, and what kind of issues. */
+    public record SubCityRow(String name, long cases, long issues, long resolved, Map<String, Long> byCategory) {}
+    public record Escalated(Long caseId, String code, String department, IssueCategory category, String churchName, String subCity,
+                            long daysLate, int level, boolean urgent) {}
+    public record LeaderRow(Long caseId, String code, String leader, String roleInCase, String churchName, String subCity, CaseStatus status,
+                            List<IssueCategory> categories, int issueCount, int resolvedCount, Instant createdAt) {}
+    public record Result(long cases, long issues, long issuesResolved, long letters, long withOpenInquiry, long lateIssues, long urgentIssues, boolean truncated,
+                         List<SubCityRow> subCities, List<Escalated> escalations, List<LeaderRow> leaders,
                          Map<String, Long> byStatus, Map<String, Long> byCategory, List<Count> byDepartment, List<Count> byChurch, List<Day> daily,
                          List<Row> rows, long total, int page, int size, List<InquiryDto> waitingForAdmin) {}
 
@@ -80,25 +87,45 @@ public class SummaryService {
         for (IssueCategory k : IssueCategory.values()) byCategory.put(k.name(), 0L);
         Map<String, Long> byDept = new TreeMap<>(), byChurch = new HashMap<>();
         Map<LocalDate, Long> perDay = new TreeMap<>();
-        long issues = 0, resolved = 0, letters = 0, withOpen = 0;
+        long issues = 0, resolved = 0, letters = 0, withOpen = 0, late = 0, urgent = 0;
         List<Row> rows = new ArrayList<>();
+        Map<String, long[]> subTotals = new HashMap<>();              // cases, issues, resolved
+        Map<String, Map<String, Long>> subCats = new HashMap<>();
+        List<Escalated> escalations = new ArrayList<>();
+        List<LeaderRow> leaders = new ArrayList<>();
+        LocalDate today = LocalDate.now(ZONE);
 
         for (ChurchCase c : all) {
             byStatus.merge(c.getStatus().name(), 1L, Long::sum);
             perDay.merge(c.getCreatedAt().atZone(ZONE).toLocalDate(), 1L, Long::sum);
             if (c.isLetterIssued()) letters++;
             List<String> comp = new ArrayList<>(), subj = new ArrayList<>();
-            String church = "";
+            String church = "", sub = null;
             for (CaseParty cp : c.getParties()) {
-                if (cp.getRole() == PartyRole.COMPLAINANT) { comp.add(cp.getPerson().getFullName()); if (church.isEmpty()) church = cp.getPerson().getChurch().getName(); }
+                if (cp.getRole() == PartyRole.COMPLAINANT) {
+                    comp.add(cp.getPerson().getFullName());
+                    if (church.isEmpty()) { church = cp.getPerson().getChurch().getName(); sub = cp.getPerson().getChurch().getSubCity(); }
+                }
                 else if (cp.getRole() == PartyRole.SUBJECT) subj.add(cp.getPerson().getFullName());
             }
             if (!church.isEmpty()) byChurch.merge(church, 1L, Long::sum);
             Set<String> depts = new TreeSet<>();
             Set<IssueCategory> cats = new LinkedHashSet<>();
             int done = 0;
+            String subKey = sub == null || sub.isBlank() ? "—" : sub;
+            long[] st = subTotals.computeIfAbsent(subKey, k -> new long[3]);
+            st[0]++;
+            Map<String, Long> sc = subCats.computeIfAbsent(subKey, k -> new LinkedHashMap<>());
             for (CaseIssue i : c.getIssues()) {
-                issues++;
+                issues++; st[1]++;
+                sc.merge(i.getCategory().name(), 1L, Long::sum);
+                if (i.isUrgent() && i.getStatus() != IssueStatus.RESOLVED) urgent++;
+                long dl = Escalation.daysLate(i, today);
+                if (dl > 0) {
+                    late++;
+                    escalations.add(new Escalated(c.getId(), c.getCode(), i.getDepartment().getName(), i.getCategory(), church, sub, dl, i.getEscalationLevel(), i.isUrgent()));
+                }
+                if (i.getStatus() == IssueStatus.RESOLVED) st[2]++;
                 byCategory.merge(i.getCategory().name(), 1L, Long::sum);
                 cats.add(i.getCategory());
                 if (i.getStatus() == IssueStatus.RESOLVED) { resolved++; done++; }
@@ -106,7 +133,12 @@ public class SummaryService {
             }
             int open = openByCase.getOrDefault(c.getId(), 0);
             if (open > 0) withOpen++;
-            rows.add(new Row(c.getId(), c.getCode(), comp, subj, church, c.getStatus(), c.getIssues().size(), done, new ArrayList<>(cats),
+            for (CaseParty cp : c.getParties()) {
+                if (cp.getPerson().getWorkingStatus() == WorkingStatus.LEADER_PRIEST && leaders.size() < 200)
+                    leaders.add(new LeaderRow(c.getId(), c.getCode(), cp.getPerson().getFullName(), cp.getRole() == PartyRole.SUBJECT ? "SUBJECT" : "COMPLAINANT",
+                            cp.getPerson().getChurch().getName(), cp.getPerson().getChurch().getSubCity(), c.getStatus(), new ArrayList<>(cats), c.getIssues().size(), done, c.getCreatedAt()));
+            }
+            rows.add(new Row(c.getId(), c.getCode(), comp, subj, church, sub, c.getStatus(), c.getIssues().size(), done, new ArrayList<>(cats),
                     new ArrayList<>(depts), open, c.isLetterIssued(), c.getCreatedAt()));
         }
 
@@ -116,9 +148,15 @@ public class SummaryService {
         List<Count> deptList = byDept.entrySet().stream().map(e -> new Count(e.getKey(), e.getValue())).toList();
         List<Day> daily = perDay.entrySet().stream().map(e -> new Day(e.getKey().toString(), e.getValue())).toList();
 
+        List<SubCityRow> subCities = subTotals.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue()[1], a.getValue()[1]))
+                .map(e -> new SubCityRow(e.getKey(), e.getValue()[0], e.getValue()[1], e.getValue()[2], subCats.get(e.getKey()))).toList();
+        escalations.sort((a, b) -> Long.compare(b.daysLate(), a.daysLate()));
+        if (escalations.size() > 50) escalations = new ArrayList<>(escalations.subList(0, 50));
+
         int sz = Math.min(Math.max(size, 1), 100), pg = Math.max(page, 0);
         int fromIdx = Math.min(pg * sz, rows.size()), toIdx = Math.min(fromIdx + sz, rows.size());
-        return new Result(all.size(), issues, resolved, letters, withOpen, all.size() >= CAP, byStatus, byCategory, deptList, topChurch, daily,
+        return new Result(all.size(), issues, resolved, letters, withOpen, late, urgent, all.size() >= CAP, subCities, escalations, leaders, byStatus, byCategory, deptList, topChurch, daily,
                 rows.subList(fromIdx, toIdx), rows.size(), pg, sz, inquiryService.waitingForAdmin(actor));
     }
 }

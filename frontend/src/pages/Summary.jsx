@@ -5,6 +5,34 @@ import { STATUS, CATEGORY, fmtDate, fmtCode, names, fmtDay } from '../ui.js'
 import { downloadCsv } from '../sheet.js'
 import PeriodFilter, { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 
+const ROLE_IN_CASE = { SUBJECT: 'Reported on', COMPLAINANT: 'Reported' }
+
+/** Which kefle ketema brings which kind of issue (for example, Bole and finance assessments). */
+function SubCityTable({ rows }) {
+  const cats = Object.keys(CATEGORY)
+  const maxIssues = Math.max(1, ...rows.map(r => r.issues))
+  if (!rows.length) return <p className="muted">{t('Nothing in this period.')}</p>
+  return (
+    <div className="tablewrap">
+      <table className="sumtable subtable">
+        <thead><tr><th>{t('Kefle ketema')}</th><th>{t('Cases')}</th><th>{t('Issues')}</th><th>{t('Resolved')}</th><th>{t('Most common issue')}</th><th>{t('By type of issue')}</th></tr></thead>
+        <tbody>{rows.map(r => {
+          const top = cats.map(k => [k, r.byCategory[k] || 0]).sort((a, b) => b[1] - a[1])[0]
+          return (
+            <tr key={r.name} style={{ cursor: 'default' }}>
+              <td><b>{r.name === '—' ? t('Not set') : r.name}</b>
+                <div className="mbar"><i style={{ width: Math.max(4, (r.issues / maxIssues) * 100) + '%' }} /></div></td>
+              <td>{r.cases}</td><td>{r.issues}</td>
+              <td>{r.resolved}<small className="muted"> · {r.issues ? Math.round((r.resolved / r.issues) * 100) : 0}%</small></td>
+              <td>{top && top[1] > 0 ? <b>{CATEGORY[top[0]].icon} {t(CATEGORY[top[0]].label)} ({top[1]})</b> : '—'}</td>
+              <td><div className="catchips">{cats.filter(k => r.byCategory[k]).map(k => <span key={k} className="catchip" title={t(CATEGORY[k].label)}>{CATEGORY[k].icon} {r.byCategory[k]}</span>)}</div></td>
+            </tr>)
+        })}</tbody>
+      </table>
+    </div>
+  )
+}
+
 const STATUS_COLOR = { OPEN: '#1b7f7a', REFERRED: '#c99a2e', COURT: '#b23a2a', RESOLVED: '#2d7a3e' }
 
 function Bars({ items }) {
@@ -61,8 +89,8 @@ export default function Summary({ me, onOpen }) {
         if (rows.length >= r.total || !r.rows.length) break
       }
       downloadCsv('case-summary.csv',
-        ['Code', 'Registered', 'Church', 'Reported by', 'About', 'Status', 'Issues', 'Resolved issues', 'Departments', 'Open church comments', 'Letter issued'],
-        rows.map(r => [fmtCode(r.code), r.createdAt.slice(0, 10), r.churchName, r.complainants.join('; '), r.subjects.join('; '), r.status, r.issueCount, r.resolvedCount, r.departments.join('; '), r.openInquiries, r.letterIssued ? 'yes' : 'no']))
+        ['Code', 'Registered', 'Church', 'Kefle ketema', 'Reported by', 'About', 'Status', 'Issues', 'Resolved issues', 'Departments', 'Open church comments', 'Letter issued'],
+        rows.map(r => [fmtCode(r.code), r.createdAt.slice(0, 10), r.churchName, r.subCity || '', r.complainants.join('; '), r.subjects.join('; '), r.status, r.issueCount, r.resolvedCount, r.departments.join('; '), r.openInquiries, r.letterIssued ? 'yes' : 'no']))
     } catch (x) { setErr(x.message) }
   }
 
@@ -99,6 +127,8 @@ export default function Summary({ me, onOpen }) {
             <Stat icon="✅" label={t('Issues resolved')} value={d.issuesResolved} />
             <Stat icon="✉️" label={t('Letters issued')} value={d.letters} />
             <Stat icon="💬" label={t('Waiting on a church comment')} value={d.withOpenInquiry} />
+            <Stat icon="⏰" label={t('Late in departments')} value={d.lateIssues} />
+            <Stat icon="🔥" label={t('Urgent right now')} value={d.urgentIssues} />
           </div>
 
           {d.waitingForAdmin.length > 0 && (
@@ -114,6 +144,26 @@ export default function Summary({ me, onOpen }) {
             </div>
           )}
 
+          {d.escalations.length > 0 && (
+            <div className="card pending esc">
+              <h2>🚨 {t('Late: not solved by the date')} <span className="count">{d.escalations.length}</span></h2>
+              <p className="hint">{t('These issues passed their date in the department. The administrator was told automatically.')}</p>
+              {d.escalations.map(e => (
+                <button key={e.caseId + e.department + e.category} className="mini" onClick={() => onOpen(e.caseId)}>
+                  <span className="mrow"><span className="avatar sm">{CATEGORY[e.category].icon}</span><span><b>{fmtCode(e.code)} · {e.churchName}{e.subCity ? ' · ' + e.subCity : ''}</b>
+                    <small>{e.department} · {t(CATEGORY[e.category].label)}</small></span></span>
+                  <span className="flag late">⏰ {t('{n} days late', { n: e.daysLate })}{e.urgent ? ' · 🔥' : ''}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="card">
+            <h2>📍 {t('Issues by kefle ketema')}</h2>
+            <p className="hint">{t('Where the issues come from, and what kind they are.')}</p>
+            <SubCityTable rows={d.subCities} />
+          </div>
+
           <div className="dgrid">
             <div className="card"><h2>{t('By status')}</h2><Bars items={Object.entries(d.byStatus).map(([k, n]) => ({ name: t(STATUS[k].label), count: n, color: STATUS_COLOR[k] }))} /></div>
             <div className="card"><h2>{t('By type of issue')}</h2><Bars items={Object.entries(d.byCategory).map(([k, n]) => ({ name: CATEGORY[k].icon + ' ' + t(CATEGORY[k].label), count: n }))} /></div>
@@ -123,6 +173,28 @@ export default function Summary({ me, onOpen }) {
               <Bars items={d.daily.slice(-14).map(x => ({ name: fmtDay(x.date), count: x.count }))} /></div>}
           </div>
 
+          {d.leaders.length > 0 && (
+            <div className="card">
+              <h2>✝️ {t('Issues involving leaders and priests')} <span className="count">{d.leaders.length}</span></h2>
+              <div className="tablewrap">
+                <table className="sumtable">
+                  <thead><tr><th>{t('Leader')}</th><th>{t('Church')}</th><th>{t('Case')}</th><th>{t('In the case')}</th><th>{t('Issues')}</th><th>{t('Resolved')}</th><th>{t('Status')}</th></tr></thead>
+                  <tbody>{d.leaders.map(l => (
+                    <tr key={l.caseId + l.leader} onClick={() => onOpen(l.caseId)} tabIndex={0} onKeyDown={e => e.key === 'Enter' && onOpen(l.caseId)}>
+                      <td><b>{l.leader}</b></td>
+                      <td>{l.churchName}{l.subCity && <small className="muted"> · {l.subCity}</small>}</td>
+                      <td>{fmtCode(l.code)}</td>
+                      <td>{t(ROLE_IN_CASE[l.roleInCase])}</td>
+                      <td><div className="catchips">{l.categories.map(k => <span key={k} className="catchip" title={t(CATEGORY[k].label)}>{CATEGORY[k].icon} {t(CATEGORY[k].label)}</span>)}</div></td>
+                      <td>{l.resolvedCount}/{l.issueCount}</td>
+                      <td><span className={'badge ' + STATUS[l.status].cls}>{t(STATUS[l.status].label)}</span></td>
+                    </tr>))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           <div className="card">
             <div className="sumhead">
               <h2>{t('All cases in this view')} <span className="count">{d.total}</span></h2>
@@ -131,12 +203,13 @@ export default function Summary({ me, onOpen }) {
             {d.rows.length === 0 ? <p className="muted">{t('No cases match these filters.')}</p> : (
               <div className="tablewrap">
                 <table className="sumtable">
-                  <thead><tr><th>{t('Code')}</th><th>{t('Registered')}</th><th>{t('Church')}</th><th>{t('Reported by')}</th><th>{t('Status')}</th><th>{t('Issues')}</th><th>{t('Departments')}</th><th /></tr></thead>
+                  <thead><tr><th>{t('Code')}</th><th>{t('Registered')}</th><th>{t('Church')}</th><th>{t('Kefle ketema')}</th><th>{t('Reported by')}</th><th>{t('Status')}</th><th>{t('Issues')}</th><th>{t('Departments')}</th><th /></tr></thead>
                   <tbody>{d.rows.map(r => (
                     <tr key={r.id} onClick={() => onOpen(r.id)} tabIndex={0} onKeyDown={e => e.key === 'Enter' && onOpen(r.id)}>
                       <td><b>{fmtCode(r.code)}</b></td>
                       <td>{fmtDate(r.createdAt)}</td>
                       <td>{r.churchName}</td>
+                      <td>{r.subCity || '—'}</td>
                       <td>{names(r.complainants)}{r.subjects.length > 0 && <small className="muted"> · {t('about')} {names(r.subjects)}</small>}</td>
                       <td><span className={'badge ' + STATUS[r.status].cls}>{t(STATUS[r.status].label)}</span></td>
                       <td>{r.resolvedCount}/{r.issueCount}</td>

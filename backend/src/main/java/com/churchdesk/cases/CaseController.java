@@ -72,6 +72,15 @@ public class CaseController {
         return service.get(id, u);
     }
 
+    public record UrgentRequest(boolean urgent) {}
+
+    @PutMapping("/cases/{id}/issues/{issueId}/urgent") @PreAuthorize("hasRole('ADMIN')")
+    public CaseDetail urgent(@PathVariable Long id, @PathVariable Long issueId, @RequestBody UrgentRequest r, Authentication auth) {
+        AppUser u = current.get(auth);
+        flow.setUrgent(id, issueId, r.urgent(), u);
+        return service.get(id, u);
+    }
+
     @PostMapping("/cases/{id}/issues/{issueId}/court") @PreAuthorize("hasAnyRole('ADMIN','OFFICER')")
     public CaseDetail court(@PathVariable Long id, @PathVariable Long issueId, @Valid @RequestBody(required = false) NoteRequest r, Authentication auth) {
         AppUser u = current.get(auth);
