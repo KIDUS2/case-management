@@ -224,7 +224,13 @@ export default function NewCase({ me, onCreated, goChurches }) {
 
       </div>
 
-      <button className="btn big" disabled={busy}>{busy ? 'Saving…' : '💾 Save case and get code'}</button>
+      <div className="savebar">
+        <p className="savehint"><span className="savedot" />{t('A case code is created when you save. You can print the receipt right after.')}</p>
+        <button className="savebtn" disabled={busy}>
+          {busy ? <span className="spin" aria-hidden="true" /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>}
+          <span>{busy ? t('Saving…') : t('Save case')}</span>
+        </button>
+      </div>
     </form>
   )
 }
