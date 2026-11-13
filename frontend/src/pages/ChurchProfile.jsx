@@ -8,6 +8,12 @@ const KINDS = { CARTA: 'Carta (land title)', MAP: 'Map or plan', LETTER: 'Letter
 const money = n => Number(n || 0).toLocaleString(locale(), { maximumFractionDigits: 0 })
 
 /** Pulls latitude and longitude out of "9.03, 38.74" or out of a pasted Google Maps / OpenStreetMap link. */
+const FAC = {
+  HALL: { icon: '🏛️', label: 'Hall' }, SCHOOL: { icon: '🏫', label: 'School' }, CLINIC: { icon: '🏥', label: 'Clinic' },
+  LIBRARY: { icon: '📚', label: 'Library' }, CEMETERY: { icon: '🪦', label: 'Cemetery' }, GUEST_HOUSE: { icon: '🛏️', label: 'Guest house' },
+  HOLY_WATER: { icon: '💧', label: 'Holy water (tsebel)' }, RENTAL: { icon: '🏬', label: 'Rental property' }, PARKING: { icon: '🅿️', label: 'Parking' }, OTHER: { icon: '🧱', label: 'Other' },
+}
+const COND = { GOOD: 'Good', FAIR: 'Fair', NEEDS_REPAIR: 'Needs repair' }
 export function parseLocation(text) {
   const s = decodeURIComponent((text || '').trim())
   const pats = [/@(-?\d+\.\d+),(-?\d+\.\d+)/, /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /[?&](?:q|ll|query)=(-?\d+\.\d+)[, ](-?\d+\.\d+)/, /mlat=(-?\d+\.\d+).*mlon=(-?\d+\.\d+)/, /^(-?\d+\.\d+)\s*[,; ]\s*(-?\d+\.\d+)$/]
@@ -43,12 +49,15 @@ export default function ChurchProfile({ church, canWrite, isAdmin, onBack, onCha
   const [kind, setKind] = useState('CARTA')
   const [title, setTitle] = useState('')
   const [busy, setBusy] = useState(false)
+  const [facs, setFacs] = useState(null)
+  const [fac, setFac] = useState(null)
   const [ok, setOk] = useState('')
 
   const loadFiles = () => api(`/churches/${church.id}/files`).then(setFiles).catch(x => setErr(x.message))
   useEffect(() => {
     api(`/churches/${church.id}/profile`).then(setP).catch(x => setErr(x.message))
     loadFiles()
+    api(`/churches/${church.id}/facilities`).then(setFacs).catch(x => setErr(x.message))
     api(`/employees?churchId=${church.id}&size=100`).then(r => setStaff(r.items)).catch(() => setStaff([]))
   }, [church.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -87,6 +96,19 @@ export default function ChurchProfile({ church, canWrite, isAdmin, onBack, onCha
   }
 
   const located = p.latitude != null && p.longitude != null
+  const saveFac = async e => {
+    e.preventDefault(); setErr('')
+    const body = { kind: fac.kind, name: fac.name, capacity: fac.capacity === '' ? null : Number(fac.capacity), condition: fac.condition, notes: fac.notes }
+    try {
+      if (fac.id) await api('/church-facilities/' + fac.id, { method: 'PUT', body })
+      else await api(`/churches/${church.id}/facilities`, { method: 'POST', body })
+      setFac(null); setFacs(await api(`/churches/${church.id}/facilities`))
+    } catch (x) { setErr(x.message) }
+  }
+  const removeFac = async x => {
+    if (!(await askConfirm(x.name || t((FAC[x.kind] || FAC.OTHER).label), { title: t('Remove this facility?'), confirmText: t('Remove'), danger: true }))) return
+    try { await api('/church-facilities/' + x.id, { method: 'DELETE' }); setFacs(l => l.filter(y => y.id !== x.id)) } catch (er) { setErr(er.message) }
+  }
   const leaders = (staff || []).filter(x => x.workingStatus === 'LEADER_PRIEST')
   const others = (staff || []).filter(x => ['ACTIVE_EMPLOYEE', 'CONTRACT', 'SUSPENDED'].includes(x.workingStatus))
   const payroll = isAdmin ? [...leaders, ...others].reduce((a, x) => a + Number(x.salary || 0), 0) : null
@@ -145,6 +167,29 @@ export default function ChurchProfile({ church, canWrite, isAdmin, onBack, onCha
                   {(form.latitude !== '' || form.longitude !== '') && <button type="button" className="btn ghost sm" onClick={() => setForm({ ...form, latitude: '', longitude: '' })}>✕ {t('Remove location')}</button>}</div>
                 <label>{t('Notes')}</label><textarea rows={3} value={form.notes} onChange={f('notes')} maxLength={4000} />
                 <div className="iact"><button className="btn sm">{t('Save')}</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>{t('Cancel')}</button></div>
+              </form>
+            )}
+          </div>
+
+          <div className="card"><h2>{t('Facilities')} <span className="count">{facs ? facs.length : 0}</span> <small className="inl">{t('hall, school, clinic, cemetery…')}</small></h2>
+            {(facs || []).map(x => (
+              <div className="filerow" key={x.id}><span className="iicon">{(FAC[x.kind] || FAC.OTHER).icon}</span>
+                <div className="grow"><div className="fname">{x.name || t((FAC[x.kind] || FAC.OTHER).label)}</div>
+                  <small>{t((FAC[x.kind] || FAC.OTHER).label)}{x.capacity != null ? ' · ' + t('{n} people', { n: x.capacity }) : ''}{x.condition ? ' · ' + t(COND[x.condition]) : ''}{x.notes ? ' · ' + x.notes : ''}</small></div>
+                {canWrite && <button className="btn x" aria-label={t('Edit')} onClick={() => setFac({ id: x.id, kind: x.kind, name: x.name || '', capacity: x.capacity ?? '', condition: x.condition || '', notes: x.notes || '' })}>✏️</button>}
+                {canWrite && <button className="btn x" aria-label={t('Delete')} onClick={() => removeFac(x)}>🗑️</button>}</div>))}
+            {facs && facs.length === 0 && !fac && <p className="muted">{t('No facilities recorded yet.')}</p>}
+            {canWrite && !fac && <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={() => setFac({ kind: 'HALL', name: '', capacity: '', condition: '', notes: '' })}>➕ {t('Add a facility')}</button>}
+            {fac && (
+              <form onSubmit={saveFac} style={{ marginTop: 10 }}>
+                <div className="grid">
+                  <div><label>{t('Type')}</label><select value={fac.kind} onChange={e => setFac({ ...fac, kind: e.target.value })}>{Object.entries(FAC).map(([k, v]) => <option key={k} value={k}>{v.icon} {t(v.label)}</option>)}</select></div>
+                  <div><label>{t('Name (optional)')}</label><input value={fac.name} maxLength={120} onChange={e => setFac({ ...fac, name: e.target.value })} /></div>
+                  <div><label>{t('Capacity (people)')}</label><input inputMode="numeric" value={fac.capacity} onChange={e => setFac({ ...fac, capacity: e.target.value.replace(/\D/g, '') })} /></div>
+                  <div><label>{t('Condition')}</label><select value={fac.condition} onChange={e => setFac({ ...fac, condition: e.target.value })}><option value="">—</option>{Object.entries(COND).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}</select></div>
+                  <div className="span"><label>{t('Notes')}</label><input value={fac.notes} maxLength={500} onChange={e => setFac({ ...fac, notes: e.target.value })} /></div>
+                </div>
+                <div className="iact"><button className="btn sm">{t('Save')}</button><button type="button" className="btn ghost sm" onClick={() => setFac(null)}>{t('Cancel')}</button></div>
               </form>
             )}
           </div>
