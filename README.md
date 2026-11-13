@@ -24,3 +24,20 @@ First login: **admin / admin123** (change it under Users). Set `JWT_SECRET` in p
 - Department inbox, case history timeline, file attachments (stored in `./uploads`, set `app.storage.dir` to change)
 - One global search (name, church or case code)
 - Upgrading: migration `V4` runs automatically on start. Back up the database first.
+
+## Backend structure (`backend/src/main/java/com/churchdesk`)
+
+| Package | What goes there |
+|---|---|
+| `controller` | REST endpoints (`@RestController`) |
+| `service` | Business rules |
+| `model` | JPA entities |
+| `repository` | Spring Data repositories |
+| `dto.request` | Bodies that come in (`...Request`, `...In`) |
+| `dto.response` | Bodies that go out (`...Dto`, overviews, reports) |
+| `dto.common` | Shared by both (`PageDto`, `NameCount`, `DayCount`, `Download`) |
+| `enums` | Enumerations (`Role`, `CaseStatus`, `IssueStatus`, ...) |
+| `config` | Spring configuration and start-up tasks |
+| `security` | JWT filter and service, `CurrentUser` |
+| `exception` | Error handling (`ApiExceptionHandler`) |
+| `util` | Static helpers (`Times`, `EmployeeIds`, `Escalation`, `CaseAccess`) |

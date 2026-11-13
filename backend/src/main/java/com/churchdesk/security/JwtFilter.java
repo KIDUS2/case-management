@@ -1,6 +1,5 @@
 package com.churchdesk.security;
 
-import com.churchdesk.user.UserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
+import com.churchdesk.repository.UserRepository;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
