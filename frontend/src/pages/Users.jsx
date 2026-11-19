@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
-import { ROLES } from '../ui.js'
+import { ROLES, SUB_CITIES } from '../ui.js'
 import { askText } from '../dialog.js'
 
-const empty = { username: '', fullName: '', password: '', role: 'RECEPTION', departmentId: '', jobTitle: '', phone: '', email: '', canViewAll: false }
+const empty = { username: '', fullName: '', password: '', role: 'RECEPTION', departmentId: '', jobTitle: '', phone: '', email: '', canViewAll: false, subCity: '' }
 
 export default function Users({ me }) {
   const [users, setUsers] = useState([])
@@ -24,7 +24,7 @@ export default function Users({ me }) {
   const add = async e => {
     e.preventDefault(); setErr(''); setOk('')
     try {
-      await api('/users', { method: 'POST', body: { ...form, departmentId: form.role === 'DEPARTMENT' ? Number(form.departmentId) || null : null, canViewAll: form.role !== 'ADMIN' && form.canViewAll } })
+      await api('/users', { method: 'POST', body: { ...form, departmentId: form.role === 'DEPARTMENT' ? Number(form.departmentId) || null : null, subCity: form.role === 'SUBCITY' ? form.subCity : null, canViewAll: form.role !== 'ADMIN' && form.canViewAll } })
       setForm(empty); setOk('User added 🎉'); load()
     } catch (x) { setErr(x.message) }
   }
@@ -38,6 +38,7 @@ export default function Users({ me }) {
     await patch({ id }, body); setEdit(null)
   }
   const changeRole = (u, r) => {
+    if (r === 'SUBCITY') return patch(u, { role: r, subCity: u.subCity || SUB_CITIES[0] })
     if (r !== 'DEPARTMENT') return patch(u, { role: r })
     const d = activeDepts[0]
     if (!d) return setErr('Add a department first (Departments page).')
@@ -63,10 +64,18 @@ export default function Users({ me }) {
               {activeDepts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select></div>
         )}
+        {form.role === 'SUBCITY' && (
+          <div className="span"><label>{t('Sub-city')}</label>
+            <select value={form.subCity} onChange={set('subCity')} required>
+              <option value="">{t('Choose the sub-city…')}</option>
+              {SUB_CITIES.map(x => <option key={x} value={x}>{x}</option>)}
+            </select>
+            <small className="muted">{t('This account can submit and follow cases for churches of this sub-city only.')}</small></div>
+        )}
         <div><label>Job title (optional)</label><input value={form.jobTitle} onChange={set('jobTitle')} maxLength={120} /></div>
         <div><label>Phone (optional)</label><input value={form.phone} onChange={set('phone')} inputMode="tel" maxLength={40} /></div>
         <div className="span"><label>Email (optional)</label><input type="email" value={form.email} onChange={set('email')} maxLength={120} /></div>
-        {form.role !== 'ADMIN' && <label className="check span"><input type="checkbox" checked={form.canViewAll} onChange={e => setForm({ ...form, canViewAll: e.target.checked })} /> 🔓 Can see every case (otherwise only cases they registered or are added to)</label>}
+        {form.role !== 'ADMIN' && form.role !== 'SUBCITY' && <label className="check span"><input type="checkbox" checked={form.canViewAll} onChange={e => setForm({ ...form, canViewAll: e.target.checked })} /> 🔓 Can see every case (otherwise only cases they registered or are added to)</label>}
         <button className="btn span">➕ Add user</button>
       </form>
 
@@ -80,12 +89,17 @@ export default function Users({ me }) {
         {shown.map(u => (
           <div className={'row' + (u.active ? '' : ' off')} key={u.id} style={{ flexWrap: 'wrap' }}>
             <div className="avatar">{u.fullName[0]}</div>
-            <div className="grow" style={{ minWidth: 160 }}><b>{u.fullName}</b><small>@{u.username}{u.jobTitle ? ' · ' + u.jobTitle : ''}{u.departmentName ? ' · ' + u.departmentName : ''}{u.active ? '' : ' · deactivated'}</small>
+            <div className="grow" style={{ minWidth: 160 }}><b>{u.fullName}</b><small>@{u.username}{u.jobTitle ? ' · ' + u.jobTitle : ''}{u.departmentName ? ' · ' + u.departmentName : ''}{u.subCity ? ' · ' + u.subCity : ''}{u.active ? '' : ' · deactivated'}</small>
               {(u.phone || u.email) && <small>{[u.phone, u.email].filter(Boolean).join(' · ')}</small>}
-              {u.role !== 'ADMIN' && <small>{u.canViewAll ? '🔓 Can see every case' : '🔒 Sees only cases they registered or were added to'}</small>}</div>
+              {u.role !== 'ADMIN' && u.role !== 'SUBCITY' && <small>{u.canViewAll ? '🔓 Can see every case' : '🔒 Sees only cases they registered or were added to'}</small>}</div>
             <select value={u.role} disabled={u.username === me.username} onChange={e => changeRole(u, e.target.value)}>
               {Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
+            {u.role === 'SUBCITY' && (
+              <select value={u.subCity || ''} onChange={e => patch(u, { subCity: e.target.value })}>
+                {SUB_CITIES.map(x => <option key={x} value={x}>{x}</option>)}
+              </select>
+            )}
             {u.role === 'DEPARTMENT' && (
               <select value={u.departmentId || ''} onChange={e => patch(u, { departmentId: Number(e.target.value) })}>
                 {departments.filter(d => d.active || d.id === u.departmentId).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}

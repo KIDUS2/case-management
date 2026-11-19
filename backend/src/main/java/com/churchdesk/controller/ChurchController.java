@@ -15,7 +15,11 @@ import com.churchdesk.dto.request.CreateChurch;
 import com.churchdesk.dto.request.UpdateChurch;
 import com.churchdesk.dto.response.BulkResult;
 import com.churchdesk.dto.response.ChurchDto;
+import com.churchdesk.enums.Role;
+import com.churchdesk.model.AppUser;
 import com.churchdesk.model.Church;
+import com.churchdesk.security.CurrentUser;
+import org.springframework.security.core.Authentication;
 import com.churchdesk.repository.ChurchRepository;
 import com.churchdesk.service.OptionService;
 
@@ -25,11 +29,17 @@ public class ChurchController {
 
     private final ChurchRepository repo;
     private final com.churchdesk.service.OptionService options;
-    public ChurchController(ChurchRepository repo, com.churchdesk.service.OptionService options) { this.repo = repo; this.options = options; }
+    private final CurrentUser current;
+    public ChurchController(ChurchRepository repo, com.churchdesk.service.OptionService options, CurrentUser current) { this.repo = repo; this.options = options; this.current = current; }
 
+    /** A sub-city office only sees the churches of its own sub-city. */
     @GetMapping
-    public List<ChurchDto> list() {
-        return repo.findAllByOrderByNameAsc().stream().map(c -> new ChurchDto(c.getId(), c.getName(), c.getSubCity(), c.getLatitude() != null)).toList();
+    public List<ChurchDto> list(Authentication auth) {
+        AppUser me = current.get(auth);
+        boolean own = me.getRole() == Role.SUBCITY;
+        return repo.findAllByOrderByNameAsc().stream()
+                .filter(c -> !own || (me.getSubCity() != null && me.getSubCity().equals(c.getSubCity())))
+                .map(c -> new ChurchDto(c.getId(), c.getName(), c.getSubCity(), c.getLatitude() != null)).toList();
     }
 
     @PostMapping @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('ADMIN')")

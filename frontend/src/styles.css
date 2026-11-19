@@ -711,3 +711,16 @@ button.chx-stat{cursor:pointer}.chx-stat b{font-size:1.7rem;font-family:var(--se
 .hr-body{padding-top:2px}.hr-body .emp-head,.hr-body .chx-head{margin-top:0}
 .hr-body .chx-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (max-width:900px){.hr-body .chx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Review of cases a sub-city submitted */
+.badge.review{background:#f1e2b8;color:#5a4300}
+.badge.review.returned{background:#f5d3d0;color:#7a1f18}
+.reviewbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;margin:0 0 16px;padding:14px 18px;border-radius:14px;border:1px solid #d9bd6a;background:linear-gradient(180deg,#fff7dc,#fbefc6);color:#4a3a05}
+.reviewbar.returned{border-color:#e0a39d;background:linear-gradient(180deg,#fdeceb,#f9dcd9);color:#6b1c15;flex-direction:column;align-items:flex-start;gap:4px}
+.reviewbar .rvtxt{display:flex;flex-direction:column;gap:2px;flex:1 1 280px}
+.reviewbar .rvact{display:flex;gap:8px;flex-wrap:wrap}
+.reviewbar .rvret{flex:1 1 100%;display:flex;flex-direction:column;gap:8px}
+.reviewbar textarea{width:100%}
+:root[data-theme="dark"] .reviewbar,.dark .reviewbar{color:#f6ecc8;background:#3a3010;border-color:#6d5a1c}
+:root[data-theme="dark"] .reviewbar.returned,.dark .reviewbar.returned{color:#f6d6d3;background:#3d1a17;border-color:#7a3a35}
+.reviewbar .btn{margin:0}

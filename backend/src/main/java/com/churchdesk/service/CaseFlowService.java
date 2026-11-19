@@ -12,6 +12,7 @@ import com.churchdesk.enums.CaseStatus;
 import com.churchdesk.enums.EventType;
 import com.churchdesk.enums.IssueStatus;
 import com.churchdesk.enums.PartyRole;
+import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
 import com.churchdesk.model.AppUser;
 import com.churchdesk.model.CaseEvent;
@@ -75,12 +76,48 @@ public class CaseFlowService {
         refreshStatus(c);
     }
 
+    /** Tells the administrator and the officers that a sub-city sent a case and it is waiting for them. */
+    public void notifySubmitted(ChurchCase c, AppUser actor) {
+        events.save(new CaseEvent(c.getId(), null, EventType.NOTE, "Submitted by the " + actor.getSubCity() + " sub-city for review", actor.getUsername()));
+        List<AppUser> who = new ArrayList<>(users.findByRoleAndActiveTrue(Role.ADMIN));
+        who.addAll(users.findByRoleAndActiveTrue(Role.OFFICER));
+        notifier.send(who, "SUBMITTED", "New case from " + actor.getSubCity(),
+                "Case " + code(c) + " · " + complainant(c) + " is waiting for your review", c.getId(), c.getCode(), actor.getUsername());
+    }
+
+    /** An officer or the administrator accepts a submitted case, or returns it to the sub-city with a reason. */
+    @Transactional
+    public void review(Long caseId, boolean accept, String note, AppUser actor) {
+        if (actor.getRole() != Role.ADMIN && actor.getRole() != Role.OFFICER)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the administrator or an officer can review a submitted case");
+        ChurchCase c = load(caseId);
+        if (c.getReviewStatus() != ReviewStatus.PENDING) throw new ResponseStatusException(HttpStatus.CONFLICT, "This case is not waiting for review");
+        String reason = blankToNull(note);
+        if (!accept && reason == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please write why the case is returned, so the sub-city knows what to fix");
+        c.setReviewStatus(accept ? ReviewStatus.ACCEPTED : ReviewStatus.RETURNED);
+        c.setReviewNote(reason);
+        c.setReviewedBy(actor.getUsername());
+        c.setReviewedAt(Instant.now());
+        events.save(new CaseEvent(c.getId(), null, EventType.NOTE,
+                (accept ? "Accepted by " : "Returned to the sub-city by ") + actor.getFullName() + (reason == null ? "" : ". " + reason), actor.getUsername()));
+        users.findByUsername(c.getCreatedBy()).ifPresent(u -> notifier.send(List.of(u), accept ? "ACCEPTED" : "RETURNED",
+                accept ? "Case " + code(c) + " accepted" : "Case " + code(c) + " returned",
+                accept ? "The diocese accepted your case · " + complainant(c) : "Reason: " + reason, c.getId(), c.getCode(), actor.getUsername()));
+    }
+
+    /** Nothing moves on a case the diocese has not accepted yet. */
+    private static void assertReviewed(ChurchCase c) {
+        if (c.getReviewStatus() != ReviewStatus.ACCEPTED)
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Accept this case first. It was submitted by a sub-city and has not been reviewed.");
+    }
+
     // ---- steps on an existing case ----
 
     @Transactional
     public void refer(Long caseId, Long issueId, Long departmentId, LocalDate returnOn, String note, AppUser actor) {
         ChurchCase c = load(caseId);
         access.assertCanView(c, actor);
+        assertReviewed(c);
         CaseIssue i = issue(c, issueId);
         Department d = departments.findById(departmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
         applyReferral(c, i, d, returnOn, note, actor);
@@ -90,6 +127,7 @@ public class CaseFlowService {
     public void resolve(Long caseId, Long issueId, String note, AppUser actor) {
         ChurchCase c = load(caseId);
         access.assertCanView(c, actor);
+        assertReviewed(c);
         CaseIssue i = issue(c, issueId);
         if (!CaseAccess.canResolve(actor, i))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the department that received this issue (or an officer) can resolve it");
@@ -142,6 +180,7 @@ public class CaseFlowService {
     public void court(Long caseId, Long issueId, String note, AppUser actor) {
         ChurchCase c = load(caseId);
         access.assertCanView(c, actor);
+        assertReviewed(c);
         CaseIssue i = issue(c, issueId);
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
         i.setStatus(IssueStatus.COURT);

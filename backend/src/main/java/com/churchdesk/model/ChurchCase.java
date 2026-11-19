@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import com.churchdesk.enums.CaseStatus;
+import com.churchdesk.enums.ReviewStatus;
 
 @Entity
 @Table(name = "church_case")
@@ -16,6 +17,10 @@ public class ChurchCase {
     @Enumerated(EnumType.STRING) @Column(nullable = false) private CaseStatus status = CaseStatus.OPEN;
     @Column(name = "discussion_notes", columnDefinition = "text") private String discussionNotes;
     @Column(name = "letter_issued", nullable = false) private boolean letterIssued;
+    @Enumerated(EnumType.STRING) @Column(name = "review_status", nullable = false) private ReviewStatus reviewStatus = ReviewStatus.ACCEPTED;
+    @Column(name = "review_note") private String reviewNote;
+    @Column(name = "reviewed_by") private String reviewedBy;
+    @Column(name = "reviewed_at") private Instant reviewedAt;
     @Column(name = "created_by", nullable = false) private String createdBy;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
@@ -38,6 +43,14 @@ public class ChurchCase {
     public void setDiscussionNotes(String v) { discussionNotes = v; }
     public boolean isLetterIssued() { return letterIssued; }
     public void setLetterIssued(boolean v) { letterIssued = v; }
+    public ReviewStatus getReviewStatus() { return reviewStatus; }
+    public void setReviewStatus(ReviewStatus v) { reviewStatus = v; }
+    public String getReviewNote() { return reviewNote; }
+    public void setReviewNote(String v) { reviewNote = v; }
+    public String getReviewedBy() { return reviewedBy; }
+    public void setReviewedBy(String v) { reviewedBy = v; }
+    public Instant getReviewedAt() { return reviewedAt; }
+    public void setReviewedAt(Instant v) { reviewedAt = v; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String v) { createdBy = v; }
     public Instant getCreatedAt() { return createdAt; }

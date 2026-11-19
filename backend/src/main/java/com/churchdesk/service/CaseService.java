@@ -39,6 +39,7 @@ import com.churchdesk.enums.CaseStatus;
 import com.churchdesk.enums.EventType;
 import com.churchdesk.enums.IssueStatus;
 import com.churchdesk.enums.PartyRole;
+import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
 import com.churchdesk.enums.WorkingStatus;
 import com.churchdesk.model.AppUser;
@@ -93,9 +94,36 @@ public class CaseService {
         this.departments = departments; this.issueRepo = issueRepo; this.eventRepo = eventRepo; this.fileRepo = fileRepo; this.flow = flow; this.access = access;
     }
 
+    /** The desk registers a case: it is accepted from the start. */
     @Transactional
-    public CaseDetail create(CreateCaseRequest r, AppUser actor) {
+    public CaseDetail create(CreateCaseRequest r, AppUser actor) { return createCase(r, actor, ReviewStatus.ACCEPTED); }
+
+    /**
+     * A sub-city office submits a case. Every person must belong to a church of its own sub-city, nothing is sent to a
+     * department yet, and the case waits for an officer or the administrator to accept it.
+     */
+    @Transactional
+    public CaseDetail submit(CreateCaseRequest r, AppUser actor) {
+        if (actor.getRole() != Role.SUBCITY || actor.getSubCity() == null)
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a sub-city account can submit a case");
+        List<PartyIn> everyone = new ArrayList<>(r.complainants());
+        if (r.subjects() != null) everyone.addAll(r.subjects());
+        for (PartyIn in : everyone) {
+            Church ch = churches.findById(in.churchId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a church from the list for " + in.fullName().trim()));
+            if (!actor.getSubCity().equals(ch.getSubCity()))
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ch.getName() + " is not in " + actor.getSubCity() + ". You can only submit cases for your own sub-city.");
+        }
+        List<IssueIn> issues = r.issues().stream().map(i -> new IssueIn(i.category(), i.description(), null, null)).toList();
+        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false);
+        CaseDetail d = createCase(clean, actor, ReviewStatus.PENDING);
+        flow.notifySubmitted(cases.findById(d.id()).orElseThrow(), actor);
+        return d;
+    }
+
+    private CaseDetail createCase(CreateCaseRequest r, AppUser actor, ReviewStatus review) {
         ChurchCase c = new ChurchCase();
+        c.setReviewStatus(review);
         c.setCode(newCode());
         c.setDiscussionNotes(blankToNull(r.discussionNotes()));
         c.setLetterIssued(r.letterIssued());
@@ -175,10 +203,13 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public PageDto<CaseSummary> list(String q, CaseStatus status, int page, int size, AppUser actor) {
+    public PageDto<CaseSummary> list(String q, CaseStatus status, ReviewStatus review, int page, int size, AppUser actor) {
         Specification<ChurchCase> spec = access.visibleTo(actor);
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
+        }
+        if (review != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("reviewStatus"), review));
         }
         if (q != null && !q.isBlank()) {
             final String like = "%" + q.trim().toLowerCase() + "%";
@@ -268,7 +299,8 @@ public class CaseService {
     public Summary summary(AppUser actor) {
         Specification<ChurchCase> mine = access.visibleTo(actor);
         return new Summary(cases.count(mine), count(mine, CaseStatus.OPEN), count(mine, CaseStatus.REFERRED),
-                count(mine, CaseStatus.COURT), count(mine, CaseStatus.RESOLVED));
+                count(mine, CaseStatus.COURT), count(mine, CaseStatus.RESOLVED),
+                cases.count(mine.and((root, query, cb) -> cb.equal(root.get("reviewStatus"), ReviewStatus.PENDING))));
     }
 
     private long count(Specification<ChurchCase> mine, CaseStatus s) {
@@ -317,7 +349,7 @@ public class CaseService {
                 complainants.stream().map(Person::getFullName).toList(),
                 peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
                 church, c.getStatus(), c.getIssues().size(),
-                (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt());
+                (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt(), c.getReviewStatus());
     }
 
     private PersonInfo toPerson(Person p) { return toPerson(p, null); }
@@ -433,7 +465,8 @@ public class CaseService {
                 .map(f -> new CaseFileDto(f.getId(), f.getIssueId(), f.getInquiryId(), f.getStage(), f.getOriginalName(), f.getContentType(), f.getSizeBytes(), f.getUploadedBy(), f.getUploadedAt())).toList();
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
-                subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files);
+                subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files,
+                c.getReviewStatus(), c.getReviewNote(), c.getReviewedBy());
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

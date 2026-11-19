@@ -22,9 +22,10 @@ public class UserService {
     private final UserRepository repo;
     private final DepartmentRepository departments;
     private final PasswordEncoder encoder;
+    private final OptionService options;
 
-    public UserService(UserRepository repo, DepartmentRepository departments, PasswordEncoder encoder) {
-        this.repo = repo; this.departments = departments; this.encoder = encoder;
+    public UserService(UserRepository repo, DepartmentRepository departments, PasswordEncoder encoder, OptionService options) {
+        this.repo = repo; this.departments = departments; this.encoder = encoder; this.options = options;
     }
 
     @Transactional(readOnly = true)
@@ -40,6 +41,7 @@ public class UserService {
         u.setPasswordHash(encoder.encode(r.password()));
         u.setRole(r.role());
         u.setDepartment(departmentFor(r.role(), r.departmentId()));
+        u.setSubCity(subCityFor(r.role(), r.subCity()));
         u.setPhone(blank(r.phone())); u.setEmail(blank(r.email())); u.setJobTitle(blank(r.jobTitle()));
         u.setCanViewAll(Boolean.TRUE.equals(r.canViewAll()));
         return UserDto.of(repo.save(u));
@@ -56,6 +58,7 @@ public class UserService {
         Long deptId = r.departmentId() != null ? r.departmentId() : (u.getDepartment() == null ? null : u.getDepartment().getId());
         u.setRole(role);
         u.setDepartment(departmentFor(role, deptId));
+        u.setSubCity(subCityFor(role, r.subCity() != null ? r.subCity() : u.getSubCity()));
         if (r.active() != null) u.setActive(r.active());
         if (r.phone() != null) u.setPhone(blank(r.phone()));
         if (r.email() != null) u.setEmail(blank(r.email()));
@@ -71,6 +74,13 @@ public class UserService {
         u.setFullName(r.fullName().trim());
         u.setPhone(blank(r.phone())); u.setEmail(blank(r.email())); u.setJobTitle(blank(r.jobTitle()));
         return UserDto.of(u);
+    }
+
+    /** A sub-city office must be tied to one sub-city from the list; every other role has none. */
+    private String subCityFor(Role role, String subCity) {
+        if (role != Role.SUBCITY) return null;
+        if (subCity == null || subCity.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose the sub-city for this account");
+        return options.requireSubCity(subCity);
     }
 
     private static String blank(String s) { return s == null || s.isBlank() ? null : s.trim(); }

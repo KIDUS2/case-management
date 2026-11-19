@@ -11,12 +11,12 @@ function Chips({ options, value, onChange }) {
     <button type="button" key={k} className={'chip' + (value === k ? ' on' : '')} onClick={() => onChange(k)}>{v}</button>)}</div>
 }
 
-function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin }) {
+function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub }) {
   const [matches, setMatches] = useState([])
   const set = patch => onChange({ ...party, ...patch })
 
   useEffect(() => {
-    if (party.fullName.trim().length < 3) { setMatches([]); return }
+    if (sub || party.fullName.trim().length < 3) { setMatches([]); return }
     const t = setTimeout(() => api('/persons/lookup?name=' + encodeURIComponent(party.fullName.trim())).then(setMatches).catch(() => {}), 400)
     return () => clearTimeout(t)
   }, [party.fullName])
@@ -35,7 +35,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
   const [q, setQ] = useState('')
   const [hits, setHits] = useState([])
   useEffect(() => {
-    if (q.trim().length < 3) { setHits([]); return }
+    if (sub || q.trim().length < 3) { setHits([]); return }
     const h = setTimeout(() => api('/persons/lookup?name=' + encodeURIComponent(q.trim())).then(setHits).catch(() => {}), 350)
     return () => clearTimeout(h)
   }, [q])
@@ -51,19 +51,19 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
   return (
     <div className="issue">
       <div className="top"><b>{title}</b>{onRemove && <button type="button" className="btn x" onClick={onRemove}>Remove</button>}</div>
-      <label>{t('Find an existing person')}</label>
-      <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={t('Name, phone or ID number')} maxLength={80} />
+      {!sub && <><label>{t('Find an existing person')}</label>
+      <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={t('Name, phone or ID number')} maxLength={80} /></>}
       {hits.length > 0 && <div className="pickbox">{hits.map(m =>
         <button type="button" key={m.id} className="pickrow" onClick={() => pick(m)}>
           <b>{m.fullName}</b><span>{[m.employeeId && fmtId(m.employeeId), m.churchName, m.phone].filter(Boolean).join(' · ')}</span>
         </button>)}</div>}
       {q.trim().length >= 3 && hits.length === 0 && <small className="muted">{t('No one found. Fill in the details below to add a new person.')}</small>}
-      <label>{t('Employee ID (12 digits) or the church’s own number')}</label>
+      {!sub && <><label>{t('Employee ID (12 digits) or the church’s own number')}</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" />
         <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
-      </div>
+      </div></>}
       {found && <div className="banner"><b>✅ {t('Employee found')} 🪪 {fmtId(found.employeeId)}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: found.fullName, b: found.churchName, c: found.totalCases, d: found.openCases })}
         {found.complaintsAgainst > 0 && <div className="warn">⚠️ {t('{n} earlier cases are about this person', { n: found.complaintsAgainst })}</div>}</div>}
       {idMsg && <small className="muted">{idMsg}</small>}
@@ -109,10 +109,11 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const [files, setFiles] = useState([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const sub = me.role === 'SUBCITY'   // a sub-city office submits for review instead of registering
 
   useEffect(() => {
     api('/churches').then(setChurches).catch(e => setErr(e.message))
-    api('/departments').then(d => setDepartments(d.filter(x => x.active))).catch(() => {})
+    if (!sub) api('/departments').then(d => setDepartments(d.filter(x => x.active))).catch(() => {})
   }, [])
 
   const setAt = (setter, i) => v => setter(l => l.map((x, k) => (k === i ? v : x)))
@@ -142,7 +143,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         category: i.category, description: i.description,
         departmentId: i.departmentId ? Number(i.departmentId) : null, returnOn: i.departmentId ? i.returnOn || null : null,
       }))
-      const c = await api('/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter } })
+      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter } })
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
@@ -152,17 +153,19 @@ export default function NewCase({ me, onCreated, goChurches }) {
 
   return (
     <form onSubmit={submit}>
-      <h1>Register a case</h1><p className="muted">Listen first, then record. A short code is created when you save.</p>
+      <h1>{sub ? t('Submit a case') : 'Register a case'}</h1>
+      <p className="muted">{sub ? t('Cases from {x} are sent to the diocese for review. You will be told when it is accepted or returned.', { x: me.subCity || '' }) : 'Listen first, then record. A short code is created when you save.'}</p>
       {err && <div className="err">{err}</div>}
       <datalist id="church-list">{churches.map(c => <option key={c.id} value={c.name} label={c.subCity || ''} />)}</datalist>
       {churches.length === 0 && <div className="banner warn">No churches yet. {me.role === 'ADMIN' ? <a href="#" onClick={e => { e.preventDefault(); goChurches() }}>Add the church list first →</a> : 'Ask an administrator to add the church list.'}</div>}
+      {sub && churches.length > 0 && <div className="banner">📍 {t('You can choose churches of {x} only.', { x: me.subCity || '' })}</div>}
 
       <div className="formgrid">
       <div className="card">
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
         {complainants.map((p, i) => (
-          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} autoFocus={i === 0}
+          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} autoFocus={i === 0}
             onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setComplainants(l => [...l, blankParty(l[0]?.workingStatus)])}>➕ Add another person (group)</button>
@@ -172,7 +175,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">2</span>Who is it about? <small className="inl">(optional)</small></h2>
         <p className="hint">If the report is about an employee or a leader, add them here. Leave empty for a request or general matter.</p>
         {subjects.map((p, i) => (
-          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches} isAdmin={me.role === 'ADMIN'}
+          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub}
             onChange={setAt(setSubjects, i)} onRemove={removeAt(setSubjects, i)} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setSubjects(l => [...l, blankParty()])}>➕ Add an employee or leader</button>
@@ -188,7 +191,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
               {catOptions().map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
             </select>
             <textarea rows={3} placeholder="Describe the cause…" value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
-            {departments.length > 0 && (
+            {!sub && departments.length > 0 && (
               <div className="grid" style={{ marginTop: 8 }}>
                 <div><label>Send to a department now? (optional)</label>
                   <select value={it.departmentId} onChange={e => setIssue(i, { departmentId: e.target.value })}>
@@ -208,7 +211,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">4</span>Discussion &amp; letter</h2>
         <label>Discussion notes</label>
         <textarea rows={4} value={notes} maxLength={8000} onChange={e => setNotes(e.target.value)} placeholder="What was discussed and agreed…" />
-        <label className="check"><input type="checkbox" checked={letter} onChange={e => setLetter(e.target.checked)} /> ✉️ A letter has been issued</label>
+        {!sub && <label className="check"><input type="checkbox" checked={letter} onChange={e => setLetter(e.target.checked)} /> ✉️ A letter has been issued</label>}
       </div>
 
       <div className="card">
@@ -225,10 +228,10 @@ export default function NewCase({ me, onCreated, goChurches }) {
       </div>
 
       <div className="savebar">
-        <p className="savehint"><span className="savedot" />{t('A case code is created when you save. You can print the receipt right after.')}</p>
+        <p className="savehint"><span className="savedot" />{sub ? t('The diocese reviews your case before it moves on.') : t('A case code is created when you save. You can print the receipt right after.')}</p>
         <button className="savebtn" disabled={busy}>
           {busy ? <span className="spin" aria-hidden="true" /> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>}
-          <span>{busy ? t('Saving…') : t('Save case')}</span>
+          <span>{busy ? t('Saving…') : sub ? t('Submit for review') : t('Save case')}</span>
         </button>
       </div>
     </form>

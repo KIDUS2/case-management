@@ -9,4 +9,4 @@ public record CreateUserRequest(@NotBlank @Size(min = 3, max = 60) String userna
                                 @NotNull Role role,
                                 Long departmentId,
                                 @Size(max = 40) String phone, @Size(max = 120) String email, @Size(max = 120) String jobTitle,
-                                Boolean canViewAll) {}
+                                Boolean canViewAll, @Size(max = 80) String subCity) {}

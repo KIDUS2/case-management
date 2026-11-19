@@ -29,20 +29,20 @@ const NAV = [
   { key: 'summary', icon: '🗂️', label: 'Summary', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER'] },
   { key: 'queue', icon: '🚪', label: 'Door queue', roles: DESK },
-  { key: 'new', icon: '➕', label: 'Register case', roles: DESK },
-  { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
-  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'], badge: true },
+  { key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
+  { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
+  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], badge: true },
   { key: 'hr', icon: '👥', label: 'HR management', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
   { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
-  { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
+  { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'] },
 ]
 /** Switching language reloads the page; remember where the person was so they come back to the same place. */
 const readView = () => { try { const v = JSON.parse(sessionStorage.getItem('view') || 'null'); if (v && (v.page === 'employees' || v.page === 'workforce')) v.page = 'hr'; return v } catch { return null } }
 const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(v)) : sessionStorage.removeItem('view') } catch { /* private mode */ } }
-const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases' }
+const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases', SUBCITY: 'cases' }
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -126,14 +126,14 @@ export default function App() {
         <div className="topline">
           <div className="brand"><img src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church" /><div className="bt">{t("Case Desk")}<small>{t("Addis Ababa Diocese")}</small></div></div>
           <div className="aside-foot">
-            <div className="me"><b>{user.fullName}</b><small>{ROLES[user.role]}{user.departmentName ? ' · ' + user.departmentName : ''}</small></div>
+            <div className="me"><b>{user.fullName}</b><small>{ROLES[user.role]}{user.departmentName ? ' · ' + user.departmentName : ''}{user.subCity ? ' · ' + user.subCity : ''}</small></div>
             <button className="nav" onClick={logout}>↩️ Log out</button>
           </div>
         </div>
         <nav className="navlist">
           {items.map(n => (
             <button key={n.key} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
-              <span>{n.icon}</span> {n.label}
+              <span>{n.icon}</span> {user.role === 'SUBCITY' && n.subLabel ? n.subLabel : n.label}
               {n.badge && unread > 0 && <span className="nbadge">{unread > 99 ? '99+' : unread}</span>}
             </button>
           ))}

@@ -14,6 +14,7 @@ public class AppUser {
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     @Column(nullable = false) private boolean active = true;
     private String phone;
+    @Column(name = "sub_city") private String subCity;
     private String email;
     @Column(name = "job_title") private String jobTitle;
     @Column(name = "can_view_all", nullable = false) private boolean canViewAll;
@@ -31,6 +32,8 @@ public class AppUser {
     public void setRole(Role v) { role = v; }
     public Department getDepartment() { return department; }
     public void setDepartment(Department v) { department = v; }
+    public String getSubCity() { return subCity; }
+    public void setSubCity(String v) { subCity = v; }
     public String getPhone() { return phone; }
     public void setPhone(String v) { phone = v; }
     public String getEmail() { return email; }

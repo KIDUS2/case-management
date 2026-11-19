@@ -15,6 +15,7 @@ import com.churchdesk.dto.request.LetterRequest;
 import com.churchdesk.dto.request.LinkRequest;
 import com.churchdesk.dto.request.NoteRequest;
 import com.churchdesk.dto.request.ReferRequest;
+import com.churchdesk.dto.request.ReviewRequest;
 import com.churchdesk.dto.request.UrgentRequest;
 import com.churchdesk.dto.response.CaseDetail;
 import com.churchdesk.dto.response.CaseSummary;
@@ -23,6 +24,7 @@ import com.churchdesk.dto.response.PersonInfo;
 import com.churchdesk.dto.response.QueueItem;
 import com.churchdesk.dto.response.Summary;
 import com.churchdesk.enums.CaseStatus;
+import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
 import com.churchdesk.model.AppUser;
 import com.churchdesk.security.CurrentUser;
@@ -45,9 +47,10 @@ public class CaseController {
     @GetMapping("/cases")
     public PageDto<CaseSummary> list(@RequestParam(required = false) String q,
                                      @RequestParam(required = false) CaseStatus status,
+                                     @RequestParam(required = false) ReviewStatus review,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "12") int size, Authentication auth) {
-        return service.list(q, status, page, size, current.get(auth));
+        return service.list(q, status, review, page, size, current.get(auth));
     }
 
     @GetMapping("/cases/summary")
@@ -62,6 +65,20 @@ public class CaseController {
     @PostMapping("/cases") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize(STAFF)
     public CaseDetail create(@Valid @RequestBody CreateCaseRequest r, Authentication auth) {
         return service.create(r, current.get(auth));
+    }
+
+    /** A sub-city office submits a case for review. */
+    @PostMapping("/cases/submit") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize("hasRole('SUBCITY')")
+    public CaseDetail submit(@Valid @RequestBody CreateCaseRequest r, Authentication auth) {
+        return service.submit(r, current.get(auth));
+    }
+
+    /** Accept a submitted case, or return it to the sub-city with a reason. */
+    @PostMapping("/cases/{id}/review") @PreAuthorize("hasAnyRole('ADMIN','OFFICER')")
+    public CaseDetail review(@PathVariable Long id, @Valid @RequestBody ReviewRequest r, Authentication auth) {
+        AppUser u = current.get(auth);
+        flow.review(id, r.accept(), r.note(), u);
+        return service.get(id, u);
     }
 
     @GetMapping("/persons/lookup") @PreAuthorize(STAFF)
@@ -132,7 +149,7 @@ public class CaseController {
         return service.get(id, u);
     }
 
-    @PostMapping("/cases/{id}/parties")
+    @PostMapping("/cases/{id}/parties") @PreAuthorize("!hasRole('SUBCITY')")
     public CaseDetail addParty(@PathVariable Long id, @Valid @RequestBody AddPartyRequest r, Authentication auth) {
         return service.addParty(id, r, current.get(auth));
     }
@@ -142,12 +159,12 @@ public class CaseController {
         return service.addIssue(id, r, current.get(auth));
     }
 
-    @PostMapping("/cases/{id}/links")
+    @PostMapping("/cases/{id}/links") @PreAuthorize("!hasRole('SUBCITY')")
     public CaseDetail link(@PathVariable Long id, @Valid @RequestBody LinkRequest r, Authentication auth) {
         return service.linkCase(id, r.code(), current.get(auth));
     }
 
-    @DeleteMapping("/cases/{id}/links/{otherId}")
+    @DeleteMapping("/cases/{id}/links/{otherId}") @PreAuthorize("!hasRole('SUBCITY')")
     public CaseDetail unlink(@PathVariable Long id, @PathVariable Long otherId, Authentication auth) {
         return service.unlinkCase(id, otherId, current.get(auth));
     }

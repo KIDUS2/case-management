@@ -4,7 +4,7 @@ import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
 import ChurchLoop from '../components/ChurchLoop.jsx'
 import IssueFlags from '../components/IssueFlags.jsx'
-import { STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
+import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -27,7 +27,8 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
     const t = setTimeout(() => {
       const p = new URLSearchParams({ page, size: 12 })
       if (q.trim()) p.set('q', q.trim())
-      if (status) p.set('status', status)
+      if (status === '@PENDING') p.set('review', 'PENDING')
+      else if (status) p.set('status', status)
       api('/cases?' + p).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message)).finally(() => setLoading(false))
     }, 250)
     return () => clearTimeout(t)
@@ -40,12 +41,13 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
     { key: 'REFERRED', label: 'Referred', n: sum?.referred, icon: '➡️' },
     { key: 'COURT', label: 'In court', n: sum?.court, icon: '⚖️' },
     { key: 'RESOLVED', label: 'Resolved', n: sum?.resolved, icon: '✅' },
+    ...((sum?.awaitingReview > 0 || me.role === 'SUBCITY') ? [{ key: '@PENDING', label: 'Awaiting review', n: sum?.awaitingReview, icon: '📨' }] : []),
   ]
 
   return (
     <>
       <div className="head"><div><h1>Cases</h1><p className="muted">Every report and request that came to the desk.</p></div>
-        {isStaff(me.role) && <button className="btn" onClick={goNew}>➕ Register case</button>}</div>
+        {(isStaff(me.role) || me.role === 'SUBCITY') && <button className="btn" onClick={goNew}>➕ {me.role === 'SUBCITY' ? t('Submit a case') : 'Register case'}</button>}</div>
       {err && <div className="err">{err}</div>}
       <div className="tiles">
         {tiles.map(t => (
@@ -60,7 +62,7 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
           <button key={c.id} className={'case ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
             <div className="avatar">{initial(c.complainants[0])}</div>
             <div className="grow">
-              <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span></div>
+              <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>{c.reviewStatus && c.reviewStatus !== 'ACCEPTED' && <span className={'badge review ' + c.reviewStatus.toLowerCase()}>{t(REVIEW[c.reviewStatus])}</span>}</div>
               <small>⛪ {c.churchName}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</small>
               {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
               <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
@@ -69,7 +71,7 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
           </button>
         ))}
         {!loading && !data.items.length && (
-          <div className="card empty">🌿<br />{q || status ? 'No cases match your search.' : me.role === 'ADMIN' ? 'No cases yet. Register the first one!' : 'You only see cases you registered, cases you were added to, or issues sent to your department.'}</div>
+          <div className="card empty">🌿<br />{q || status ? 'No cases match your search.' : me.role === 'SUBCITY' ? t('You have not submitted a case yet.') : me.role === 'ADMIN' ? 'No cases yet. Register the first one!' : 'You only see cases you registered, cases you were added to, or issues sent to your department.'}</div>
         )}
       </div>
       {data.total > data.size && (
@@ -81,6 +83,34 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
       )}
     </>
   )
+}
+
+/** What a sub-city submitted: the diocese accepts it or returns it with a reason. */
+function ReviewBanner({ c, me, onChange, setErr }) {
+  const [note, setNote] = useState('')
+  const [returning, setReturning] = useState(false)
+  const [busy, setBusy] = useState(false)
+  if (!c.reviewStatus || c.reviewStatus === 'ACCEPTED') return null
+  const canReview = ['ADMIN', 'OFFICER'].includes(me.role)
+  const decide = async accept => {
+    setErr(''); setBusy(true)
+    try { onChange(await api(`/cases/${c.id}/review`, { method: 'POST', body: { accept, note } })); setReturning(false); setNote('') }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  if (c.reviewStatus === 'RETURNED') return (
+    <div className="reviewbar returned"><b>↩️ {t('Returned to the sub-city')}</b>
+      <span>{c.reviewNote}{c.reviewedBy ? ' · @' + c.reviewedBy : ''}</span></div>)
+  return (
+    <div className="reviewbar pending">
+      <div className="rvtxt"><b>📨 {t('Waiting for review')}</b>
+        <span>{canReview ? t('A sub-city sent this case. Nothing can be sent to a department until you accept it.') : t('The diocese has not reviewed this case yet. You will be told when it is accepted or returned.')}</span></div>
+      {canReview && !returning && <div className="rvact"><button className="btn sm" disabled={busy} onClick={() => decide(true)}>✔ {t('Accept case')}</button>
+        <button className="btn ghost sm" disabled={busy} onClick={() => setReturning(true)}>↩ {t('Return to sub-city')}</button></div>}
+      {canReview && returning && <div className="rvret">
+        <textarea rows={2} value={note} maxLength={1000} onChange={e => setNote(e.target.value)} placeholder={t('Why is it returned? The sub-city will read this.')} />
+        <div className="rvact"><button className="btn sm" disabled={busy || !note.trim()} onClick={() => decide(false)}>{t('Return case')}</button>
+          <button className="btn ghost sm" onClick={() => setReturning(false)}>{t('Cancel')}</button></div></div>}
+    </div>)
 }
 
 function PersonRow({ p }) {
@@ -111,10 +141,11 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
   const st = ISSUE_STATUS[i.status]
   const done = i.status === 'RESOLVED'
   const desk = ['ADMIN', 'OFFICER', 'RECEPTION'].includes(me.role)
-  const canRefer = desk && !done
+  const held = !!c.reviewStatus && c.reviewStatus !== 'ACCEPTED'   // not reviewed yet: nothing moves
+  const canRefer = desk && !done && !held
   const myTurn = me.role !== 'DEPARTMENT' || i.queuePosition <= 1
-  const canResolve = !done && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId && myTurn))
-  const canCourt = ['ADMIN', 'OFFICER'].includes(me.role) && !done && i.status !== 'COURT'
+  const canResolve = !done && !held && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId && myTurn))
+  const canCourt = ['ADMIN', 'OFFICER'].includes(me.role) && !done && !held && i.status !== 'COURT'
   const d = i.returnOn ? dayDiff(i.returnOn) : null
 
   const run = async (path, body) => {
@@ -480,11 +511,12 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
     <>
       <button className="btn ghost back" onClick={onBack}>← All cases</button>
       {fresh && (
-        <div className="fresh">✅ <b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.
+        <div className="fresh">✅ {me.role === 'SUBCITY' ? <><b>{t('Case submitted.')}</b> {t('The diocese will review it. Keep this code to follow it.')}</> : <><b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.</>}
           {fresh.failed?.length > 0 && <div className="warn" style={{ marginTop: 6 }}>⚠️ {t('These files could not be uploaded: {f}. Add them again below.', { f: fresh.failed.join(', ') })}</div>}
         </div>
       )}
       {err && <div className="err">{err}</div>}
+      <ReviewBanner c={c} me={me} onChange={setC} setErr={setErr} />
       <div className={'hero-card ' + st.cls}>
         <div className="grow">
           <small className="onhero">Case code</small>
@@ -514,7 +546,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
             <small style={{ marginTop: 12 }}>{t('Registered {d} by @{u}', { d: fmtDate(c.createdAt), u: c.createdBy })}</small>
           </div>
-          <ChurchLoop c={c} me={me} setErr={setErr} onChanged={() => api('/cases/' + c.id).then(setC).catch(() => {})} />
+          {me.role !== 'SUBCITY' && <ChurchLoop c={c} me={me} setErr={setErr} onChanged={() => api('/cases/' + c.id).then(setC).catch(() => {})} />}
           <Timeline c={c} onChange={setC} setErr={setErr} />
         </div>
         <div>
@@ -528,9 +560,9 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
           {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
-          <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />
+          {me.role !== 'SUBCITY' && <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />}
           <Files c={c} me={me} onChange={setC} setErr={setErr} />
-          <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />
+          {me.role !== 'SUBCITY' && <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />}
         </div>
       </div>
     </>
