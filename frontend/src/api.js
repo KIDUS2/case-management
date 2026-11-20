@@ -17,9 +17,16 @@ async function check(res) {
   return res
 }
 
+/** The body as JSON; an empty body (204, or a 200 from an endpoint that returns nothing) gives null instead of an error. */
+async function readJson(res) {
+  if (res.status === 204) return null
+  const text = await res.text()
+  return text ? JSON.parse(text) : null
+}
+
 export async function api(path, { method = 'GET', body } = {}) {
   const res = await check(await send('/api' + path, { method, headers: headers(true), body: body ? JSON.stringify(body) : undefined }))
-  return res.status === 204 ? null : res.json()
+  return readJson(res)
 }
 
 /** Send one file as multipart/form-data. */
@@ -28,7 +35,7 @@ export async function upload(path, file, fields = {}) {
   form.append('file', file)
   Object.entries(fields).forEach(([k, v]) => { if (v) form.append(k, v) })
   const res = await check(await send('/api' + path, { method: 'POST', headers: headers(false), body: form }))
-  return res.json()
+  return readJson(res)
 }
 
 /** Files need the login header, so fetch the bytes and let the browser save them. */
