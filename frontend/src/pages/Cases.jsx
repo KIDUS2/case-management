@@ -1,4 +1,6 @@
 import Skeleton, { Waiting } from '../components/Skeleton.jsx'
+import DateFilter from '../components/DateFilter.jsx'
+import { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 import { useEffect, useState } from 'react'
 import { askConfirm } from '../dialog.js'
 import { api, upload, download } from '../api.js'
@@ -18,26 +20,29 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
   const [q, setQ] = useState(initialQuery || '')
   const [status, setStatus] = useState('')
   const [kind, setKind] = useState('')
+  const [period, setPeriod] = useState(periodOf('all'))
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ items: [], total: 0, size: 12 })
   const [sum, setSum] = useState(null)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { api('/cases/summary').then(setSum).catch(e => setErr(e.message)) }, [])
-  useEffect(() => { setPage(0) }, [q, status, kind])
+  useEffect(() => { api('/cases/summary?' + periodQuery(period)).then(setSum).catch(e => setErr(e.message)) }, [period])
+  useEffect(() => { setPage(0) }, [q, status, kind, period])
   useEffect(() => {
     setLoading(true)
     const t = setTimeout(() => {
       const p = new URLSearchParams({ page, size: 12 })
       if (q.trim()) p.set('q', q.trim())
       if (kind) p.set('kind', kind)
+      if (period.from) p.set('from', period.from)
+      if (period.to) p.set('to', period.to)
       if (status === '@PENDING') p.set('review', 'PENDING')
       else if (status) p.set('status', status)
       api('/cases?' + p).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message)).finally(() => setLoading(false))
     }, 250)
     return () => clearTimeout(t)
-  }, [q, status, kind, page])
+  }, [q, status, kind, page, period])
 
   const pages = Math.max(1, Math.ceil(data.total / data.size))
   const tiles = [
@@ -63,6 +68,7 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
       </div>
       <div className="lbar">
         <label className="lsearch"><span aria-hidden="true">🔍</span><input placeholder={t('Filter by name, church or case number…')} value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" aria-label={t('Clear')} onClick={() => setQ('')}>×</button>}</label>
+        <DateFilter value={period} onChange={setPeriod} />
         {me.role !== 'SUBCITY' && (
           <select className="lkind" value={kind} onChange={e => setKind(e.target.value)} aria-label={t('Kind')}>
             <option value="">{t('All kinds')}</option><option value="ISSUE">{t('Issues')}</option><option value="CHARITY">🤝 {t('Charity requests')}</option>

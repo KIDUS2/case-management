@@ -108,9 +108,9 @@ export default function Users({ me }) {
                 {departments.filter(d => d.active || d.id === u.departmentId).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
-            <button className="btn ghost" title="Edit details" onClick={() => setEdit({ id: u.id, fullName: u.fullName, jobTitle: u.jobTitle || '', phone: u.phone || '', email: u.email || '', canViewAll: u.canViewAll })}>✏️ Details</button>
-            <button className="btn ghost" title="Reset password" onClick={() => reset(u)}>🔑</button>
-            <button className="btn ghost" disabled={u.username === me.username} onClick={() => patch(u, { active: !u.active })}>{u.active ? 'Deactivate' : 'Activate'}</button>
+            <button className="btn ghost sm" title="Edit details" onClick={() => setEdit({ id: u.id, fullName: u.fullName, jobTitle: u.jobTitle || '', phone: u.phone || '', email: u.email || '', canViewAll: u.canViewAll })}>✏️ Details</button>
+            <button className="btn ghost sm" title="Reset password" onClick={() => reset(u)}>🔑</button>
+            <button className={'btn ghost sm' + (u.active ? ' danger' : '')} disabled={u.username === me.username} onClick={() => patch(u, { active: !u.active })}>{u.active ? 'Deactivate' : 'Activate'}</button>
           </div>
         ))}
         {edit && (

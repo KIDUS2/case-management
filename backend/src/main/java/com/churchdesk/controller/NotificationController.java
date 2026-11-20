@@ -19,9 +19,11 @@ public class NotificationController {
     @GetMapping
     public NotificationPage list(@RequestParam(defaultValue = "false") boolean unread,
                                  @RequestParam(required = false) String channel,
+                                 @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+                                 @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "20") int size, Authentication auth) {
-        return service.page(current.get(auth).getId(), unread, channel, page, size);
+        return service.page(current.get(auth).getId(), unread, channel, from, to, page, size);
     }
 
     @GetMapping("/unread-count")

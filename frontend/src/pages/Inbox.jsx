@@ -1,4 +1,6 @@
 import Skeleton from '../components/Skeleton.jsx'
+import DateFilter from '../components/DateFilter.jsx'
+import { periodOf } from '../components/PeriodFilter.jsx'
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
@@ -15,6 +17,7 @@ export default function Inbox({ me, onOpen }) {
   const [deptId, setDeptId] = useState(isDept ? me.departmentId : '')
   const [tab, setTab] = useState('pending')
   const [page, setPage] = useState(0)
+  const [period, setPeriod] = useState(periodOf('all'))
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
@@ -27,16 +30,19 @@ export default function Inbox({ me, onOpen }) {
     if (isDept || isBoss) return
     api('/departments').then(d => { const a = d.filter(x => x.active); setDepartments(a); if (a[0]) setDeptId(a[0].id) }).catch(e => setErr(e.message))
   }, [isDept])
-  useEffect(() => { setPage(0) }, [tab, deptId])
+  useEffect(() => { setPage(0) }, [tab, deptId, period])
 
   const load = () => {
-    if (isBoss) { api(`/inbox/passed-up?page=${page}&size=15`).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message)); return }
+    const range = (period.from ? '&from=' + period.from : '') + (period.to ? '&to=' + period.to : '')
+    if (isBoss) { api(`/inbox/passed-up?page=${page}&size=15${range}`).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message)); return }
     if (!deptId) return
     const p = new URLSearchParams({ resolved: tab === 'done', page, size: 15 })
     if (!isDept) p.set('departmentId', deptId)
+    if (period.from) p.set('from', period.from)
+    if (period.to) p.set('to', period.to)
     api('/inbox?' + p).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message))
   }
-  useEffect(load, [deptId, tab, page, isBoss]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(load, [deptId, tab, page, isBoss, period]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolve = async it => {
     setBusy(true); setErr(''); setOk('')
@@ -78,10 +84,10 @@ export default function Inbox({ me, onOpen }) {
         )}
       </div>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
-      {!isBoss && <div className="tabs">
+      <div className="lbar">{!isBoss && <div className="tabs" style={{ margin: 0 }}>
         <button className={'chip' + (tab === 'pending' ? ' on' : '')} onClick={() => setTab('pending')}>⏳ {data ? t('Waiting ({n})', { n: data.pending }) : t('Waiting')}</button>
         <button className={'chip' + (tab === 'done' ? ' on' : '')} onClick={() => setTab('done')}>✅ {t('Finished')}</button>
-      </div>}
+      </div>}<DateFilter value={period} onChange={setPeriod} />{data && <span className="lcount">{t('Showing {a} of {b}', { a: data.items.length, b: data.total })}</span>}</div>
       {!data && !err && <Skeleton rows={4} tall />}
       {data && data.items.length === 0 && <div className="card empty">{tab === 'pending' ? '🎉 ' + t('Nothing is waiting. Great work!') : t('Nothing finished yet.')}</div>}
       {data && data.items.map(it => {
@@ -106,7 +112,7 @@ export default function Inbox({ me, onOpen }) {
                 <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} placeholder="e.g. Salary difference paid on 12 Nov." />
                 <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
                   <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { const f = Array.from(e.target.files); e.target.value = ''; setPicked(l => [...l, ...f]) }} /></label>
-                <div className="iact"><button className="btn ok sm" disabled={busy} onClick={() => resolve(it)}>{busy ? t('Saving…') : '✅ ' + t('Confirm finished')}</button><button className="btn ghost sm" onClick={() => setOpen(null)}>Cancel</button></div>
+                <div className="iact"><button className="btn ok sm" disabled={busy} aria-busy={busy} onClick={() => resolve(it)}>{busy ? t('Saving…') : '✅ ' + t('Confirm finished')}</button><button className="btn ghost sm" onClick={() => setOpen(null)}>Cancel</button></div>
               </div>
             )}
             {act?.id === it.issueId && (

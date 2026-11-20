@@ -33,7 +33,7 @@ export default function Login({ onLogin, onBack, onTrack }) {
         <label>Username</label><input value={username} onChange={e => setU(e.target.value)} autoFocus autoCapitalize="none" />
         <label>Password</label><PasswordInput value={password} onChange={e => setP(e.target.value)} />
         {err && <div className="err">{err}</div>}
-        <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        <button className="btn" disabled={busy} aria-busy={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
         {onTrack && <button type="button" className="linkbtn" onClick={onTrack}>🔎 Check my case with the number from the text message</button>}
       </form>
     </div>

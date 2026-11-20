@@ -17,6 +17,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByUserIdAndChannelAndReadAtIsNull(Long userId, String channel, Pageable pageable);
     long countByUserIdAndChannelAndReadAtIsNull(Long userId, String channel);
 
+    @Query("select n from Notification n where n.userId = :uid and (:ch = '' or n.channel = :ch) and (:unread = false or n.readAt is null) and n.createdAt >= :from and n.createdAt < :to")
+    Page<Notification> search(@Param("uid") Long userId, @Param("ch") String channel, @Param("unread") boolean unreadOnly,
+                              @Param("from") Instant from, @Param("to") Instant to, Pageable pageable);
+
     @Modifying(clearAutomatically = true)
     @Query("update Notification n set n.readAt = :now where n.userId = :uid and n.readAt is null")
     int markAllRead(@Param("uid") Long userId, @Param("now") Instant now);

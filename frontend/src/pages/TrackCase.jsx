@@ -75,7 +75,7 @@ export default function TrackCase({ onBack }) {
             <label htmlFor="tp">{t('Phone number')}</label>
             <input id="tp" value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" placeholder="09 12 34 56 78" maxLength={30} />
             {err && <div className="err" role="alert">{err}</div>}
-            <button className="btn" disabled={busy}>{busy ? t('Checking…') : t('Show my case')}</button>
+            <button className="btn" disabled={busy} aria-busy={busy}>{busy ? t('Checking…') : t('Show my case')}</button>
           </form>
         </div>
         {res && <div className="tresults" aria-live="polite">{res.length > 1 && <p className="tcount">{t('We found {n} cases for this number.', { n: res.length })}</p>}{res.map(c => <Result key={c.code} c={c} />)}</div>}

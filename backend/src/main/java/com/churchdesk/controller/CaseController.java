@@ -55,13 +55,15 @@ public class CaseController {
                                      @RequestParam(required = false) CaseStatus status,
                                      @RequestParam(required = false) ReviewStatus review,
                                      @RequestParam(required = false) CaseKind kind,
+                                     @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+                                     @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "12") int size, Authentication auth) {
-        return service.list(q, status, review, kind, page, size, current.get(auth));
+        return service.list(q, status, review, kind, from, to, page, size, current.get(auth));
     }
 
     @GetMapping("/cases/summary")
-    public Summary summary(Authentication auth) { return service.summary(current.get(auth)); }
+    public Summary summary(@RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from, @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to, Authentication auth) { return service.summary(current.get(auth), from, to); }
 
     @GetMapping("/cases/code/{code}")
     public CaseDetail byCode(@PathVariable String code, Authentication auth) { return service.getByCode(code, current.get(auth)); }
@@ -202,13 +204,15 @@ public class CaseController {
 
     /** What was passed up: Sera Askiyajie sees what waits for him, Papas what waits for the final decision. */
     @GetMapping("/inbox/passed-up") @PreAuthorize("hasAnyRole('ADMIN','SERA_ASKIYAJIE','PAPAS')")
-    public InboxDto passedUp(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication auth) {
-        return service.escalatedInbox(current.get(auth), page, size);
+    public InboxDto passedUp(@RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from, @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication auth) {
+        return service.escalatedInbox(current.get(auth), from, to, page, size);
     }
 
     @GetMapping("/inbox")
     public InboxDto inbox(@RequestParam(required = false) Long departmentId,
                           @RequestParam(defaultValue = "false") boolean resolved,
+                          @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+                          @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
                           @RequestParam(defaultValue = "0") int page,
                           @RequestParam(defaultValue = "20") int size, Authentication auth) {
         AppUser u = current.get(auth);
@@ -217,6 +221,6 @@ public class CaseController {
         else if (u.getRole().isDiocese()) dept = departmentId;
         else throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not available for your role");
         if (dept == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a department");
-        return service.inbox(dept, resolved, page, size);
+        return service.inbox(dept, resolved, from, to, page, size);
     }
 }

@@ -60,11 +60,9 @@ public class NotificationService {
 
     /** channel = GENERAL or SUBCITY to see one channel only; null for both. */
     @Transactional(readOnly = true)
-    public NotificationPage page(Long userId, boolean unreadOnly, String channel, int page, int size) {
+    public NotificationPage page(Long userId, boolean unreadOnly, String channel, java.time.LocalDate from, java.time.LocalDate to, int page, int size) {
         var pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50), Sort.by(Sort.Direction.DESC, "createdAt", "id"));
-        var result = channel == null
-                ? (unreadOnly ? repo.findByUserIdAndReadAtIsNull(userId, pr) : repo.findByUserId(userId, pr))
-                : (unreadOnly ? repo.findByUserIdAndChannelAndReadAtIsNull(userId, channel, pr) : repo.findByUserIdAndChannel(userId, channel, pr));
+        var result = repo.search(userId, channel == null ? "" : channel, unreadOnly, com.churchdesk.util.Times.from(from), com.churchdesk.util.Times.until(to), pr);
         long unread = channel == null ? repo.countByUserIdAndReadAtIsNull(userId) : repo.countByUserIdAndChannelAndReadAtIsNull(userId, channel);
         return new NotificationPage(result.getContent().stream().map(this::dto).toList(), result.getTotalElements(),
                 result.getNumber(), result.getSize(), unread);
@@ -85,6 +83,7 @@ public class NotificationService {
 
     @Transactional
     public void markAllRead(Long userId) { repo.markAllRead(userId, Instant.now()); }
+    @Transactional
     public void markAllRead(Long userId, String channel) {
         if (channel == null || channel.isBlank()) markAllRead(userId);
         else repo.markChannelRead(userId, channel, Instant.now());

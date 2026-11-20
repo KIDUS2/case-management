@@ -16,12 +16,12 @@ public interface CaseIssueRepository extends JpaRepository<CaseIssue, Long> {
     @Query("select i from CaseIssue i join fetch i.churchCase c where i.returnOn is not null and i.returnOn <= :until and i.status <> :resolved order by i.returnOn, c.id")
     List<CaseIssue> findExpected(@Param("until") LocalDate until, @Param("resolved") IssueStatus resolved);
 
-    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses order by i.referredAt desc, i.id desc")
-    Page<CaseIssue> findForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, Pageable pageable);
+    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses and coalesce(i.resolvedAt, i.referredAt) >= :from and coalesce(i.resolvedAt, i.referredAt) < :to order by i.referredAt desc, i.id desc")
+    Page<CaseIssue> findForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to, Pageable pageable);
 
     /** What a department still has to do, in the order it must be served: urgent first, then first come first served. */
-    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses order by case when i.held = true then 1 else 0 end, case when i.priority = 'URGENT' then 0 else 1 end, i.referredAt asc, i.id asc")
-    Page<CaseIssue> findQueueForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, Pageable pageable);
+    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses and i.referredAt >= :from and i.referredAt < :to order by case when i.held = true then 1 else 0 end, case when i.priority = 'URGENT' then 0 else 1 end, i.referredAt asc, i.id asc")
+    Page<CaseIssue> findQueueForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to, Pageable pageable);
 
     /** How many referred issues of the same department must be served before this one. */
     @Query("select count(i) from CaseIssue i where i.department.id = :did and i.status = :ref and i.id <> :id and "
@@ -33,8 +33,8 @@ public interface CaseIssueRepository extends JpaRepository<CaseIssue, Long> {
     List<CaseIssue> findAllInDepartments(@Param("s") IssueStatus status);
 
     /** Issues passed up to Sera Askiyajie (level 1) or Papas (level 2) and not finished yet. */
-    @Query("select i from CaseIssue i where i.handlerLevel between :min and :max and i.status <> :resolved order by i.referredAt asc, i.id asc")
-    Page<CaseIssue> findAtLevel(@Param("min") int min, @Param("max") int max, @Param("resolved") IssueStatus resolved, Pageable pageable);
+    @Query("select i from CaseIssue i where i.handlerLevel between :min and :max and i.status <> :resolved and i.referredAt >= :from and i.referredAt < :to order by i.referredAt asc, i.id asc")
+    Page<CaseIssue> findAtLevel(@Param("min") int min, @Param("max") int max, @Param("resolved") IssueStatus resolved, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to, Pageable pageable);
 
     long countByDepartmentIdAndStatus(Long departmentId, IssueStatus status);
 }

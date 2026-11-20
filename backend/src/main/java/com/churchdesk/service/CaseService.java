@@ -236,9 +236,14 @@ public class CaseService {
         throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not make a case code, please try again");
     }
 
+    /** Cases registered on or between these days (Addis Ababa time); either end may be left out. */
+    private static Specification<ChurchCase> registeredBetween(LocalDate from, LocalDate to) {
+        return (root, query, cb) -> cb.and(cb.greaterThanOrEqualTo(root.<java.time.Instant>get("createdAt"), Times.from(from)), cb.lessThan(root.<java.time.Instant>get("createdAt"), Times.until(to)));
+    }
+
     @Transactional(readOnly = true)
-    public PageDto<CaseSummary> list(String q, CaseStatus status, ReviewStatus review, CaseKind kind, int page, int size, AppUser actor) {
-        Specification<ChurchCase> spec = access.visibleTo(actor);
+    public PageDto<CaseSummary> list(String q, CaseStatus status, ReviewStatus review, CaseKind kind, LocalDate from, LocalDate to, int page, int size, AppUser actor) {
+        Specification<ChurchCase> spec = access.visibleTo(actor).and(registeredBetween(from, to));
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
@@ -313,10 +318,10 @@ public class CaseService {
 
     /** What a department has received (pending) or already finished (resolved). */
     @Transactional(readOnly = true)
-    public InboxDto inbox(Long departmentId, boolean resolved, int page, int size) {
+    public InboxDto inbox(Long departmentId, boolean resolved, LocalDate from, LocalDate to, int page, int size) {
         List<IssueStatus> statuses = resolved ? List.of(IssueStatus.RESOLVED) : List.of(IssueStatus.REFERRED, IssueStatus.COURT);
         PageRequest pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50));
-        Page<CaseIssue> result = resolved ? issueRepo.findForDepartment(departmentId, statuses, pr) : issueRepo.findQueueForDepartment(departmentId, statuses, pr);
+        Page<CaseIssue> result = resolved ? issueRepo.findForDepartment(departmentId, statuses, Times.from(from), Times.until(to), pr) : issueRepo.findQueueForDepartment(departmentId, statuses, Times.from(from), Times.until(to), pr);
         LocalDate today = Times.today();
         List<InboxItem> items = result.getContent().stream().map(i -> toInbox(i, today)).toList();
         long pending = issueRepo.countByDepartmentIdAndStatus(departmentId, IssueStatus.REFERRED);
@@ -336,18 +341,18 @@ public class CaseService {
 
     /** Issues a department passed up: Sera Askiyajie sees level 1, Papas level 2, the administrator both. */
     @Transactional(readOnly = true)
-    public InboxDto escalatedInbox(AppUser actor, int page, int size) {
+    public InboxDto escalatedInbox(AppUser actor, LocalDate from, LocalDate to, int page, int size) {
         int min = actor.getRole() == Role.PAPAS ? 2 : 1;
         int max = actor.getRole() == Role.SERA_ASKIYAJIE ? 1 : 2;
         PageRequest pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50));
-        Page<CaseIssue> result = issueRepo.findAtLevel(min, max, IssueStatus.RESOLVED, pr);
+        Page<CaseIssue> result = issueRepo.findAtLevel(min, max, IssueStatus.RESOLVED, Times.from(from), Times.until(to), pr);
         LocalDate today = Times.today();
         return new InboxDto(result.getContent().stream().map(i -> toInbox(i, today)).toList(), result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalElements());
     }
 
     @Transactional(readOnly = true)
-    public Summary summary(AppUser actor) {
-        Specification<ChurchCase> mine = access.visibleTo(actor);
+    public Summary summary(AppUser actor, LocalDate from, LocalDate to) {
+        Specification<ChurchCase> mine = access.visibleTo(actor).and(registeredBetween(from, to));
         return new Summary(cases.count(mine), count(mine, CaseStatus.OPEN), count(mine, CaseStatus.REFERRED),
                 count(mine, CaseStatus.COURT), count(mine, CaseStatus.RESOLVED),
                 cases.count(mine.and((root, query, cb) -> cb.equal(root.get("reviewStatus"), ReviewStatus.PENDING))));
