@@ -47,13 +47,16 @@ const NAV = [
 /** Switching language reloads the page; remember where the person was so they come back to the same place. */
 const readView = () => { try { const v = JSON.parse(sessionStorage.getItem('view') || 'null'); if (v && (v.page === 'employees' || v.page === 'workforce')) v.page = 'hr'; return v } catch { return null } }
 const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(v)) : sessionStorage.removeItem('view') } catch { /* private mode */ } }
+/** Every page and case has its own link (#/cases/12), so Back works and a link can be sent to a colleague. */
+const parseHash = () => { const m = /^#\/([a-z]+)(?:\/(\d+))?$/.exec(location.hash); return m ? { page: m[1], openId: m[2] ? Number(m[2]) : null } : null }
+const toHash = (page, openId) => (page ? '#/' + page + (page === 'cases' && openId ? '/' + openId : '') : '')
 const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases', SUBCITY: 'cases', SERA_ASKIYAJIE: 'inbox', PAPAS: 'inbox' }
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [ready, setReady] = useState(false)
-  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'hr' : localStorage.getItem('token') ? readView()?.page || null : null))
-  const [openId, setOpenId] = useState(() => (localStorage.getItem('token') ? readView()?.openId || null : null))
+  const [page, setPage] = useState(() => (new URLSearchParams(location.search).get('emp') ? 'hr' : localStorage.getItem('token') ? parseHash()?.page || readView()?.page || null : null))
+  const [openId, setOpenId] = useState(() => (localStorage.getItem('token') ? (parseHash() ? parseHash().openId : readView()?.openId) || null : null))
   const [optsReady, setOptsReady] = useState(false)
   const [fresh, setFresh] = useState(null)
   const [query, setQuery] = useState('')
@@ -67,6 +70,23 @@ export default function App() {
   const [focusEmp, setFocusEmp] = useState(() => new URLSearchParams(location.search).get('emp'))
 
   useEffect(() => { if (user) saveView({ page, openId }) }, [user, page, openId])
+
+  // page -> address bar (each move adds a history entry, so the Back button works)
+  useEffect(() => {
+    if (!user || !page) return
+    const h = toHash(page, openId)
+    if (location.hash !== h) location.hash = h
+  }, [user, page, openId])
+  // address bar -> page (Back/Forward, or a pasted link)
+  useEffect(() => {
+    if (!user) return
+    const on = () => {
+      const v = parseHash(); if (!v) return
+      setPage(v.page); setOpenId(v.openId); setFresh(null)
+    }
+    window.addEventListener('hashchange', on)
+    return () => window.removeEventListener('hashchange', on)
+  }, [user])
 
   // the dropdown lists (issue types, kefle ketema) come from Settings
   useEffect(() => {
@@ -110,12 +130,12 @@ export default function App() {
   }, [toast])
 
   useEffect(() => {
-    const h = () => { saveView(null); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0); notify(t('Your session has ended. Please sign in again.'), 'info') }
+    const h = () => { history.replaceState(null, '', location.pathname); saveView(null); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0); notify(t('Your session has ended. Please sign in again.'), 'info') }
     window.addEventListener('session-expired', h)
     return () => window.removeEventListener('session-expired', h)
   }, [])
 
-  const logout = () => { saveView(null); localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
+  const logout = () => { history.replaceState(null, '', location.pathname); saveView(null); localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
   const go = key => { setOpenId(null); setFresh(null); setQuery(''); setPage(key) }
   const openCase = (id, isNew = false, failed = []) => { setOpenId(id); setFresh(isNew ? { failed } : null); setPage('cases') }
   const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
