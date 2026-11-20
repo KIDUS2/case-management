@@ -19,7 +19,7 @@ export default function FilePreview() {
     if (!file) return
     if (file.kind === 'none') { setState({ loading: false, url: null, text: '', err: '' }); return }
     let live = true
-    setState({ loading: true, url: null, text: '', err: '' })
+    setState({ loading: true, url: null, text: '', err: '' });
     (file.local ? Promise.resolve(file.local) : blob(file.path)).then(async b => {
       if (!live) return
       const kind = file.kind
