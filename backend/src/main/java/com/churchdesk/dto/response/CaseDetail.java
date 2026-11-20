@@ -10,4 +10,4 @@ public record CaseDetail(Long id, String code, CaseStatus status, String discuss
                          String createdBy, Instant createdAt, List<PersonInfo> complainants, List<PersonInfo> subjects, List<PersonInfo> involved,
                          List<IssueDto> issues, List<CaseSummary> relatedCases, List<Long> linkedCaseIds, List<EventDto> events, List<CaseFileDto> files,
                          ReviewStatus reviewStatus, String reviewNote, String reviewedBy,
-                         CaseKind kind, boolean subCitySolved) {}
+                         CaseKind kind, boolean subCitySolved, Integer expectedPeople) {}

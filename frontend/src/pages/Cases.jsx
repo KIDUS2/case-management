@@ -631,6 +631,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
           <small className="onhero">Case code</small>
           <div className="bigcode">{fmtCode(c.code)}</div>
           <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</div>
+          {c.expectedPeople && <div className={'onhero expectline' + (c.complainants.length < c.expectedPeople ? ' short' : '')}>👥 {t('{a} of {b} expected people listed', { a: c.complainants.length, b: c.expectedPeople })}{c.complainants.length < c.expectedPeople && desk ? ' · ' + t('Add the others in People and access') : ''}</div>}
           <div className="onhero" style={{ marginTop: 6 }}>{t('{a} of {b} issues resolved', { a: resolved, b: c.issues.length })}</div>
           <div className="progress"><i style={{ width: (c.issues.length ? (resolved / c.issues.length) * 100 : 0) + '%' }} /></div>
           <Journey stage={stageOf(c.status, c.reviewStatus === 'PENDING')} dark />

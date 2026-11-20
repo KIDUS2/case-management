@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
+import GroupSheet, { blankRow } from '../components/GroupSheet.jsx'
+import { askConfirm } from '../dialog.js'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { CATEGORY, catOptions, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
@@ -108,6 +110,10 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
 
 export default function NewCase({ me, onCreated, goChurches }) {
   const [complainants, setComplainants] = useState([blankParty()])
+  const [size, setSize] = useState('1')              // 1, 2, 3 or 'many' (more than 3)
+  const [expected, setExpected] = useState(4)         // how many people are expected when the group is big
+  const [rows, setRows] = useState([blankRow(), blankRow(), blankRow()]) // the people after the first, for a big group
+  const many = size === 'many'
   const [subjects, setSubjects] = useState([])
   const [issues, setIssues] = useState([blankIssue()])
   const [notes, setNotes] = useState('')
@@ -127,6 +133,16 @@ export default function NewCase({ me, onCreated, goChurches }) {
     if (!sub) api('/departments').then(d => setDepartments(d.filter(x => x.active))).catch(() => {})
   }, [])
 
+  // picking 1, 2 or 3 shows that many full forms; "more than 3" switches to the compact list
+  const pickSize = k => {
+    if (k === 'many') { setExpected(e => Math.max(4, e, complainants.length)); setSize('many'); return }
+    const n = Number(k)
+    setSize(k)
+    setComplainants(l => {
+      const kept = l.slice(0, Math.max(n, l.filter((p, i) => i === 0 || p.fullName.trim()).length))
+      return kept.length >= n ? kept : [...kept, ...Array.from({ length: n - kept.length }, () => blankParty(l[0]?.workingStatus))]
+    })
+  }
   const setAt = (setter, i) => v => setter(l => l.map((x, k) => (k === i ? v : x)))
   const removeAt = (setter, i) => () => setter(l => l.filter((_, k) => k !== i))
   const setIssue = (i, patch) => setIssues(l => l.map((x, k) => (k === i ? { ...x, ...patch } : x)))
@@ -144,10 +160,16 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const submit = async e => {
     e.preventDefault(); setErr('')
     try {
-      const comp = complainants.map((p, i) => {
+      // for a big group, the people after the first use the first person's church and kind; empty lines are ignored
+      const lead = complainants[0]
+      const people = many
+        ? [lead, ...rows.filter(r => r.fullName.trim() || r.phone.trim() || r.idNo.trim()).map(r => ({ ...blankParty(lead.workingStatus), churchName: lead.churchName, workingStatus: lead.workingStatus, fullName: r.fullName, phone: r.phone, employeeId: lead.workingStatus === 'CHURCH_MEMBER' ? '' : r.idNo, sebekaGubayeNo: lead.workingStatus === 'CHURCH_MEMBER' ? r.idNo : '' }))]
+        : complainants
+      const comp = people.map((p, i) => {
         if (!p.fullName.trim()) throw new Error(t('{x}: please enter the name.', { x: t('Person {n} reporting', { n: i + 1 }) }))
         return toPayload(p, t('Person {n} reporting', { n: i + 1 }), true)
       })
+      if (many && comp.length < expected && !(await askConfirm(t('Only {a} of {b} people are listed. Save the case now? You can add the others later from the case page.', { a: comp.length, b: expected }), { title: t('Not everyone is listed'), confirmText: t('Save anyway') }))) return
       const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 })))
       const bad = issues.findIndex(i => (charity || i.category !== 'UNCLEAR') && !i.description.trim())
       if (bad >= 0) throw new Error(charity ? t('Please write what help is needed.') : t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }))
@@ -157,7 +179,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         category: i.category, description: i.description,
         departmentId: i.departmentId ? Number(i.departmentId) : null, returnOn: i.departmentId ? i.returnOn || null : null,
       }))
-      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter, kind: charity ? 'CHARITY' : 'ISSUE', localSolution: sub && solved ? solution.trim() : null } })
+      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter, kind: charity ? 'CHARITY' : 'ISSUE', expectedPeople: many ? expected : null, localSolution: sub && solved ? solution.trim() : null } })
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
@@ -183,11 +205,25 @@ export default function NewCase({ me, onCreated, goChurches }) {
       <div className="card">
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
-        {complainants.map((p, i) => (
-          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus={i === 0}
-            onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
-        ))}
-        <button type="button" className="btn ghost" onClick={() => setComplainants(l => [...l, blankParty(l[0]?.workingStatus)])}>➕ Add another person (group)</button>
+        <div className="sizepick" role="radiogroup" aria-label={t('How many people are reporting?')}>
+          <span>{t('How many people are reporting?')}</span>
+          {['1', '2', '3', 'many'].map(k => <button type="button" key={k} role="radio" aria-checked={size === k} className={'chip' + (size === k ? ' on' : '')} onClick={() => pickSize(k)}>{k === 'many' ? t('More than 3') : k}</button>)}
+          {many && <label className="expect">{t('How many are expected?')}<input type="number" min={4} max={1000} value={expected} onChange={e => setExpected(Math.max(4, Math.min(1000, Number(e.target.value) || 4)))} /></label>}
+        </div>
+        {many ? (
+          <>
+            <PartyEditor title={t('Person 1')} party={complainants[0]} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus onChange={setAt(setComplainants, 0)} onRemove={null} />
+            <GroupSheet rows={rows} onChange={setRows} expected={expected} idLabel={complainants[0].workingStatus === 'CHURCH_MEMBER' ? t('Sebeka Gubaye number') : t('Employee ID')} />
+          </>
+        ) : (
+          <>
+            {complainants.map((p, i) => (
+              <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus={i === 0}
+                onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
+            ))}
+            <button type="button" className="btn ghost" onClick={() => { setComplainants(l => [...l, blankParty(l[0]?.workingStatus)]); if (complainants.length >= 3) setSize('many') }}>➕ Add another person (group)</button>
+          </>
+        )}
       </div>
 
       <div className="card">

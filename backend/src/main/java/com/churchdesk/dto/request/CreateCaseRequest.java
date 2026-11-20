@@ -13,4 +13,6 @@ public record CreateCaseRequest(@NotEmpty @Valid List<PartyIn> complainants,
                                 /** ISSUE (default) or CHARITY. */
                                 @Size(max = 10) String kind,
                                 /** A sub-city that already solved the case writes what it did here; the diocese is shown it. */
-                                @Size(max = 4000) String localSolution) {}
+                                @Size(max = 4000) String localSolution,
+                                /** For a large group: how many people were expected, so the desk can see who is still missing. */
+                                @jakarta.validation.constraints.Min(2) @jakarta.validation.constraints.Max(1000) Integer expectedPeople) {}

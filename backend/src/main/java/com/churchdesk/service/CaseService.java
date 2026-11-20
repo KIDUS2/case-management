@@ -124,7 +124,7 @@ public class CaseService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ch.getName() + " is not in " + actor.getSubCity() + ". You can only submit cases for your own sub-city.");
         }
         List<IssueIn> issues = r.issues().stream().map(i -> new IssueIn(i.category(), i.description(), null, null)).toList();
-        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false, r.kind(), null);
+        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false, r.kind(), null, r.expectedPeople());
         CaseDetail d = createCase(clean, actor, ReviewStatus.PENDING);
         ChurchCase made = cases.findById(d.id()).orElseThrow();
         flow.notifySubmitted(made, actor);
@@ -145,6 +145,7 @@ public class CaseService {
         c.setDiscussionNotes(blankToNull(r.discussionNotes()));
         c.setLetterIssued(r.letterIssued());
         c.setCreatedBy(actor.getUsername());
+        c.setExpectedPeople(r.expectedPeople());
 
         Set<String> seen = new HashSet<>();
         int order = 0;
@@ -522,7 +523,7 @@ public class CaseService {
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
                 subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files,
-                c.getReviewStatus(), c.getReviewNote(), c.getReviewedBy(), c.getKind(), c.isSubCitySolved());
+                c.getReviewStatus(), c.getReviewNote(), c.getReviewedBy(), c.getKind(), c.isSubCitySolved(), c.getExpectedPeople());
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

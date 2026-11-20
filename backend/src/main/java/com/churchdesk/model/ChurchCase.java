@@ -45,6 +45,9 @@ public class ChurchCase {
     public void setDiscussionNotes(String v) { discussionNotes = v; }
     public boolean isLetterIssued() { return letterIssued; }
     public void setLetterIssued(boolean v) { letterIssued = v; }
+    @Column(name = "expected_people") private Integer expectedPeople;
+    public Integer getExpectedPeople() { return expectedPeople; }
+    public void setExpectedPeople(Integer v) { expectedPeople = v; }
     public com.churchdesk.enums.CaseKind getKind() { return kind; }
     public void setKind(com.churchdesk.enums.CaseKind v) { kind = v; }
     public boolean isSubCitySolved() { return subCitySolved; }
