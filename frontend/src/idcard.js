@@ -30,7 +30,7 @@ export async function printIdCard(e) {
   const expired = e.idExpired
   w.document.open()
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(e.fullName)} – ID</title><style>
-  @page{size:A4 portrait;margin:0}
+  @page{size:85.6mm 54mm;margin:0}
   *{box-sizing:border-box}
   body{margin:0;font-family:"Noto Sans Ethiopic","Nyala",system-ui,sans-serif;background:#e7eadb;color:#231a33;display:flex;flex-direction:column;align-items:center;gap:14mm;padding:12mm 0}
   .card{flex:none;box-sizing:border-box;width:85.6mm;height:54mm;break-inside:avoid;border-radius:3.2mm;background:#fff;position:relative;overflow:hidden;box-shadow:0 2px 14px #0003;border:.3mm solid #d9dcc8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -52,7 +52,7 @@ export async function printIdCard(e) {
   .small{font-size:1.85mm;color:#445;line-height:1.35;margin-top:1.4mm}
   .wm{position:absolute;right:-5mm;bottom:3mm;width:30mm;opacity:.07}
   .hint{font:12px system-ui;color:#456}
-  @media print{body{background:#fff;padding:15mm 0 0;gap:8mm}.card{box-shadow:none}.hint{display:none}}
+  @media print{body{background:#fff;padding:0;gap:0;display:block}.card{box-shadow:none;border:0;border-radius:0;page-break-after:always;break-after:page}.card.back{page-break-after:auto;break-after:auto}.hint{display:none}}
   </style></head><body>
   <div class="card front">
     <div class="band"><img src="${cross}" alt=""><div class="t"><b>የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን</b><span>Ethiopian Orthodox Tewahedo Church</span><span>አዲስ አበባ ሀገረ ስብከት · Addis Ababa Diocese</span></div><i style="width:11mm;flex:none"></i></div>
