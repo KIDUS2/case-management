@@ -185,6 +185,7 @@ const AM = {
   'Your case is being handled': 'ጉዳይዎ እየተሠራበት ነው', 'It is with the department that can solve it. We will send you a text message when there is news.': 'ሊፈታው በሚችለው ክፍል እጅ ነው። ዜና ሲኖር የጽሑፍ መልዕክት እንልክልዎታለን።',
   'Your case is in the court process': 'ጉዳይዎ በፍርድ ሂደት ላይ ነው', 'This part takes longer. We will send you a text message when there is news.': 'ይህ ደረጃ ረዘም ያለ ጊዜ ይወስዳል። ዜና ሲኖር የጽሑፍ መልዕክት እንልክልዎታለን።',
   'Your case is finished': 'ጉዳይዎ ተጠናቋል', 'Everything has been solved. If something is still wrong, please visit the diocese office with your case number.': 'ሁሉም ተፈትቷል። አሁንም የቀረ ችግር ካለ፣ እባክዎ በጉዳይ ቁጥርዎ ወደ ሀገረ ስብከቱ ቢሮ ይምጡ።',
+  'Showing {a} of {b}': 'ከ{b} ውስጥ {a} እየታየ ነው', 'Filter by name, church or case number…': 'በስም፣ በቤተ ክርስቲያን ወይም በጉዳይ ቁጥር ያጣሩ…', 'Clear': 'አጽዳ', 'Kind': 'ዓይነት', 
   'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
   'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
   'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',

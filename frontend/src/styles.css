@@ -873,3 +873,40 @@ main>:not(.topbar){animation:pagein .32s cubic-bezier(.2,.7,.2,1) both}
 .tres h3{font-size:.95rem;margin:20px 0 8px}
 .tlines{list-style:none;margin:0;padding:0}.tlines li{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
 .tlines em{margin-left:auto;font-style:normal;color:var(--mute);font-size:.88rem}
+
+/* cases list: segmented status filter + work table */
+.seg{display:flex;gap:4px;padding:4px;margin:14px 0 12px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow-x:auto;scrollbar-width:none;box-shadow:var(--shadow)}
+.seg::-webkit-scrollbar{display:none}
+.segb{flex:1 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 16px;border:0;border-radius:10px;background:none;color:var(--mute);font:inherit;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
+.segb:hover{color:var(--ink);background:var(--soft)}
+.segb em{font-style:normal;font-size:.8rem;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.segb.on{background:linear-gradient(180deg,var(--solid2),var(--solid));color:#fff;box-shadow:0 6px 14px -8px var(--solid)}
+.segb.on em{background:#ffffff30;color:#fff}
+.lbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.lsearch{flex:1 1 260px;display:flex;align-items:center;gap:8px;margin:0;padding:0 12px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;font-weight:400}
+.lsearch:focus-within{border-color:var(--pri);box-shadow:0 0 0 3px var(--soft)}
+.lsearch input{border:0;background:none;box-shadow:none!important;padding:12px 0;min-width:0}
+.lsearch button{border:0;background:none;color:var(--mute);font-size:1.3rem;cursor:pointer}
+.lkind{width:auto;min-width:160px;border-radius:12px;background:var(--card)}
+.lcount{margin-left:auto;color:var(--mute);font-size:.85rem}
+.ctable{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.chead,.crow{display:grid;grid-template-columns:minmax(230px,2.4fr) minmax(170px,1.7fr) 110px 150px 100px 130px;gap:14px;align-items:center;padding:0 18px}
+.chead{padding-block:11px;background:var(--soft);color:var(--mute);font-size:.76rem;font-weight:700;letter-spacing:.04em}
+.crow{width:100%;padding-block:13px;border:0;border-top:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer;position:relative;transition:background .12s}
+.crow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--teal)}
+.crow.s-ref::before{background:var(--gold)}.crow.s-court::before{background:var(--court)}.crow.s-ok::before{background:var(--ok)}
+.crow:hover,.crow:focus-visible{background:color-mix(in srgb,var(--soft) 60%,var(--card));outline:none}
+.crow:focus-visible{box-shadow:inset 0 0 0 2px var(--pri)}
+.c-case{display:flex;gap:12px;align-items:center;min-width:0;flex-wrap:wrap}
+.c-case .grow{flex:1 1 150px}.c-case b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-case small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-case .codechip{font-size:.72rem;order:3}
+.c-issues{display:flex;flex-wrap:wrap;gap:5px}.cat.more{background:var(--line);color:var(--ink)}
+.c-prog{display:grid;gap:4px}
+.pbar{height:7px;border-radius:99px;background:var(--line);overflow:hidden}.pbar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--leaf),var(--crown))}
+.c-status{display:flex;flex-wrap:wrap;gap:5px}
+@media(max-width:980px){.chead{display:none}
+  .crow{grid-template-columns:1fr auto;grid-template-areas:"case case" "issues issues" "prog status" "wait date";gap:10px 12px;padding:14px 16px 14px 18px}
+  .c-case{grid-area:case}.c-issues{grid-area:issues}.c-prog{grid-area:prog}.c-status{grid-area:status;justify-content:flex-end}.c-wait{grid-area:wait}.c-date{grid-area:date;text-align:right}
+  .lcount{display:none}}
+.lkind{padding:11px 12px;height:48px}

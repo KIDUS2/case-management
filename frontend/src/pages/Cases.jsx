@@ -54,30 +54,55 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
       <div className="head"><div><h1>Cases</h1><p className="muted">Every report and request that came to the desk.</p></div>
         {(isStaff(me.role) || me.role === 'SUBCITY') && <button className="btn" onClick={goNew}>➕ {me.role === 'SUBCITY' ? t('Submit a case') : 'Register case'}</button>}</div>
       {err && <div className="err">{err}</div>}
-      <div className="tiles">
-        {tiles.map(t => (
-          <button key={t.key} className={'tile' + (status === t.key ? ' on' : '')} onClick={() => setStatus(t.key)}>
-            <span className="ti">{t.icon}</span><b>{t.n ?? '–'}</b><small>{t.label}</small>
+      <div className="seg" role="tablist" aria-label={t('Status')}>
+        {tiles.map(x => (
+          <button key={x.key} role="tab" aria-selected={status === x.key} className={'segb' + (status === x.key ? ' on' : '')} onClick={() => setStatus(x.key)}>
+            <span aria-hidden="true">{x.icon}</span> {t(x.label)} <em>{x.n ?? '–'}</em>
           </button>
         ))}
       </div>
- {me.role !== 'SUBCITY' && <div className="tabs" style={{ marginBottom: 8 }}>
-        {[['', t('All kinds')], ['ISSUE', t('Issues')], ['CHARITY', '🤝 ' + t('Charity requests')]].map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}</div>}
-      <input className="search" placeholder="Filter this list by name, church or case code…" value={q} onChange={e => setQ(e.target.value)} />
-      <div className={loading ? 'fade' : ''}>
-        {loading && !data.items.length && <Skeleton rows={5} />}
-        {data.items.map(c => (
-          <button key={c.id} className={'case ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
-            <div className="avatar">{initial(c.complainants[0])}</div>
-            <div className="grow">
-              <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>{c.kind === 'CHARITY' && <span className="badge charity">🤝 {t('Charity')}</span>}{c.reviewStatus && c.reviewStatus !== 'ACCEPTED' && <span className={'badge review ' + c.reviewStatus.toLowerCase()}>{t(REVIEW[c.reviewStatus])}</span>}</div>
-              <small>⛪ {c.churchName}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</small>
-              {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
-              <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
-            </div>
-            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{t('{a}/{b} resolved', { a: c.resolvedCount, b: c.issueCount })}{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small>{c.status !== 'RESOLVED' && <Waiting since={c.createdAt} />}</div>
-          </button>
-        ))}
+      <div className="lbar">
+        <label className="lsearch"><span aria-hidden="true">🔍</span><input placeholder={t('Filter by name, church or case number…')} value={q} onChange={e => setQ(e.target.value)} />{q && <button type="button" aria-label={t('Clear')} onClick={() => setQ('')}>×</button>}</label>
+        {me.role !== 'SUBCITY' && (
+          <select className="lkind" value={kind} onChange={e => setKind(e.target.value)} aria-label={t('Kind')}>
+            <option value="">{t('All kinds')}</option><option value="ISSUE">{t('Issues')}</option><option value="CHARITY">🤝 {t('Charity requests')}</option>
+          </select>
+        )}
+        <span className="lcount">{t('Showing {a} of {b}', { a: data.items.length, b: data.total })}</span>
+      </div>
+      <div className={'ctable' + (loading ? ' fade' : '')} role="table">
+        <div className="chead" role="row"><span>{t('Case')}</span><span>{t('Issues')}</span><span>{t('Progress')}</span><span>{t('Status')}</span><span>{t('Waiting')}</span><span>{t('Registered')}</span></div>
+        {loading && !data.items.length && <Skeleton rows={6} />}
+        {data.items.map(c => {
+          const pct = c.issueCount ? Math.round((c.resolvedCount / c.issueCount) * 100) : 0
+          return (
+            <button key={c.id} role="row" className={'crow ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
+              <span className="c-case">
+                <span className="avatar">{initial(c.complainants[0])}</span>
+                <span className="grow">
+                  <b>{names(c.complainants)}</b>
+                  <small>⛪ {c.churchName}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</small>
+                  {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
+                </span>
+                <span className="codechip">{fmtCode(c.code)}</span>
+              </span>
+              <span className="c-issues">
+                {c.categories.slice(0, 3).map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}
+                {c.categories.length > 3 && <span className="cat more">+{c.categories.length - 3}</span>}
+              </span>
+              <span className="c-prog" title={t('{a}/{b} resolved', { a: c.resolvedCount, b: c.issueCount })}>
+                <span className="pbar"><i style={{ width: pct + '%' }} /></span><small>{c.resolvedCount}/{c.issueCount}{c.letterIssued ? ' · ✉️' : ''}</small>
+              </span>
+              <span className="c-status">
+                <span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>
+                {c.kind === 'CHARITY' && <span className="badge charity">🤝 {t('Charity')}</span>}
+                {c.reviewStatus && c.reviewStatus !== 'ACCEPTED' && <span className={'badge review ' + c.reviewStatus.toLowerCase()}>{t(REVIEW[c.reviewStatus])}</span>}
+              </span>
+              <span className="c-wait">{c.status !== 'RESOLVED' ? <Waiting since={c.createdAt} /> : <small>—</small>}</span>
+              <span className="c-date"><small>{fmtDate(c.createdAt)}</small></span>
+            </button>
+          )
+        })}
         {!loading && !data.items.length && (
           <div className="card empty">🌿<br />{q || status ? 'No cases match your search.' : me.role === 'SUBCITY' ? t('You have not submitted a case yet.') : me.role === 'ADMIN' ? 'No cases yet. Register the first one!' : 'You only see cases you registered, cases you were added to, or issues sent to your department.'}</div>
         )}
