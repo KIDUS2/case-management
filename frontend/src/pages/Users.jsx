@@ -79,7 +79,7 @@ export default function Users({ me }) {
         <div><label>Phone (optional)</label><input value={form.phone} onChange={set('phone')} inputMode="tel" maxLength={40} /></div>
         <div className="span"><label>Email (optional)</label><input type="email" value={form.email} onChange={set('email')} maxLength={120} /></div>
         {form.role !== 'ADMIN' && form.role !== 'SUBCITY' && <label className="check span"><input type="checkbox" checked={form.canViewAll} onChange={e => setForm({ ...form, canViewAll: e.target.checked })} /> 🔓 Can see every case (otherwise only cases they registered or are added to)</label>}
-        <button className="btn span">➕ Add user</button>
+        <button className="btn addbtn">➕ Add user</button>
       </form>}
 
       <div className="card list">

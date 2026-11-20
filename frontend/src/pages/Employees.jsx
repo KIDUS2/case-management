@@ -1,3 +1,4 @@
+import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
@@ -52,7 +53,7 @@ function Docs({ e, setErr }) {
       {list.map(d => (
         <div className="filerow" key={d.id}><span className="iicon">📄</span>
           <div className="grow"><div className="fname">{d.title}</div><small>{d.kind ? d.kind + ' · ' : ''}{fmtSize(d.sizeBytes)} · @{d.uploadedBy}</small></div>
-          <button className="btn x" onClick={() => downloadPath('/employee-files/' + d.id, d.originalName).catch(x => setErr(x.message))}>⬇️</button>
+          {kindOf(d.originalName) !== 'none' && <button className="btn ghost sm" onClick={() => previewFile('/employee-files/' + d.id, d.originalName, d.size)}>👁️ {t('Preview')}</button>}<button className="btn x" title={t('Download')} onClick={() => downloadPath('/employee-files/' + d.id, d.originalName).catch(x => setErr(x.message))}>⬇️</button>
           <button className="btn x" onClick={() => remove(d)}>🗑️</button></div>
       ))}
       {list.length === 0 && <p className="muted">No documents yet.</p>}

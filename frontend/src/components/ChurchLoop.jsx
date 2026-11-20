@@ -1,3 +1,4 @@
+import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
@@ -15,7 +16,7 @@ function FileList({ files, setErr }) {
   if (!files.length) return null
   return (
     <div className="lfiles">{files.map(f => (
-      <button type="button" key={f.id} className="lfile" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>
+      <button type="button" key={f.id} className="lfile" onClick={() => kindOf(f.originalName) !== 'none' ? previewFile('/files/' + f.id, f.originalName, f.size) : download(f.id, f.originalName).catch(x => setErr(x.message))}>
         📎 <span>{f.originalName}</span><small>{fmtSize(f.size)}</small>
       </button>))}
     </div>

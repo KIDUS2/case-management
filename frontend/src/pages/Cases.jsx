@@ -9,6 +9,7 @@ import ChurchLoop from '../components/ChurchLoop.jsx'
 import IssueFlags from '../components/IssueFlags.jsx'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { InvestigationCard, SubcityCard } from '../components/Collaboration.jsx'
+import { previewFile, kindOf } from '../preview.js'
 import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
@@ -269,7 +270,7 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
             {myFiles.map(f => (
               <div className="filerow" key={f.id}><span className="iicon" style={{ width: 32, height: 32 }}>📄</span>
                 <div className="grow"><div className="fname">{f.originalName}</div><small>{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
-                <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button></div>
+                {kindOf(f.originalName) !== 'none' && <button className="btn ghost sm" onClick={() => previewFile('/files/' + f.id, f.originalName, f.size)}>👁️ {t('Preview')}</button>}<button className="btn ghost sm" title={t('Download')} onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button></div>
             ))}
           </div>
         )}
@@ -540,7 +541,7 @@ function Files({ c, me, onChange, setErr }) {
         <div className="filerow" key={f.id}>
           <span className="iicon">📄</span>
           <div className="grow"><div className="fname">{f.originalName}</div><small>{f.stage === 'REQUEST' ? t('Comment to the church') + ' · ' : f.stage === 'FINDING' ? t('Church reply') + ' · ' : ''}{f.issueId ? 'Issue ' + (c.issues.findIndex(i => i.id === f.issueId) + 1) + ' · ' : ''}{fmtSize(f.size)} · @{f.uploadedBy} · {ago(f.uploadedAt)}</small></div>
-          <button className="btn ghost sm" onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button>
+          {kindOf(f.originalName) !== 'none' && <button className="btn ghost sm" onClick={() => previewFile('/files/' + f.id, f.originalName, f.size)}>👁️ {t('Preview')}</button>}<button className="btn ghost sm" title={t('Download')} onClick={() => download(f.id, f.originalName).catch(x => setErr(x.message))}>⬇️</button>
           {['ADMIN', 'OFFICER'].includes(me.role) && <button className="btn x" onClick={() => remove(f)} aria-label="Remove file">🗑️</button>}
         </div>
       ))}

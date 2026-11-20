@@ -1,3 +1,4 @@
+import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
@@ -198,7 +199,7 @@ export default function ChurchProfile({ church, canWrite, isAdmin, onBack, onCha
             {(files || []).map(d => (
               <div className="filerow" key={d.id}><span className="iicon">{d.kind === 'CARTA' ? '📜' : d.kind === 'MAP' ? '🗺️' : d.kind === 'PHOTO' ? '🖼️' : '📄'}</span>
                 <div className="grow"><div className="fname">{d.title}</div><small>{t(KINDS[d.kind])} · {fmtSize(d.sizeBytes)} · @{d.uploadedBy}</small></div>
-                <button className="btn x" onClick={() => downloadPath('/church-files/' + d.id, d.originalName).catch(x => setErr(x.message))}>⬇️</button>
+                {kindOf(d.originalName) !== 'none' && <button className="btn ghost sm" onClick={() => previewFile('/church-files/' + d.id, d.originalName, d.sizeBytes)}>👁️ {t('Preview')}</button>}<button className="btn x" title={t('Download')} onClick={() => downloadPath('/church-files/' + d.id, d.originalName).catch(x => setErr(x.message))}>⬇️</button>
                 {canWrite && <button className="btn x" onClick={() => remove(d)}>🗑️</button>}</div>))}
             {files && files.length === 0 && <p className="muted">{t('No documents yet.')}</p>}
             {canWrite && (

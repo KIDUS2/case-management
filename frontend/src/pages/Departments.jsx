@@ -42,10 +42,10 @@ export default function Departments() {
       <h1>Departments</h1>
       <p className="muted">The offices that receive issues (HR, Finance, Legal…). Add, rename or switch them off. Staff accounts are linked to a department in <b>Users</b>.</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
-      <form className="card grid" onSubmit={add}>
+      <form className="card grid inlineadd" onSubmit={add}>
         <div><label>Department name</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required maxLength={120} /></div>
         <div><label>Normally handles</label>{catSelect(form.handlesCategory, v => setForm({ ...form, handlesCategory: v }))}</div>
-        <button className="btn span">➕ Add department</button>
+        <button className="btn">➕ Add department</button>
       </form>
       <div className="card list">
         {list.map(d => (
@@ -65,7 +65,7 @@ export default function Departments() {
                   <small>{d.handlesCategory ? CATEGORY[d.handlesCategory].icon + ' ' + CATEGORY[d.handlesCategory].label : 'Any kind of issue'} · {t('{n} staff accounts', { n: d.staff })}{d.active ? '' : ' · ' + t('switched off')}</small>
                 </div>
                 <button className="btn ghost sm" onClick={() => setEdit({ id: d.id, name: d.name, handlesCategory: d.handlesCategory || '' })}>✏️ Edit</button>
-                <button className="btn ghost sm" onClick={() => toggle(d)}>{d.active ? 'Switch off' : 'Switch on'}</button>
+                <button className={'btn ghost sm' + (d.active ? ' danger' : '')} onClick={() => toggle(d)}>{d.active ? 'Switch off' : 'Switch on'}</button>
               </>
             )}
           </div>
