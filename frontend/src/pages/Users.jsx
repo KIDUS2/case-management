@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { ROLES, SUB_CITIES } from '../ui.js'
 import { askText } from '../dialog.js'
+import PasswordInput from '../components/PasswordInput.jsx'
 
 const empty = { username: '', fullName: '', password: '', role: 'RECEPTION', departmentId: '', jobTitle: '', phone: '', email: '', canViewAll: false, subCity: '' }
 
@@ -55,7 +56,7 @@ export default function Users({ me }) {
       <form className="card grid" onSubmit={add}>
         <div><label>Full name</label><input value={form.fullName} onChange={set('fullName')} required /></div>
         <div><label>Username</label><input value={form.username} onChange={set('username')} required minLength={3} autoCapitalize="none" /></div>
-        <div><label>Password</label><input type="password" value={form.password} onChange={set('password')} required minLength={6} autoComplete="new-password" /></div>
+        <div><label>Password</label><PasswordInput value={form.password} onChange={set('password')} required minLength={6} autoComplete="new-password" /></div>
         <div><label>Role</label><select value={form.role} onChange={set('role')}>{Object.entries(ROLES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         {form.role === 'DEPARTMENT' && (
           <div className="span"><label>Department</label>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api.js'
 import Prefs from '../components/Prefs.jsx'
+import PasswordInput from '../components/PasswordInput.jsx'
 
 export default function Login({ onLogin, onBack }) {
   const [username, setU] = useState('')
@@ -23,7 +24,7 @@ export default function Login({ onLogin, onBack }) {
         <h1>Case Desk</h1>
         <p className="muted">Welcome! Please sign in to continue.</p>
         <label>Username</label><input value={username} onChange={e => setU(e.target.value)} autoFocus autoCapitalize="none" />
-        <label>Password</label><input type="password" value={password} onChange={e => setP(e.target.value)} />
+        <label>Password</label><PasswordInput value={password} onChange={e => setP(e.target.value)} />
         {err && <div className="err">{err}</div>}
         <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
       </form>

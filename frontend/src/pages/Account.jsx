@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api.js'
 import { ROLES, initial } from '../ui.js'
+import PasswordInput from '../components/PasswordInput.jsx'
 
 export default function Account({ me, onUser }) {
   const [p, setP] = useState({ fullName: me.fullName || '', phone: me.phone || '', email: me.email || '', jobTitle: me.jobTitle || '' })
@@ -51,9 +52,9 @@ export default function Account({ me, onUser }) {
         <form className="card" onSubmit={submit}>
           <h2>Change password</h2>
           {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
-          <label>Current password</label><input type="password" value={cur} onChange={e => setCur(e.target.value)} required autoComplete="current-password" />
-          <label>New password (at least 6 characters)</label><input type="password" value={next} onChange={e => setNext(e.target.value)} required minLength={6} autoComplete="new-password" />
-          <label>New password again</label><input type="password" value={again} onChange={e => setAgain(e.target.value)} required minLength={6} autoComplete="new-password" />
+          <label>Current password</label><PasswordInput value={cur} onChange={e => setCur(e.target.value)} required autoComplete="current-password" />
+          <label>New password (at least 6 characters)</label><PasswordInput value={next} onChange={e => setNext(e.target.value)} required minLength={6} autoComplete="new-password" />
+          <label>New password again</label><PasswordInput value={again} onChange={e => setAgain(e.target.value)} required minLength={6} autoComplete="new-password" />
           <button className="btn" disabled={busy}>{busy ? 'Saving…' : '🔑 Change password'}</button>
         </form>
       </div>

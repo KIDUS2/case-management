@@ -168,6 +168,8 @@ const AM = {
   'Return case': 'ጉዳዩን መልስ',
   'Choose the sub-city…': 'ክፍለ ከተማ ይምረጡ…',
   'This account can submit and follow cases for churches of this sub-city only.': 'ይህ መለያ የዚህን ክፍለ ከተማ አብያተ ክርስቲያናት ጉዳዮች ብቻ ማስገባትና መከታተል ይችላል።',
+  'Show password': 'የይለፍ ቃል አሳይ',
+  'Hide password': 'የይለፍ ቃል ደብቅ',
   'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
   'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
   'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',
