@@ -7,4 +7,6 @@ import java.util.List;
 public record PublicCaseStatus(String code, String status, int issues, int resolved, LocalDate appointmentDate, Integer appointmentSpot,
                                List<IssueLine> lines, boolean awaitingReview) {
     public record IssueLine(String category, String status) {}
+    /** One or more cases: a phone number can belong to several. */
+    public record Result(List<PublicCaseStatus> cases) {}
 }

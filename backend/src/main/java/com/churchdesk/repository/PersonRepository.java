@@ -19,6 +19,11 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     boolean existsByEmployeeId(String employeeId);
     List<Person> findByEmployeeIdIsNullAndWorkingStatusNot(WorkingStatus status);
 
+    /** People whose main phone, or any extra phone, ends with these 9 digits, however it was typed (spaces, dashes, +251). */
+    @Query(value = "select p.id from person p where regexp_replace(coalesce(p.phone,''), '[^0-9]', '', 'g') like '%' || :tail "
+            + "or regexp_replace(coalesce(p.extra_phones,''), '[^0-9\\n]', '', 'g') ~ ('(^|\\n)[0-9]*' || :tail || '($|\\n)')", nativeQuery = true)
+    List<Long> idsByPhoneTail(@Param("tail") String last9);
+
     @Query("select p from Person p join fetch p.church where (lower(p.fullName) like :pattern or lower(coalesce(p.employeeId,'')) like :digits or lower(coalesce(p.churchRef,'')) like :pattern or coalesce(p.phone,'') like :pattern or coalesce(p.phone,'') like :digits or lower(coalesce(p.motherName,'')) like :pattern) order by p.fullName")
     List<Person> search(@Param("pattern") String pattern, @Param("digits") String digits, Pageable pageable);
 
