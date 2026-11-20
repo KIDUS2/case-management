@@ -72,11 +72,10 @@ public class SubcityReferralService {
         s.setRepliedAt(Instant.now());
         s.setStatus("REPLIED");
         events.save(new CaseEvent(c.getId(), s.getIssueId(), EventType.SUBCITY_REFERRAL, "Solution from the " + s.getSubCity() + " sub-city: " + s.getSolution(), actor.getUsername()));
+        // addressed to the administrator (and to whoever sent the case), on the sub-city channel
         List<AppUser> who = new ArrayList<>(users.findByRoleAndActiveTrue(Role.ADMIN));
-        who.addAll(users.findByRoleAndActiveTrue(Role.OFFICER));
-        who.addAll(users.findByRoleAndActiveTrue(Role.SERA_ASKIYAJIE));
         users.findByUsername(s.getSentBy()).ifPresent(who::add);
-        notifier.send(who, "SUBCITY_REPLY", s.getSubCity() + " sent its solution · case " + code(c), s.getSolution(), c.getId(), c.getCode(), actor.getUsername());
+        notifier.sendFromSubCity(who, "SUBCITY_REPLY", s.getSubCity(), "🏙️ " + s.getSubCity() + " sent its solution · case " + code(c), s.getSolution(), c.getId(), c.getCode(), actor.getUsername());
         return toDto(s, c);
     }
 

@@ -3,13 +3,14 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { NOTE_ICON, ago, fmtDate } from '../ui.js'
 
-export default function Notifications({ onOpen, onChanged }) {
+export default function Notifications({ onOpen, onChanged, channel = null }) {
+  const sub = channel === 'SUBCITY'
   const [tab, setTab] = useState('unread')
   const [page, setPage] = useState(0)
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
 
-  const load = () => api(`/notifications?unread=${tab === 'unread'}&page=${page}&size=20`).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message))
+  const load = () => api(`/notifications?unread=${tab === 'unread'}${channel ? '&channel=' + channel : ''}&page=${page}&size=20`).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message))
   useEffect(() => { setPage(0) }, [tab])
   useEffect(() => { load() }, [tab, page]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -17,12 +18,12 @@ export default function Notifications({ onOpen, onChanged }) {
     if (!n.read) { await api(`/notifications/${n.id}/read`, { method: 'POST' }).catch(() => {}); onChanged() }
     if (n.caseId) onOpen(n.caseId); else load()
   }
-  const readAll = async () => { await api('/notifications/read-all', { method: 'POST' }).catch(() => {}); onChanged(); load() }
+  const readAll = async () => { await api('/notifications/read-all' + (channel ? '?channel=' + channel : ''), { method: 'POST' }).catch(() => {}); onChanged(); load() }
   const pages = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1
 
   return (
     <>
-      <div className="head"><div><h1>Notifications</h1><p className="muted">News about the cases you registered or the issues sent to your department.</p></div>
+      <div className="head"><div><h1>{sub ? '🏙️ ' + t('From sub-cities') : 'Notifications'}</h1><p className="muted">{sub ? t('Cases, solutions and news sent by the sub-city offices. They come only to you.') : 'News about the cases you registered or the issues sent to your department.'}</p></div>
         {data?.unread > 0 && <button className="btn ghost" onClick={readAll}>✔ Mark all as read</button>}</div>
       {err && <div className="err">{err}</div>}
       <div className="tabs">
@@ -33,9 +34,9 @@ export default function Notifications({ onOpen, onChanged }) {
         {!data && !err && <div className="gmsg">Loading…</div>}
         {data && data.items.length === 0 && <div className="empty">🔔<br />{tab === 'unread' ? 'You are all caught up.' : 'No notifications yet.'}</div>}
         {data && data.items.map(n => (
-          <button key={n.id} className={'nitem' + (n.read ? '' : ' unread')} onClick={() => click(n)} title={fmtDate(n.createdAt)}>
+          <button key={n.id} className={'nitem' + (n.read ? '' : ' unread') + (n.channel === 'SUBCITY' ? ' subc' : '')} onClick={() => click(n)} title={fmtDate(n.createdAt)}>
             <span className="nicon">{NOTE_ICON[n.type] || '🔔'}</span>
-            <span className="grow"><b>{n.title}</b>{n.body && <span className="nbody">{n.body}</span>}<small>{ago(n.createdAt)}</small></span>
+            <span className="grow"><b>{n.title}</b>{n.body && <span className="nbody">{n.body}</span>}<small>{n.subCity ? n.subCity + ' · ' : ''}{ago(n.createdAt)}</small></span>
             {!n.read && <span className="udot" />}
           </button>
         ))}

@@ -3,6 +3,8 @@ import { api } from './api.js'
 import { ROLES, NOTE_ICON, applyOptions } from './ui.js'
 import Login from './pages/Login.jsx'
 import Landing from './components/Landing.jsx'
+import TrackCase from './pages/TrackCase.jsx'
+import AuditLog from './pages/AuditLog.jsx'
 import Summary from './pages/Summary.jsx'
 import Users from './pages/Users.jsx'
 import Cases from './pages/Cases.jsx'
@@ -33,10 +35,12 @@ const NAV = [
   { key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
   { key: 'cases', icon: '📁', label: 'All cases', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], badge: true },
+  { key: 'subinbox', icon: '🏙️', label: 'From sub-cities', roles: ['ADMIN'], badge: 'sub' },
   { key: 'hr', icon: '👥', label: 'HR management', roles: DESK },
   { key: 'churches', icon: '⛪', label: 'Churches', roles: DESK },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
+  { key: 'audit', icon: '🗒️', label: 'Audit log', roles: ['ADMIN'] },
   { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
   { key: 'account', icon: '⚙️', label: 'My account', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'] },
 ]
@@ -54,6 +58,8 @@ export default function App() {
   const [fresh, setFresh] = useState(null)
   const [query, setQuery] = useState('')
   const [unread, setUnread] = useState(0)
+  const [counts, setCounts] = useState({ general: 0, subCity: 0 })
+  const [track, setTrack] = useState(() => location.hash === '#track')
   const [ring, setRing] = useState(false)
   const [toast, setToast] = useState(null)
   const lastUnread = useRef(0)
@@ -75,7 +81,8 @@ export default function App() {
 
   const refreshUnread = useCallback(async () => {
     try {
-      const { count } = await api('/notifications/unread-count')
+      const { count, general, subCity } = await api('/notifications/unread-count')
+      setCounts({ general, subCity })
       if (count > lastUnread.current) {
         // something new arrived: pop a short message and ring the bell
         const r = await api('/notifications?unread=true&size=1').catch(() => null)
@@ -114,9 +121,10 @@ export default function App() {
   const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
 
   if (!ready || (user && !optsReady)) return <div className="center">Loading…</div>
+  if (!user && track) return <TrackCase onBack={() => { setTrack(false); history.replaceState(null, '', location.pathname) }} />
   if (!user) return signIn
-    ? <Login onBack={() => setSignIn(false)} onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
-    : <Landing onLogin={() => setSignIn(true)} />
+    ? <Login onBack={() => setSignIn(false)} onTrack={() => setTrack(true)} onLogin={(t, u) => { localStorage.setItem('token', t); setUser(u) }} />
+    : <Landing onLogin={() => setSignIn(true)} onTrack={() => setTrack(true)} />
 
   const items = NAV.filter(n => n.roles.includes(user.role))
   const current = items.some(n => n.key === page) ? page : HOME[user.role]
@@ -135,7 +143,8 @@ export default function App() {
           {items.map(n => (
             <button key={n.key} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
               <span>{n.icon}</span> {user.role === 'SUBCITY' && n.subLabel ? n.subLabel : n.label}
-              {n.badge && unread > 0 && <span className="nbadge">{unread > 99 ? '99+' : unread}</span>}
+              {n.badge === true && (user.role === 'ADMIN' ? counts.general : unread) > 0 && <span className="nbadge">{Math.min(user.role === 'ADMIN' ? counts.general : unread, 99)}</span>}
+              {n.badge === 'sub' && counts.subCity > 0 && <span className="nbadge sub">{Math.min(counts.subCity, 99)}</span>}
             </button>
           ))}
         </nav>
@@ -154,7 +163,9 @@ export default function App() {
         {current === 'cases' && <Cases me={user} openId={openId} setOpenId={id => { setOpenId(id); setFresh(null) }} goNew={() => go('new')} fresh={fresh} initialQuery={query} />}
         {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
         {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
-        {current === 'notifications' && <Notifications onOpen={id => openCase(id)} onChanged={refreshUnread} />}
+        {current === 'notifications' && <Notifications channel={user.role === 'ADMIN' ? 'GENERAL' : null} onOpen={id => openCase(id)} onChanged={refreshUnread} />}
+        {current === 'subinbox' && <Notifications channel="SUBCITY" onOpen={id => openCase(id)} onChanged={refreshUnread} />}
+        {current === 'audit' && <AuditLog />}
         {current === 'churches' && <Churches me={user} />}
         {current === 'hr' && <Hr me={user} focus={focusEmp} onFocusDone={() => { setFocusEmp(null); history.replaceState(null, '', location.pathname) }} onSeeCases={seeAll} onOpenCase={id => openCase(id)} />}
         {current === 'departments' && <Departments />}

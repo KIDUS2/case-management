@@ -10,7 +10,7 @@ const FEATURES = [
 ]
 
 /** The first page people see: what the platform is for, and one clear way in. */
-export default function Landing({ onLogin }) {
+export default function Landing({ onLogin, onTrack }) {
   return (
     <div className="landing">
       <header className="lhead">
@@ -26,6 +26,7 @@ export default function Landing({ onLogin }) {
         <p className="llead">One place to receive, follow and close the cases that reach the diocese from its churches.</p>
         <div className="lcta">
           <button className="btn lbtn big" onClick={onLogin}>Login to the platform</button>
+          {onTrack && <button className="btn ghost lbtn big" onClick={onTrack}>🔎 Check my case</button>}
           <a className="btn ghost lbtn" href="#offers">What the platform offers</a>
         </div>
       </section>

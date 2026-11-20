@@ -762,3 +762,22 @@ button.chx-stat{cursor:pointer}.chx-stat b{font-size:1.7rem;font-family:var(--se
 @media (max-width:560px){.kindpick{grid-template-columns:1fr}}
 .solvedbox{margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid #a7bfdc;background:#f1f6fc}
 .solvedbox textarea{width:100%;margin-top:8px}
+
+/* sub-city channel, audit log, public case check */
+.nav .nbadge.sub{background:#2f6fdb;color:#fff}
+.nitem.subc{border-left:4px solid #2f6fdb}
+.auditrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line,#e6e8ee)}
+.auditrow:last-child{border-bottom:0}
+.auditrow .grow{flex:1;min-width:0}
+.auditrow .nbody{display:block;color:var(--muted,#6b7280);font-size:.85rem}
+.auditrow small{color:var(--muted,#6b7280);white-space:nowrap}
+.auditrow.warn{background:rgba(220,60,60,.06)}
+.pager{display:flex;justify-content:center;align-items:center;gap:14px;margin:16px 0}
+.card.track{max-width:440px;width:100%}
+.trackres{margin-top:18px;padding-top:14px;border-top:1px solid var(--line,#e6e8ee)}
+.trackres h2{letter-spacing:.08em;margin:0 0 6px}
+.trackres ul{list-style:none;padding:0;margin:8px 0}
+.trackres li{padding:6px 0}
+.trackappt{background:rgba(47,111,219,.08);padding:10px 12px;border-radius:10px}
+.linkbtn{background:none;border:0;color:var(--link,#2f6fdb);cursor:pointer;margin-top:12px;font:inherit;text-decoration:underline}
+@media(max-width:600px){.auditrow{flex-wrap:wrap}}

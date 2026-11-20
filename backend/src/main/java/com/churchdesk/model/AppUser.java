@@ -19,6 +19,8 @@ public class AppUser {
     @Column(name = "job_title") private String jobTitle;
     @Column(name = "can_view_all", nullable = false) private boolean canViewAll;
     @ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "department_id") private Department department;
+    @Column(name = "failed_attempts", nullable = false) private int failedAttempts;
+    @Column(name = "locked_until") private Instant lockedUntil;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
     public Long getId() { return id; }
@@ -44,4 +46,8 @@ public class AppUser {
     public void setCanViewAll(boolean v) { canViewAll = v; }
     public boolean isActive() { return active; }
     public void setActive(boolean v) { active = v; }
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int v) { failedAttempts = v; }
+    public Instant getLockedUntil() { return lockedUntil; }
+    public void setLockedUntil(Instant v) { lockedUntil = v; }
 }

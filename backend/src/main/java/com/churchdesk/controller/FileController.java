@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import com.churchdesk.dto.common.Download;
 import com.churchdesk.dto.response.CaseFileDto;
 import com.churchdesk.security.CurrentUser;
+import com.churchdesk.service.AuditService;
 import com.churchdesk.service.FileService;
 
 @RestController
@@ -22,7 +23,9 @@ public class FileController {
     private final FileService service;
     private final CurrentUser current;
 
-    public FileController(FileService service, CurrentUser current) { this.service = service; this.current = current; }
+    private final AuditService audit;
+
+    public FileController(FileService service, CurrentUser current, AuditService audit) { this.service = service; this.current = current; this.audit = audit; }
 
     @PostMapping("/cases/{id}/files") @ResponseStatus(HttpStatus.CREATED)
     public CaseFileDto upload(@PathVariable Long id, @RequestParam("file") MultipartFile file,
@@ -37,6 +40,7 @@ public class FileController {
     @GetMapping("/files/{id}")
     public ResponseEntity<Resource> download(@PathVariable Long id, Authentication auth) {
         Download d = service.load(id, current.get(auth));
+        audit.record(auth.getName(), "FILE_DOWNLOAD", "FILE", String.valueOf(id), d.name());
         MediaType type;
         try { type = d.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(d.contentType()); }
         catch (Exception e) { type = MediaType.APPLICATION_OCTET_STREAM; }

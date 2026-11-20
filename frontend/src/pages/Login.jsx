@@ -3,7 +3,7 @@ import { api } from '../api.js'
 import Prefs from '../components/Prefs.jsx'
 import PasswordInput from '../components/PasswordInput.jsx'
 
-export default function Login({ onLogin, onBack }) {
+export default function Login({ onLogin, onBack, onTrack }) {
   const [username, setU] = useState('')
   const [password, setP] = useState('')
   const [err, setErr] = useState('')
@@ -27,6 +27,7 @@ export default function Login({ onLogin, onBack }) {
         <label>Password</label><PasswordInput value={password} onChange={e => setP(e.target.value)} />
         {err && <div className="err">{err}</div>}
         <button className="btn" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        {onTrack && <button type="button" className="linkbtn" onClick={onTrack}>🔎 Check my case with the number from the text message</button>}
       </form>
     </div>
   )

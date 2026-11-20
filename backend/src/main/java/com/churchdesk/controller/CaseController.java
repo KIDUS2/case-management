@@ -31,6 +31,7 @@ import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
 import com.churchdesk.model.AppUser;
 import com.churchdesk.security.CurrentUser;
+import com.churchdesk.service.AuditService;
 import com.churchdesk.service.CaseFlowService;
 import com.churchdesk.service.CaseService;
 import com.churchdesk.util.CaseAccess;
@@ -43,8 +44,10 @@ public class CaseController {
     private final CaseFlowService flow;
     private final CurrentUser current;
 
-    public CaseController(CaseService service, CaseFlowService flow, CurrentUser current) {
-        this.service = service; this.flow = flow; this.current = current;
+    private final AuditService audit;
+
+    public CaseController(CaseService service, CaseFlowService flow, CurrentUser current, AuditService audit) {
+        this.audit = audit; this.service = service; this.flow = flow; this.current = current;
     }
 
     @GetMapping("/cases")
@@ -64,7 +67,12 @@ public class CaseController {
     public CaseDetail byCode(@PathVariable String code, Authentication auth) { return service.getByCode(code, current.get(auth)); }
 
     @GetMapping("/cases/{id}")
-    public CaseDetail get(@PathVariable Long id, Authentication auth) { return service.get(id, current.get(auth)); }
+    public CaseDetail get(@PathVariable Long id, Authentication auth) {
+        AppUser u = current.get(auth);
+        CaseDetail d = service.get(id, u);
+        audit.record(u.getUsername(), "CASE_VIEW", "CASE", String.valueOf(id), "Case " + d.code());
+        return d;
+    }
 
     @PostMapping("/cases") @ResponseStatus(HttpStatus.CREATED) @PreAuthorize(STAFF)
     public CaseDetail create(@Valid @RequestBody CreateCaseRequest r, Authentication auth) {

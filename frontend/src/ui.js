@@ -33,7 +33,7 @@ export const WORKING = {
 export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff', SUBCITY: 'Sub-city office', SERA_ASKIYAJIE: 'Sera Askiyajie (manager)', PAPAS: 'Papas (head · final decision)' }
 export const REVIEW = { PENDING: 'Awaiting review', ACCEPTED: 'Accepted', RETURNED: 'Returned' }
 export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎', APPOINTMENT: '📅', SMS: '📱', HOLD: '⏸️', ESCALATED: '⬆️', INVESTIGATION: '🔎', SUBCITY_REFERRAL: '🏙️' }
-export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', ACCESS: '🔓', INQUIRY: '💬', INQUIRY_DISPUTED: '⚠️', ESCALATION: '🚨', URGENT: '🔥', SUBMITTED: '📨', ACCEPTED: '✅', RETURNED: '↩️', ESCALATED: '⬆️', INVESTIGATION: '🔎', SUBCITY_REFERRAL: '🏙️', SUBCITY_REPLY: '📄' }
+export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', ACCESS: '🔓', INQUIRY: '💬', INQUIRY_DISPUTED: '⚠️', ESCALATION: '🚨', URGENT: '🔥', SUBMITTED: '📨', ACCEPTED: '✅', RETURNED: '↩️', ESCALATED: '⬆️', INVESTIGATION: '🔎', SUBCITY_REFERRAL: '🏙️', SUBCITY_REPLY: '📄', SUBCITY_SOLVED: '✅' }
 
 export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION', 'SERA_ASKIYAJIE', 'PAPAS'].includes(role)
 export const isDiocese = role => ['ADMIN', 'OFFICER', 'SERA_ASKIYAJIE', 'PAPAS'].includes(role)

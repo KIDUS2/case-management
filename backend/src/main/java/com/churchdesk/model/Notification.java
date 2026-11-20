@@ -13,6 +13,8 @@ public class Notification {
     @Column(columnDefinition = "text") private String body;
     @Column(name = "case_id") private Long caseId;
     @Column(name = "case_code", length = 8) private String caseCode;
+    @Column(nullable = false, length = 10) private String channel = "GENERAL";
+    @Column(name = "sub_city") private String subCity;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
     @Column(name = "read_at") private Instant readAt;
 
@@ -32,4 +34,8 @@ public class Notification {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getReadAt() { return readAt; }
     public void setReadAt(Instant v) { readAt = v; }
+    public String getChannel() { return channel; }
+    public void setChannel(String v) { channel = v; }
+    public String getSubCity() { return subCity; }
+    public void setSubCity(String v) { subCity = v; }
 }

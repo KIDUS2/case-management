@@ -15,6 +15,7 @@ import com.churchdesk.model.AppUser;
 import com.churchdesk.repository.UserRepository;
 import com.churchdesk.security.CurrentUser;
 import com.churchdesk.security.JwtService;
+import com.churchdesk.service.LoginService;
 import com.churchdesk.service.UserService;
 
 @RestController
@@ -25,17 +26,16 @@ public class AuthController {
     private final JwtService jwt;
     private final CurrentUser current;
     private final UserService service;
+    private final LoginService logins;
 
-    public AuthController(UserRepository repo, PasswordEncoder encoder, JwtService jwt, CurrentUser current, UserService service) {
+    public AuthController(UserRepository repo, PasswordEncoder encoder, JwtService jwt, CurrentUser current, UserService service, LoginService logins) {
+        this.logins = logins;
         this.repo = repo; this.encoder = encoder; this.jwt = jwt; this.current = current; this.service = service;
     }
 
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest r) {
-        AppUser u = repo.findByUsername(r.username().trim().toLowerCase())
-                .filter(AppUser::isActive)
-                .filter(x -> encoder.matches(r.password(), x.getPasswordHash()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Wrong username or password"));
+        AppUser u = logins.authenticate(r.username(), r.password());
         return new LoginResponse(jwt.create(u), UserDto.of(u));
     }
 

@@ -95,9 +95,8 @@ public class CaseFlowService {
     /** Tells the administrator and the officers that a sub-city sent a case and it is waiting for them. */
     public void notifySubmitted(ChurchCase c, AppUser actor) {
         events.save(new CaseEvent(c.getId(), null, EventType.NOTE, "Submitted by the " + actor.getSubCity() + " sub-city for review", actor.getUsername()));
-        List<AppUser> who = new ArrayList<>(users.findByRoleAndActiveTrue(Role.ADMIN));
-        who.addAll(users.findByRoleAndActiveTrue(Role.OFFICER));
-        notifier.send(who, "SUBMITTED", "New case from " + actor.getSubCity(),
+        // sub-city news goes on its own channel, addressed to the administrator
+        notifier.sendFromSubCity(users.findByRoleAndActiveTrue(Role.ADMIN), "SUBMITTED", actor.getSubCity(), "🏙️ " + actor.getSubCity() + " sent a new case",
                 "Case " + code(c) + " · " + complainant(c) + " is waiting for your review", c.getId(), c.getCode(), actor.getUsername());
     }
 
@@ -249,6 +248,8 @@ public class CaseFlowService {
         refreshStatus(c);
         events.save(new CaseEvent(c.getId(), null, EventType.RESOLVED,
                 "Solved by the " + actor.getSubCity() + " sub-city and shared with the diocese. " + solution, actor.getUsername()));
+        notifier.sendFromSubCity(users.findByRoleAndActiveTrue(Role.ADMIN), "SUBCITY_SOLVED", actor.getSubCity(), "🏙️ " + actor.getSubCity() + " solved a case",
+                "Case " + code(c) + " · " + complainant(c) + " — " + solution, c.getId(), c.getCode(), actor.getUsername());
     }
 
     /** Only the administrator decides what jumps the queue. */
