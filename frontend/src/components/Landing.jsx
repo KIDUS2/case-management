@@ -19,16 +19,21 @@ export default function Landing({ onLogin, onTrack }) {
       </header>
 
       <section className="lhero">
-        <div className="seal-wrap"><img className="lseal" src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church – Addis Ababa Diocese" /></div>
-        <p className="lkicker">Ethiopian Orthodox Tewahedo Church</p>
-        <h1>Addis Ababa Diocese Case Desk</h1>
-        <p className="lam">የአዲስ አበባ ሀገረ ስብከት የጉዳይ አስተዳደር</p>
-        <p className="llead">One place to receive, follow and close the cases that reach the diocese from its churches.</p>
-        <div className="lcta">
-          <button className="btn lbtn big" onClick={onLogin}>Login to the platform</button>
-          {onTrack && <button className="btn ghost lbtn big" onClick={onTrack}>🔎 Check my case</button>}
-          <a className="btn ghost lbtn" href="#offers">What the platform offers</a>
+        <div className="lhero-in">
+          <div className="lcopy">
+            <p className="lkicker">Ethiopian Orthodox Tewahedo Church</p>
+            <h1>Addis Ababa Diocese Case Desk</h1>
+            <p className="lam">የአዲስ አበባ ሀገረ ስብከት የጉዳይ አስተዳደር</p>
+            <p className="llead">One place to receive, follow and close the cases that reach the diocese from its churches.</p>
+            <div className="lcta">
+              <button className="btn gold lbtn big" onClick={onLogin}>Login to the platform</button>
+              {onTrack && <button className="btn ghost lbtn big" onClick={onTrack}>🔎 Check my case</button>}
+            </div>
+            <a className="lmore" href="#offers">What the platform offers ↓</a>
+          </div>
+          <div className="seal-wrap"><img className="lseal" src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church – Addis Ababa Diocese" /></div>
         </div>
+        <div className="ribbon" />
       </section>
 
       <section className="loffers" id="offers">

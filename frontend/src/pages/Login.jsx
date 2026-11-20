@@ -15,9 +15,16 @@ export default function Login({ onLogin, onBack, onTrack }) {
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
   return (
-    <div className="center loginhero">
+    <div className="center loginhero split">
       <div className="loginprefs"><Prefs /></div>
       {onBack && <button className="loginback" onClick={onBack}>← Home</button>}
+      <div className="lpanel">
+        <img src="/logo.png" alt="" />
+        <h2>Addis Ababa Diocese</h2>
+        <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>
+        <p>Every case from every church, received, followed and closed in one place.</p>
+        <div className="ribbon" />
+      </div>
       <form className="card login" onSubmit={submit}>
         <img className="loginlogo" src="/logo.png" alt="Ethiopian Orthodox Tewahedo Church – Addis Ababa Diocese" />
         <p className="amh">የአዲስ አበባ ሀገረ ስብከት</p>
