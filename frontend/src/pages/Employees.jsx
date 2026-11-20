@@ -269,7 +269,10 @@ function SvcDraft({ items, setItems, churches }) {
   )
 }
 
-function Row({ k, v }) { return v ? <div className="kv"><span>{k}</span><b>{v}</b></div> : null }
+/** One line of the profile. Empty ones still show, with a quick way to fill them in, so nothing is hidden. */
+function Row({ k, v, onEdit }) {
+  return <div className="kv"><span>{t(k)}</span>{v ? <b>{v}</b> : onEdit ? <button type="button" className="kvadd" onClick={onEdit}>＋ {t('Add')}</button> : <i className="kvno">—</i>}</div>
+}
 
 const money = n => (n == null ? '' : Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 }) + ' ' + t('birr'))
 const ROLE = { COMPLAINANT: 'Reported the case', SUBJECT: 'Reported on', BOTH: 'Reported and reported on' }
@@ -334,22 +337,21 @@ function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, o
       </div>
       <div className="cols">
         <div>
-          <div className="card"><h2>Personal</h2>
-            <Row k="First name" v={e.firstName} /><Row k="Middle name" v={e.middleName} /><Row k="Last name" v={e.lastName} />
-            <Row k="Mother’s name" v={e.motherName} />
-            <Row k="Gender" v={e.gender ? (e.gender === 'MALE' ? 'Male' : 'Female') : ''} />
-            <Row k="Date of birth" v={e.birthDate ? fmtDay(e.birthDate) + (age != null ? ` (${age})` : '') : ''} />
-            <Row k="Phone" v={[e.phone, ...(e.extraPhones || [])].filter(Boolean).join(' · ') || (e.phoneExempt ? t('No phone (allowed by admin)') : '')} /><Row k="Email" v={e.email} /><Row k="Address" v={e.address} />
+          <div className="card"><h2 className="cardhead">Personal{canWrite && <button type="button" className="btn ghost sm" onClick={() => onEdit(e)}>✏️ {t('Update')}</button>}</h2>
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="First name" v={e.firstName} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Middle name" v={e.middleName} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Last name" v={e.lastName} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Mother’s name" v={e.motherName} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Gender" v={e.gender ? (e.gender === 'MALE' ? 'Male' : 'Female') : ''} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Date of birth" v={e.birthDate ? fmtDay(e.birthDate) + (age != null ? ` (${age})` : '') : ''} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Phone" v={[e.phone, ...(e.extraPhones || [])].filter(Boolean).join(' · ') || (e.phoneExempt ? t('No phone (allowed by admin)') : '')} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Email" v={e.email} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Address" v={e.address} />
           </div>
-          <div className="card"><h2>Spiritual life</h2>
-            <Row k="Christian name" v={e.christianName} /><Row k="Father confessor" v={e.fatherConfessor} />
-            <Row k="Service" v={SPIRITUAL_RANK[e.spiritualRank] ? t(SPIRITUAL_RANK[e.spiritualRank]) : ''} /><Row k="Ordained on" v={e.ordainedOn ? fmtDay(e.ordainedOn) : ''} />
-            {!e.christianName && !e.fatherConfessor && !e.spiritualRank && <p className="muted">Nothing recorded yet.</p>}
+          <div className="card"><h2 className="cardhead">Spiritual life{canWrite && <button type="button" className="btn ghost sm" onClick={() => onEdit(e)}>✏️ {t('Update')}</button>}</h2>
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Christian name" v={e.christianName} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Father confessor" v={e.fatherConfessor} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Service" v={SPIRITUAL_RANK[e.spiritualRank] ? t(SPIRITUAL_RANK[e.spiritualRank]) : ''} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Ordained on" v={e.ordainedOn ? fmtDay(e.ordainedOn) : ''} />
           </div>
-          <div className="card"><h2>Work</h2>
-            <Row k="Church" v={e.churchName} /><Row k="Working status" v={WORKING[e.workingStatus]} />
-            <Row k="Profession" v={e.profession} /><Row k="Position at the church" v={e.position} />
-            {e.salary != null && <Row k="Monthly salary" v={money(e.salary)} />}<Row k="Hired on" v={e.hireDate ? fmtDay(e.hireDate) : ''} /><Row k="Church’s own number" v={e.churchRef} />
+          <div className="card"><h2 className="cardhead">Work{canWrite && <button type="button" className="btn ghost sm" onClick={() => onEdit(e)}>✏️ {t('Update')}</button>}</h2>
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Church" v={e.churchName} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Working status" v={WORKING[e.workingStatus]} />
+            <Row onEdit={canWrite ? () => onEdit(e) : null} k="Profession" v={e.profession} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Position at the church" v={e.position} />
+            {(e.salary != null || canWrite) && <Row onEdit={canWrite ? () => onEdit(e) : null} k="Monthly salary" v={money(e.salary)} />}<Row onEdit={canWrite ? () => onEdit(e) : null} k="Hired on" v={e.hireDate ? fmtDay(e.hireDate) : ''} /><Row onEdit={canWrite ? () => onEdit(e) : null} k="Church’s own number" v={e.churchRef} />
           </div>
         </div>
         <div>

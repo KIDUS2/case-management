@@ -1066,3 +1066,9 @@ main>.head{margin-bottom:0}main>.head .muted,main>h1+.muted{margin:0 0 6px}
 .spick input[type=search]{max-width:320px;margin-bottom:8px}
 .spick .chips{max-height:150px;overflow:auto;padding:2px}
 .formgrid>*{min-width:0}
+
+/* profile: every field listed, empty ones can be filled in */
+.cardhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.kv .kvno{opacity:.4;font-style:normal}
+.kvadd{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--pri,#1e5a2e);cursor:pointer;opacity:.85}
+.kvadd:hover{text-decoration:underline;opacity:1}
