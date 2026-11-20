@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
+import Journey from '../components/Journey.jsx'
 import Prefs from '../components/Prefs.jsx'
 import { CATEGORY, fmtCode, fmtDay } from '../ui.js'
 
 // Where the case is, in the words a church member would use. Each stage says what is happening and what (if anything) they must do.
-const STAGES = ['Received', 'With the diocese', 'Being handled', 'Finished']
 const HEAD = {
   PENDING: { stage: 0, icon: '📨', tone: 'wait', title: 'We have received your case', text: 'It is waiting for the diocese to look at it. You do not need to do anything now.' },
   OPEN: { stage: 1, icon: '📝', tone: 'wait', title: 'The diocese is looking at your case', text: 'We will send your case to the right department. You do not need to do anything now.' },
@@ -27,9 +27,7 @@ function Result({ c }) {
         </div>
       </header>
       <p className="tlead">{t(h.text)}</p>
-      <ol className="tsteps" aria-label={t('Progress')}>
-        {STAGES.map((s, i) => <li key={s} className={i < h.stage ? 'past' : i === h.stage ? 'now' : ''} aria-current={i === h.stage ? 'step' : undefined}><i>{i < h.stage ? '✓' : i + 1}</i><span>{t(s)}</span></li>)}
-      </ol>
+      <Journey stage={h.stage} />
       {c.appointmentDate && (
         <div className="tappt"><span>📅</span><div><small>{t('Please come to the diocese office')}</small><b>{fmtDay(c.appointmentDate)}</b><small>{t('Your turn number: {n}', { n: c.appointmentSpot })}</small></div></div>
       )}

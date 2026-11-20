@@ -1025,3 +1025,22 @@ main>.head{margin-bottom:0}main>.head .muted,main>h1+.muted{margin:0 0 6px}
 .card.inlineadd>.btn{margin:0 0 0;height:48px;min-height:48px}
 @media(max-width:760px){.card.inlineadd{grid-template-columns:1fr}.card.inlineadd>.btn{margin-top:12px;width:100%}}
 .row .btn.ghost.sm{min-height:34px}
+
+/* case page: breadcrumb, journey in the header, next step, tabs */
+.crumbs{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:var(--mute)}
+.crumbs button{border:0;background:none;color:var(--pri);font:inherit;font-weight:600;cursor:pointer;padding:4px 8px;margin-left:-8px;border-radius:8px}
+.crumbs button:hover{background:var(--soft)}
+.crumbs b{font-family:ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--ink)}
+.tsteps.dark{margin:16px 0 4px;max-width:560px}
+.tsteps.dark li{color:#ffffffb0}.tsteps.dark li.now span{color:#fff}
+.tsteps.dark li::before{background:#ffffff40}
+.tsteps.dark li.past::before,.tsteps.dark li.now::before{background:var(--crown)}
+.tsteps.dark i{background:#ffffff1f;border-color:#ffffff55;color:#fff}
+.tsteps.dark .past i{background:var(--crown);border-color:var(--crown);color:#2b1f05}
+.tsteps.dark .now i{border-color:var(--crown);background:#ffffff1f;color:#fff;box-shadow:0 0 0 5px #d9a93a33}
+.nextstep{margin:12px 0 0;padding:9px 14px;border-radius:10px;background:#ffffff1c;color:#fff;max-width:560px;font-size:.95rem}
+.nextstep b{color:var(--crown)}
+.ctabs{display:flex;margin:2px 0 14px;width:fit-content}
+.ctabs .chip em{font-style:normal;font-size:.76rem;font-weight:800;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.ctabs .chip.on em{background:#ffffff30;color:#fff}
+@media(max-width:700px){.ctabs{width:100%;overflow-x:auto}.ctabs .chip{flex:1 0 auto;white-space:nowrap}}

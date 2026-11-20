@@ -1,4 +1,5 @@
 import Skeleton, { Waiting } from '../components/Skeleton.jsx'
+import Journey, { stageOf } from '../components/Journey.jsx'
 import DateFilter from '../components/DateFilter.jsx'
 import { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 import { useEffect, useState } from 'react'
@@ -585,8 +586,10 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
   const [copied, setCopied] = useState(false)
   const [departments, setDepartments] = useState([])
   const [churches, setChurches] = useState([])
+  const [tab, setTab] = useState('overview')
   const desk = isStaff(me.role) && me.role !== 'DEPARTMENT'
 
+  useEffect(() => { setTab('overview') }, [id])
   useEffect(() => { setC(null); setFatal(''); api('/cases/' + id).then(setC).catch(e => setFatal(e.message)) }, [id])
   useEffect(() => { api('/departments').then(setDepartments).catch(() => {}); api('/churches').then(setChurches).catch(() => {}) }, [])
 
@@ -597,11 +600,22 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
   const resolved = c.issues.filter(i => i.status === 'RESOLVED').length
   const comingBack = c.issues.some(i => i.returnOn && i.status !== 'RESOLVED')
   const setLetter = async issued => { setErr(''); try { setC(await api(`/cases/${c.id}/letter`, { method: 'PUT', body: { issued } })) } catch (x) { setErr(x.message) } }
+  const waiting = c.issues.filter(i => i.status !== 'RESOLVED').length
+  const nextStep = c.reviewStatus === 'PENDING' ? 'Waiting for the diocese to review and accept this case.'
+    : c.status === 'RESOLVED' ? (c.letterIssued || !desk ? 'Everything is finished. Nothing more to do.' : 'Everything is finished. Issue the letter if the person needs one.')
+    : c.status === 'OPEN' ? (desk ? 'Send each issue to the right department.' : 'The desk is deciding where each issue goes.')
+    : waiting === 1 ? 'One issue is still with a department.' : 'Issues are still with departments: {n} to go.'
+  const tabs = [
+    ['overview', '📋', 'Overview', null],
+    ['people', '👥', 'People and access', c.complainants.length + c.subjects.length + (c.involved?.length || 0)],
+    ['files', '📎', 'Files and related', c.files.length + (c.relatedCases?.length || 0)],
+    ['activity', '🕒', 'Activity', c.events?.length || 0],
+  ]
   const arrived = async () => { setErr(''); try { setC(await api(`/cases/${c.id}/arrived`, { method: 'POST' })) } catch (x) { setErr(x.message) } }
 
   return (
     <>
-      <button className="btn ghost back" onClick={onBack}>← All cases</button>
+      <nav className="crumbs" aria-label="Breadcrumb"><button onClick={onBack}>{t('Cases')}</button><span aria-hidden="true">›</span><b>{fmtCode(c.code)}</b></nav>
       {fresh && (
         <div className="fresh">✅ {me.role === 'SUBCITY' ? <><b>{t('Case submitted.')}</b> {t('The diocese will review it. Keep this code to follow it.')}</> : <><b>Case registered.</b> Give this code to the person. They can quote it when they come back, and staff can type it to find the case at once.</>}
           {fresh.failed?.length > 0 && <div className="warn" style={{ marginTop: 6 }}>⚠️ {t('These files could not be uploaded: {f}. Add them again below.', { f: fresh.failed.join(', ') })}</div>}
@@ -619,6 +633,8 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
           <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</div>
           <div className="onhero" style={{ marginTop: 6 }}>{t('{a} of {b} issues resolved', { a: resolved, b: c.issues.length })}</div>
           <div className="progress"><i style={{ width: (c.issues.length ? (resolved / c.issues.length) * 100 : 0) + '%' }} /></div>
+          <Journey stage={stageOf(c.status, c.reviewStatus === 'PENDING')} dark />
+          <p className="nextstep">➜ <b>{t('Next step')}:</b> {t(nextStep, { n: waiting })}</p>
         </div>
         <div className="heroside">
           <span className="badge light">{st.icon} {st.label}</span>
@@ -627,41 +643,71 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
         </div>
       </div>
 
-      <div className="cols">
-        <div>
-          <div className="card">
-            <h2>Issues <span className="count">{c.issues.length}</span> <small className="inl">each issue is a sub-case with its own status, department and files</small></h2>
-            {c.issues.map((i, k) => <IssueCard key={i.id} i={i} k={k} c={c} me={me} departments={departments} onChange={setC} setErr={setErr} />)}
-            {desk && <AddIssue c={c} departments={departments} onChange={setC} setErr={setErr} />}
-          </div>
-          <div className="card">
-            <h2>Discussion notes</h2>
-            <p className="notes">{c.discussionNotes || <span className="muted">No notes were written.</span>}</p>
-            <span className={'pill ' + (c.letterIssued ? 'yes' : 'no')}>{c.letterIssued ? '✉️ Letter issued' : '✉️ Letter not issued yet'}</span>
-            {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
-            <small style={{ marginTop: 12 }}>{t('Registered {d} by @{u}', { d: fmtDate(c.createdAt), u: c.createdBy })}</small>
-          </div>
-          {me.role !== 'SUBCITY' && <ChurchLoop c={c} me={me} setErr={setErr} onChanged={() => api('/cases/' + c.id).then(setC).catch(() => {})} />}
-          <Timeline c={c} onChange={setC} setErr={setErr} />
-        </div>
-        <div>
-          <div className="card">
-            <h2>{c.complainants.length > 1 ? t('Reported by a group ({n})', { n: c.complainants.length }) : t('Reported by')}</h2>
-            {c.complainants.map(p => <PersonRow key={p.id} p={p} />)}
-          </div>
-          <div className="card">
-            <h2>Who it is about</h2>
-            {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
-            {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
-          </div>
-          {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
-          {me.role !== 'RECEPTION' && <InvestigationCard c={c} me={me} setErr={setErr} />}
-          {c.reviewStatus !== 'PENDING' && <SubcityCard c={c} me={me} setErr={setErr} />}
-          {me.role !== 'SUBCITY' && <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />}
-          <Files c={c} me={me} onChange={setC} setErr={setErr} />
-          {me.role !== 'SUBCITY' && <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />}
-        </div>
+      <div className="tabs ctabs" role="tablist">
+        {tabs.map(([k, icon, label, n]) => <button key={k} role="tab" aria-selected={tab === k} className={'chip' + (tab === k ? ' on' : '')} onClick={() => setTab(k)}>{icon} {t(label)}{n ? <em>{n}</em> : null}</button>)}
       </div>
+
+      {tab === 'overview' && (
+        <div className="cols">
+          <div>
+            <div className="card">
+              <h2>Issues <span className="count">{c.issues.length}</span> <small className="inl">each issue is a sub-case with its own status, department and files</small></h2>
+              {c.issues.map((i, k) => <IssueCard key={i.id} i={i} k={k} c={c} me={me} departments={departments} onChange={setC} setErr={setErr} />)}
+              {desk && <AddIssue c={c} departments={departments} onChange={setC} setErr={setErr} />}
+            </div>
+            <div className="card">
+              <h2>Discussion notes</h2>
+              <p className="notes">{c.discussionNotes || <span className="muted">No notes were written.</span>}</p>
+              <span className={'pill ' + (c.letterIssued ? 'yes' : 'no')}>{c.letterIssued ? '✉️ Letter issued' : '✉️ Letter not issued yet'}</span>
+              {desk && <button className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => setLetter(!c.letterIssued)}>{c.letterIssued ? 'Undo' : 'Mark as issued'}</button>}
+              <small style={{ marginTop: 12 }}>{t('Registered {d} by @{u}', { d: fmtDate(c.createdAt), u: c.createdBy })}</small>
+            </div>
+            {me.role !== 'SUBCITY' && <ChurchLoop c={c} me={me} setErr={setErr} onChanged={() => api('/cases/' + c.id).then(setC).catch(() => {})} />}
+          </div>
+          <div>
+            <div className="card">
+              <h2>{c.complainants.length > 1 ? t('Reported by a group ({n})', { n: c.complainants.length }) : t('Reported by')}</h2>
+              {c.complainants.map(p => <PersonRow key={p.id} p={p} />)}
+            </div>
+            <div className="card">
+              <h2>Who it is about</h2>
+              {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
+              {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
+            </div>
+            {me.role !== 'RECEPTION' && <InvestigationCard c={c} me={me} setErr={setErr} />}
+            {c.reviewStatus !== 'PENDING' && <SubcityCard c={c} me={me} setErr={setErr} />}
+          </div>
+        </div>
+      )}
+
+      {tab === 'people' && (
+        <div className="cols">
+          <div>
+            <div className="card">
+              <h2>{c.complainants.length > 1 ? t('Reported by a group ({n})', { n: c.complainants.length }) : t('Reported by')}</h2>
+              {c.complainants.map(p => <PersonRow key={p.id} p={p} />)}
+            </div>
+            <div className="card">
+              <h2>Who it is about</h2>
+              {c.subjects.length === 0 && <p className="muted">No one in particular. This is a request or general matter.</p>}
+              {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
+            </div>
+          </div>
+          <div>
+            {me.role !== 'SUBCITY' && <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />}
+            {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
+          </div>
+        </div>
+      )}
+
+      {tab === 'files' && (
+        <div className="cols">
+          <div><Files c={c} me={me} onChange={setC} setErr={setErr} /></div>
+          <div>{me.role !== 'SUBCITY' && <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />}</div>
+        </div>
+      )}
+
+      {tab === 'activity' && <Timeline c={c} onChange={setC} setErr={setErr} />}
     </>
   )
 }
