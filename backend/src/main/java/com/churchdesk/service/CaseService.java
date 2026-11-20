@@ -83,11 +83,14 @@ public class CaseService {
     private final AccessService access;
     private final com.churchdesk.service.OptionService options;
     private final CaseLinkRepository linkRepo;
+    private final SmsService sms;
+    private final AppointmentService appointments;
     private final SecureRandom random = new SecureRandom();
 
     public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
                        DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
-                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo, com.churchdesk.service.OptionService options) {
+                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo, com.churchdesk.service.OptionService options, SmsService sms, AppointmentService appointments) {
+        this.sms = sms; this.appointments = appointments;
         this.options = options;
         this.linkRepo = linkRepo;
         this.cases = cases; this.partyRepo = partyRepo; this.persons = persons; this.churches = churches;
@@ -96,7 +99,12 @@ public class CaseService {
 
     /** The desk registers a case: it is accepted from the start. */
     @Transactional
-    public CaseDetail create(CreateCaseRequest r, AppUser actor) { return createCase(r, actor, ReviewStatus.ACCEPTED); }
+    public CaseDetail create(CreateCaseRequest r, AppUser actor) {
+        CaseDetail d = createCase(r, actor, ReviewStatus.ACCEPTED);
+        ChurchCase c = cases.findById(d.id()).orElseThrow();
+        sms.sendCaseNumber(c, actor.getUsername()); // never fails the registration; see SmsService
+        return toDetail(c);
+    }
 
     /**
      * A sub-city office submits a case. Every person must belong to a church of its own sub-city, nothing is sent to a
@@ -167,6 +175,9 @@ public class CaseService {
         Person person = typed == null ? null : findByAnyId(typed);
         if (person == null) person = persons.findFirstByFullNameIgnoreCaseAndChurchId(name, church.getId()).orElseGet(Person::new);
         if (typed != null && person.getId() == null && !EmployeeIds.looksLikeId(typed)) person.setChurchRef(typed);
+        String sebeka = blankToNull(in.sebekaGubayeNo());
+        if (sebeka != null) person.setSebekaGubayeNo(sebeka);
+        if (role == PartyRole.COMPLAINANT) requireIdNumber(person, in, typed, name);
         person.setFullName(name);
         if (person.getFirstName() == null) person.splitFullName();
         person.setChurch(church);
@@ -190,6 +201,19 @@ public class CaseService {
         p.setInvolvement(blankToNull(in.involvement()));
         c.getParties().add(p);
         return order + 1;
+    }
+
+    /**
+     * The person who brings the case must tell us who they are: an employee gives their Employee ID, everyone else
+     * their Sebeka Gubaye number. Nothing is asked again if we already hold it from an earlier case.
+     */
+    private static void requireIdNumber(Person person, PartyIn in, String typedEmployeeId, String name) {
+        if (in.workingStatus() == WorkingStatus.CHURCH_MEMBER) {
+            if (person.getSebekaGubayeNo() == null)
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the Sebeka Gubaye number of " + name + ".");
+        } else if (typedEmployeeId == null && person.getEmployeeId() == null && person.getChurchRef() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the Employee ID of " + name + ".");
+        }
     }
 
     private String newCode() {
@@ -262,7 +286,7 @@ public class CaseService {
             out.add(new QueueItem(c.getId(), c.getCode(), when, who.stream().map(Person::getFullName).toList(),
                     who.isEmpty() ? "" : who.get(0).getChurch().getName(),
                     list.stream().map(i -> i.getDepartment() == null ? null : i.getDepartment().getName()).filter(n -> n != null).distinct().toList(),
-                    list.size()));
+                    list.size(), appointments.spotFor(c.getId(), when)));
         }
         out.sort((a, b) -> a.returnOn().compareTo(b.returnOn()));
         return out;

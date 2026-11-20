@@ -28,7 +28,7 @@ const NAV = [
   { key: 'dashboard', icon: '📊', label: 'Dashboard', roles: ['ADMIN'] },
   { key: 'summary', icon: '🗂️', label: 'Summary', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
   { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER'] },
-  { key: 'queue', icon: '🚪', label: 'Door queue', roles: DESK },
+  { key: 'queue', icon: '🚪', label: 'Appointments', roles: DESK },
   { key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
   { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
   { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], badge: true },

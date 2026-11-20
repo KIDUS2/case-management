@@ -9,7 +9,7 @@ export const locale = () => (getLang() === 'am' ? 'am-ET' : undefined)
 
 const AM = {
   // navigation and general
-  'Dashboard': 'ዳሽቦርድ', 'Department inbox': 'የመምሪያ ገቢ ጉዳዮች', 'Door queue': 'የበር ወረፋ', 'Register case': 'ጉዳይ መዝግብ',
+  'Dashboard': 'ዳሽቦርድ', 'Department inbox': 'የመምሪያ ገቢ ጉዳዮች', 'Door queue': 'ቀጠሮዎች', 'Register case': 'ጉዳይ መዝግብ',
   'All cases': 'ሁሉም ጉዳዮች', 'Notifications': 'ማሳወቂያዎች', 'Churches': 'አብያተ ክርስቲያናት', 'Departments': 'መምሪያዎች',
   'Users': 'ተጠቃሚዎች', 'My account': 'የእኔ መለያ', 'Log out': 'ውጣ', 'Cases': 'ጉዳዮች', 'Case Desk': 'የጉዳይ ጠረጴዛ',
   'Loading…': 'በመጫን ላይ…', 'Cancel': 'ተው', 'Save': 'አስቀምጥ', 'Edit': 'አስተካክል', 'Remove': 'አስወግድ', 'Open': 'ክፈት',
@@ -49,7 +49,7 @@ const AM = {
   'Department': 'መምሪያ', 'Choose…': 'ይምረጡ…', 'Person comes back on': 'ሰውየው የሚመለሱበት ቀን', 'Note for the department (optional)': 'ለመምሪያው የሚሆን ማስታወሻ (አማራጭ)',
   'Send now': 'አሁን ላክ', 'Sending…': 'በመላክ ላይ…', 'The department is notified straight away, and the person will show in the door queue on that day.': 'መምሪያው ወዲያውኑ ይነገረዋል፤ ሰውየውም በዚያ ቀን በበር ወረፋ ውስጥ ይታያል።',
   'What was done? (the desk and admin are notified)': 'ምን ተደረገ? (ጠረጴዛውና አስተዳዳሪው ይነገራቸዋል)', 'What was done? (this is sent to the desk)': 'ምን ተደረገ? (ይህ ለጠረጴዛው ይላካል)',
-  'Attach the paper or proof (optional)': 'ወረቀቱን ወይም ማስረጃውን ያያይዙ (አማራጭ)', 'Confirm resolved': 'መፈታቱን አረጋግጥ', 'Saving…': 'በማስቀመጥ ላይ…',
+  'Attach the paper or proof (optional)': 'ወረቀቱን ወይም ማስረጃውን ያያይዙ (አማራጭ)', 'Confirm resolved': 'መፈታቱን አረጋግጥ',
   'Court details (optional)': 'የፍርድ ቤት ዝርዝር (አማራጭ)', 'Court, case number, next hearing…': 'ፍርድ ቤት፣ የመዝገብ ቁጥር፣ ቀጣይ ቀጠሮ…', 'Mark as in court': 'በፍርድ ቤት እንዳለ ምልክት አድርግ',
   'The admin is notified and must acknowledge it.': 'አስተዳዳሪው ይነገረዋል፤ ማረጋገጥም አለበት።',
   'Discussion notes': 'የውይይት ማስታወሻ', 'No notes were written.': 'ምንም ማስታወሻ አልተጻፈም።', 'Letter issued': 'ደብዳቤ ተሰጥቷል', 'Letter not issued yet': 'ደብዳቤ ገና አልተሰጠም',
@@ -170,6 +170,7 @@ const AM = {
   'This account can submit and follow cases for churches of this sub-city only.': 'ይህ መለያ የዚህን ክፍለ ከተማ አብያተ ክርስቲያናት ጉዳዮች ብቻ ማስገባትና መከታተል ይችላል።',
   'Show password': 'የይለፍ ቃል አሳይ',
   'Hide password': 'የይለፍ ቃል ደብቅ',
+  'Appointments': 'ቀጠሮዎች', 'Appointment day': 'የቀጠሮ ቀን', 'Closed': 'ዝግ', 'Full': 'ሞልቷል', '{n} spots left': '{n} ቦታ ቀርቷል', 'A numbered spot on this day is given when you save.': 'ሲያስቀምጡ በዚህ ቀን ቁጥር ያለው ቦታ ይሰጣል።', 'There are no free appointment spots in the next 4 weeks. Ask the administrator to add more spots.': 'በሚቀጥሉት 4 ሳምንታት ነፃ የቀጠሮ ቦታ የለም። አስተዳዳሪውን ተጨማሪ ቦታ እንዲጨምር ይጠይቁ።', 'People who were given an appointment. Mark them “Arrived” when they reach the door.': 'ቀጠሮ የተሰጣቸው ሰዎች። በሩ ላይ ሲደርሱ “መጥቷል” ብለው ያመልክቱ።', 'There are no appointments right now.': 'አሁን ምንም ቀጠሮ የለም።', 'Spot number': 'የቦታ ቁጥር', 'Sebeka Gubaye number': 'የሰበካ ጉባኤ ቁጥር', 'Number on the Sebeka Gubaye card': 'በሰበካ ጉባኤ ካርድ ላይ ያለ ቁጥር', 'Asked for people who are not employees.': 'ሠራተኛ ላልሆኑ ሰዎች ይጠየቃል።', '{x}: please enter the Sebeka Gubaye number.': '{x}፦ እባክዎ የሰበካ ጉባኤ ቁጥር ያስገቡ።', '{x}: please enter the Employee ID.': '{x}፦ እባክዎ የሠራተኛ መታወቂያ ቁጥር ያስገቡ።', 'Text message sent.': 'የጽሑፍ መልእክት ተልኳል።', 'The last text could not be sent.': 'የመጨረሻው የጽሑፍ መልእክት መላክ አልተቻለም።', 'Text prepared (SMS sending is not switched on yet).': 'መልእክቱ ተዘጋጅቷል (የSMS መላክ ገና አልተከፈተም)።', 'Case number sent by text.': 'የጉዳይ ቁጥሩ በጽሑፍ መልእክት ተልኳል።', 'No text message sent yet.': 'ገና የጽሑፍ መልእክት አልተላከም።', 'Send the text again': 'መልእክቱን እንደገና ላክ', 'Appointments and text messages': 'ቀጠሮዎችና የጽሑፍ መልእክቶች', 'Each day has a fixed number of spots. When they are all taken, nobody else can be booked on that day.': 'እያንዳንዱ ቀን የተወሰነ የቦታ ብዛት አለው። ሁሉም ሲያልቅ በዚያ ቀን ሌላ ሰው መመዝገብ አይቻልም።', 'Spots per day': 'በቀን የቦታ ብዛት', 'Days we give appointments': 'ቀጠሮ የምንሰጥባቸው ቀናት', 'Language of the text message': 'የመልእክቱ ቋንቋ', 'Amharic and English': 'አማርኛና እንግሊዝኛ', 'Amharic only': 'አማርኛ ብቻ', 'English only': 'እንግሊዝኛ ብቻ', 'Text messages are sent through the SMS provider.': 'መልእክቶች በSMS አቅራቢው በኩል ይላካሉ።', 'Text messages are not sent yet: they are only written to the server log. Ask the developer to switch on the SMS provider (Ethio Telecom) in the server settings.': 'መልእክቶች ገና አይላኩም፤ በአገልጋዩ መዝገብ ብቻ ይጻፋሉ። ገንቢውን በአገልጋዩ ቅንብር የSMS አቅራቢውን (ኢትዮ ቴሌኮም) እንዲከፍት ይጠይቁ።', 'Mon': 'ሰኞ', 'Tue': 'ማክሰኞ', 'Wed': 'ረቡዕ', 'Thu': 'ሐሙስ', 'Fri': 'ዓርብ', 'Sat': 'ቅዳሜ', 'Sun': 'እሑድ',
   'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
   'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
   'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',

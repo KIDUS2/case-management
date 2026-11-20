@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
+import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { CATEGORY, catOptions, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
-const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status })
+const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status, sebekaGubayeNo: '' })
 
 function Chips({ options, value, onChange }) {
   return <div className="chips">{Object.entries(options).map(([k, v]) =>
     <button type="button" key={k} className={'chip' + (value === k ? ' on' : '')} onClick={() => onChange(k)}>{v}</button>)}</div>
 }
 
-function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub }) {
+function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub, needId }) {
   const [matches, setMatches] = useState([])
   const set = patch => onChange({ ...party, ...patch })
 
@@ -58,10 +59,17 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
           <b>{m.fullName}</b><span>{[m.employeeId && fmtId(m.employeeId), m.churchName, m.phone].filter(Boolean).join(' · ')}</span>
         </button>)}</div>}
       {q.trim().length >= 3 && hits.length === 0 && <small className="muted">{t('No one found. Fill in the details below to add a new person.')}</small>}
-      {!sub && <><label>{t('Employee ID (12 digits) or the church’s own number')}</label>
+      {party.workingStatus === 'CHURCH_MEMBER' ? <>
+        <label>{t('Sebeka Gubaye number')}{needId && <span className="req"> *</span>}</label>
+        <input value={party.sebekaGubayeNo || ''} onChange={e => set({ sebekaGubayeNo: e.target.value })} maxLength={40} required={!!needId} placeholder={t('Number on the Sebeka Gubaye card')} />
+        <small className="muted">{t('Asked for people who are not employees.')}</small></>
+      : sub ? <>
+        <label>{t('Employee ID')}{needId && <span className="req"> *</span>}</label>
+        <input value={party.employeeId} onChange={e => set({ employeeId: e.target.value })} maxLength={40} required={!!needId} placeholder="0000 0000 0000" autoCapitalize="characters" /></>
+      : <><label>{t('Employee ID (12 digits) or the church’s own number')}{needId && <span className="req"> *</span>}</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" />
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" required={!!needId} />
         <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
       </div></>}
       {found && <div className="banner"><b>✅ {t('Employee found')} 🪪 {fmtId(found.employeeId)}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: found.fullName, b: found.churchName, c: found.totalCases, d: found.openCases })}
@@ -121,11 +129,13 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const setIssue = (i, patch) => setIssues(l => l.map((x, k) => (k === i ? { ...x, ...patch } : x)))
   const findChurch = name => churches.find(c => c.name.toLowerCase() === name.trim().toLowerCase())
 
-  const toPayload = (p, label) => {
+  const toPayload = (p, label, needId) => {
+    if (needId && p.workingStatus === 'CHURCH_MEMBER' && !(p.sebekaGubayeNo || '').trim()) throw new Error(t('{x}: please enter the Sebeka Gubaye number.', { x: label }))
+    if (needId && p.workingStatus !== 'CHURCH_MEMBER' && !p.employeeId.trim()) throw new Error(t('{x}: please enter the Employee ID.', { x: label }))
     const church = findChurch(p.churchName)
     if (!church) throw new Error(t('{x}: please choose the church from the list (start typing its name).', { x: label }))
     if (!p.phoneExempt && !p.phone.trim()) throw new Error(t('{x}: please enter a phone number.', { x: label }))
-    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.employeeId.trim() || null }
+    return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.workingStatus === 'CHURCH_MEMBER' ? null : p.employeeId.trim() || null, sebekaGubayeNo: p.workingStatus === 'CHURCH_MEMBER' ? (p.sebekaGubayeNo || '').trim() || null : null }
   }
 
   const submit = async e => {
@@ -133,7 +143,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
     try {
       const comp = complainants.map((p, i) => {
         if (!p.fullName.trim()) throw new Error(t('{x}: please enter the name.', { x: t('Person {n} reporting', { n: i + 1 }) }))
-        return toPayload(p, t('Person {n} reporting', { n: i + 1 }))
+        return toPayload(p, t('Person {n} reporting', { n: i + 1 }), true)
       })
       const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 })))
       const bad = issues.findIndex(i => i.category !== 'UNCLEAR' && !i.description.trim())
@@ -165,7 +175,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">1</span>Who is reporting?</h2>
         <p className="hint">One employee, a group of employees asking together, or a church member who is not an employee. Add everyone who came.</p>
         {complainants.map((p, i) => (
-          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} autoFocus={i === 0}
+          <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus={i === 0}
             onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setComplainants(l => [...l, blankParty(l[0]?.workingStatus)])}>➕ Add another person (group)</button>
@@ -198,7 +208,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
                     <option value="">Keep with the desk for now</option>
                     {departments.map(d => <option key={d.id} value={d.id}>{d.name}{d.handlesCategory === it.category ? ' ★' : ''}</option>)}
                   </select></div>
-                {it.departmentId && <div><label>Person comes back on</label><input type="date" min={todayStr()} value={it.returnOn} onChange={e => setIssue(i, { returnOn: e.target.value })} /></div>}
+                {it.departmentId && <div style={{ gridColumn: '1 / -1' }}><label>{t('Appointment day')}</label><AppointmentPicker value={it.returnOn} onChange={v => setIssue(i, { returnOn: v })} /></div>}
               </div>
             )}
           </div>

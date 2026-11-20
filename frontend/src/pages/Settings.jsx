@@ -65,6 +65,40 @@ function ListEditor({ title, hint, list, kind, withIcon, onChange, setErr, setOk
   )
 }
 
+const WEEK = [['MON', 'Mon'], ['TUE', 'Tue'], ['WED', 'Wed'], ['THU', 'Thu'], ['FRI', 'Fri'], ['SAT', 'Sat'], ['SUN', 'Sun']]
+
+/** How many appointment spots each day has, which days we work, and the language of the text message. */
+function AppointmentSettings({ setErr, setOk }) {
+  const [f, setF] = useState(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { api('/appointments/settings').then(setF).catch(e => setErr(e.message)) }, [])
+  if (!f) return null
+  const toggle = d => setF({ ...f, openDays: f.openDays.includes(d) ? f.openDays.filter(x => x !== d) : [...f.openDays, d] })
+  const save = async e => {
+    e.preventDefault(); setErr(''); setOk(''); setBusy(true)
+    try { setF(await api('/appointments/settings', { method: 'PUT', body: { capacity: Number(f.capacity), openDays: f.openDays, smsLanguage: f.smsLanguage } })); setOk(t('Saved')) }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <form className="card apset" onSubmit={save}>
+      <h2>📅 {t('Appointments and text messages')}</h2>
+      <p className="hint">{t('Each day has a fixed number of spots. When they are all taken, nobody else can be booked on that day.')}</p>
+      <label>{t('Spots per day')}</label>
+      <input type="number" min={1} max={500} value={f.capacity} onChange={e => setF({ ...f, capacity: e.target.value })} required style={{ maxWidth: 140 }} />
+      <label>{t('Days we give appointments')}</label>
+      <div className="chips">{WEEK.map(([k, v]) => <button type="button" key={k} className={'chip' + (f.openDays.includes(k) ? ' on' : '')} onClick={() => toggle(k)}>{t(v)}</button>)}</div>
+      <label>{t('Language of the text message')}</label>
+      <select value={f.smsLanguage} onChange={e => setF({ ...f, smsLanguage: e.target.value })} style={{ maxWidth: 260 }}>
+        <option value="BOTH">{t('Amharic and English')}</option><option value="AM">{t('Amharic only')}</option><option value="EN">{t('English only')}</option>
+      </select>
+      <div className={'banner' + (f.smsMode === 'http' ? '' : ' warn')} style={{ marginTop: 12 }}>
+        {f.smsMode === 'http' ? '✅ ' + t('Text messages are sent through the SMS provider.') : '⚠️ ' + t('Text messages are not sent yet: they are only written to the server log. Ask the developer to switch on the SMS provider (Ethio Telecom) in the server settings.')}
+      </div>
+      <div className="iact"><button className="btn" disabled={busy || f.openDays.length === 0}>{busy ? t('Saving…') : t('Save')}</button></div>
+    </form>
+  )
+}
+
 /** The dropdown lists used across the app. A change here shows up in every form and report. */
 export default function Settings() {
   const [lists, setLists] = useState(null)
@@ -79,6 +113,7 @@ export default function Settings() {
       <h1>{t('Settings')}</h1>
       <p className="muted">{t('These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.')}</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
+      <AppointmentSettings setErr={setErr} setOk={setOk} />
       {lists && (
         <div className="cols">
           <ListEditor kind="ISSUE_TYPE" withIcon title={t('Types of issue')} hint={t('Shown when registering a case or a sub-case, and when choosing what a department handles.')}

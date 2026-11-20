@@ -4,6 +4,7 @@ import { api, upload, download } from '../api.js'
 import { t } from '../i18n.js'
 import ChurchLoop from '../components/ChurchLoop.jsx'
 import IssueFlags from '../components/IssueFlags.jsx'
+import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
@@ -82,6 +83,28 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
         </div>
       )}
     </>
+  )
+}
+
+/** The text message with the case number: staff can see what was sent and send it again. */
+function SmsRow({ c, me, setErr }) {
+  const [items, setItems] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [ok, setOk] = useState('')
+  const load = () => api(`/cases/${c.id}/sms`).then(setItems).catch(() => setItems([]))
+  useEffect(() => { load() }, [c.id])
+  if (!isStaff(me.role)) return null
+  const again = async () => {
+    setBusy(true); setOk(''); setErr('')
+    try { await api(`/cases/${c.id}/sms`, { method: 'POST' }); setOk(t('Text message sent.')); await load() } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  const last = items && items[0]
+  return (
+    <div className="smsrow">
+      <span>📱 {last ? (last.status === 'FAILED' ? t('The last text could not be sent.') : last.status === 'LOGGED' ? t('Text prepared (SMS sending is not switched on yet).') : t('Case number sent by text.')) : t('No text message sent yet.')}</span>
+      <button className="btn ghost sm" disabled={busy} onClick={again}>{busy ? t('Sending…') : t('Send the text again')}</button>
+      {ok && <small className="ok">{ok}</small>}
+    </div>
   )
 }
 
@@ -226,13 +249,14 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
                   <option value="">Choose…</option>
                   {departments.filter(x => x.active).map(x => <option key={x.id} value={x.id}>{t('{x}{s}', { x: x.name, s: x.id === suggested?.id ? ' ★ suggested' : '' })}</option>)}
                 </select></div>
-              <div><label>Person comes back on</label><input type="date" min={todayStr()} value={ret} onChange={e => setRet(e.target.value)} /></div>
-            </div>
+              </div>
+            <label>{t('Appointment day')}</label>
+            <AppointmentPicker value={ret} onChange={setRet} />
             <label>Note for the department (optional)</label>
             <textarea rows={2} value={note} maxLength={2000} onChange={e => setNote(e.target.value)} />
             <div className="iact"><button className="btn sm" disabled={busy || !dept} onClick={() => run('refer', { departmentId: Number(dept), returnOn: ret || null, note })}>{busy ? 'Sending…' : '📤 Send now'}</button>
               <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
-            <small>The department is notified straight away, and the person will show in the door queue on that day.</small>
+            <small>The department is notified straight away. The person gets an appointment spot on that day and a text message.</small>
           </div>
         )}
         {panel === 'resolve' && (
@@ -382,7 +406,7 @@ function AddIssue({ c, departments, onChange, setErr }) {
               <option value="">Keep with the desk for now</option>
               {departments.filter(d => d.active).map(d => <option key={d.id} value={d.id}>{d.name}{d.handlesCategory === cat ? ' ★' : ''}</option>)}
             </select></div>
-          {dept && <div><label>Person comes back on</label><input type="date" min={todayStr()} value={ret} onChange={e => setRet(e.target.value)} /></div>}
+          {dept && <div style={{ gridColumn: '1 / -1' }}><label>{t('Appointment day')}</label><AppointmentPicker value={ret} onChange={setRet} /></div>}
         </div>
       )}
       <div className="iact"><button className="btn sm" disabled={busy}>💾 Add sub-case</button><button type="button" className="btn ghost sm" onClick={() => setOpen(false)}>Cancel</button></div>
@@ -517,6 +541,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
       )}
       {err && <div className="err">{err}</div>}
       <ReviewBanner c={c} me={me} onChange={setC} setErr={setErr} />
+      {c.reviewStatus !== 'PENDING' && <SmsRow c={c} me={me} setErr={setErr} />}
       <div className={'hero-card ' + st.cls}>
         <div className="grow">
           <small className="onhero">Case code</small>

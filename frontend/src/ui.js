@@ -32,7 +32,7 @@ export const WORKING = {
 }
 export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff', SUBCITY: 'Sub-city office' }
 export const REVIEW = { PENDING: 'Awaiting review', ACCEPTED: 'Accepted', RETURNED: 'Returned' }
-export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎' }
+export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎', APPOINTMENT: '📅', SMS: '📱' }
 export const NOTE_ICON = { REFERRED: '📥', RESOLVED: '✅', COURT: '⚖️', ACCESS: '🔓', INQUIRY: '💬', INQUIRY_DISPUTED: '⚠️', ESCALATION: '🚨', URGENT: '🔥', SUBMITTED: '📨', ACCEPTED: '✅', RETURNED: '↩️' }
 
 export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION'].includes(role)

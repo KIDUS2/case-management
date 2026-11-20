@@ -14,6 +14,7 @@ import com.churchdesk.enums.IssueStatus;
 import com.churchdesk.enums.PartyRole;
 import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
+import com.churchdesk.model.Appointment;
 import com.churchdesk.model.AppUser;
 import com.churchdesk.model.CaseEvent;
 import com.churchdesk.model.CaseIssue;
@@ -39,9 +40,13 @@ public class CaseFlowService {
     private final AccessService access;
     private final com.churchdesk.service.OptionService options;
     private final CaseIssueRepository issueRepo;
+    private final AppointmentService appointments;
+    private final SmsService sms;
 
     public CaseFlowService(ChurchCaseRepository cases, CaseEventRepository events, DepartmentRepository departments,
-                           UserRepository users, NotificationService notifier, AccessService access, CaseIssueRepository issueRepo, com.churchdesk.service.OptionService options) {
+                           UserRepository users, NotificationService notifier, AccessService access, CaseIssueRepository issueRepo, com.churchdesk.service.OptionService options,
+                           AppointmentService appointments, SmsService sms) {
+        this.appointments = appointments; this.sms = sms;
         this.options = options; this.issueRepo = issueRepo; this.cases = cases; this.events = events; this.departments = departments; this.users = users; this.notifier = notifier; this.access = access;
     }
 
@@ -57,10 +62,20 @@ public class CaseFlowService {
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
         if (returnOn != null && returnOn.isBefore(Times.today()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The return date cannot be in the past");
+        LocalDate previous = i.getReturnOn();
         i.setDepartment(d);
         i.setStatus(IssueStatus.REFERRED);
         i.setReferredAt(Instant.now());
         i.setReturnOn(returnOn);
+        // an appointment takes one of the day's limited spots; a new date frees the old one
+        if (previous != null && !previous.equals(returnOn)
+                && c.getIssues().stream().noneMatch(o -> o != i && o.getStatus() != IssueStatus.RESOLVED && previous.equals(o.getReturnOn())))
+            appointments.cancelDay(c.getId(), previous);
+        if (returnOn != null) {
+            Appointment ap = appointments.book(c.getId(), returnOn, actor.getUsername());
+            events.save(new CaseEvent(c.getId(), i.getId(), EventType.APPOINTMENT,
+                    "Appointment on " + returnOn + ", spot " + ap.getSpotNo(), actor.getUsername()));
+        }
         i.setEscalationLevel(0); i.setEscalatedAt(null);
         i.setResolvedAt(null); i.setResolvedBy(null); i.setResolutionNote(null);
 
@@ -121,6 +136,7 @@ public class CaseFlowService {
         CaseIssue i = issue(c, issueId);
         Department d = departments.findById(departmentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department not found"));
         applyReferral(c, i, d, returnOn, note, actor);
+        if (returnOn != null) sms.sendCaseNumber(c, actor.getUsername());
     }
 
     @Transactional
@@ -214,6 +230,7 @@ public class CaseFlowService {
         ChurchCase c = load(caseId);
         access.assertCanView(c, actor);
         for (CaseIssue i : c.getIssues()) if (i.getStatus() != IssueStatus.RESOLVED) i.setReturnOn(null);
+        appointments.markArrived(c.getId());
         events.save(new CaseEvent(c.getId(), null, EventType.ARRIVED, "Person came back to the door", actor.getUsername()));
     }
 

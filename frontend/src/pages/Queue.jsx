@@ -4,14 +4,14 @@ import { t } from '../i18n.js'
 import { dayDiff, fmtCode, fmtDay, initial, names } from '../ui.js'
 
 const GROUPS = [
-  { key: 'late', title: '⏰ Overdue', hint: 'Should have come already', test: d => d < 0, cls: 'late' },
-  { key: 'today', title: '📍 Today', hint: 'Expected at the door today', test: d => d === 0, cls: 'today' },
+  { key: 'late', title: '⏰ Overdue', hint: 'Did not come on their day', test: d => d < 0, cls: 'late' },
+  { key: 'today', title: '📍 Today', hint: 'Appointments for today', test: d => d === 0, cls: 'today' },
   { key: 'tomorrow', title: 'Tomorrow', test: d => d === 1, cls: '' },
   { key: 'week', title: 'This week', test: d => d >= 2 && d <= 7, cls: '' },
   { key: 'later', title: 'Later', test: d => d > 7, cls: '' },
 ]
 
-/** People who were sent to a department and asked to come back. Door staff recognise them here. */
+/** The appointment book: who is coming, on which day, with which spot number. */
 export default function Queue({ onOpen, goNew }) {
   const [items, setItems] = useState(null)
   const [err, setErr] = useState('')
@@ -31,12 +31,12 @@ export default function Queue({ onOpen, goNew }) {
 
   return (
     <>
-      <div className="head"><div><h1>Door queue</h1><p className="muted">People who were asked to come back. Mark them “Arrived” when they reach the door.</p></div>
+      <div className="head"><div><h1>{t('Appointments')}</h1><p className="muted">{t('People who were given an appointment. Mark them “Arrived” when they reach the door.')}</p></div>
         <button className="btn" onClick={goNew}>➕ Register case</button></div>
       {err && <div className="err">{err}</div>}
       <input className="search" placeholder="Filter this list by name, church or code…" value={filter} onChange={e => setFilter(e.target.value)} />
       {items === null && <div className="muted">Loading…</div>}
-      {items && items.length === 0 && <div className="card empty">🚪<br />Nobody is expected back right now.</div>}
+      {items && items.length === 0 && <div className="card empty">🚪<br />{t('There are no appointments right now.')}</div>}
       {GROUPS.map(g => {
         const rows = shown.filter(i => g.test(dayDiff(i.returnOn)))
         if (!rows.length) return null
@@ -45,7 +45,7 @@ export default function Queue({ onOpen, goNew }) {
             <div className="group"><h2>{g.title}</h2><span className="count">{rows.length}</span>{g.hint && <small>{g.hint}</small>}</div>
             {rows.map(it => (
               <div className={'qrow ' + g.cls} key={it.caseId}>
-                <div className="avatar">{initial(it.people[0])}</div>
+                <div className="avatar spot" title={t('Spot number')}>{it.spotNo ? '#' + it.spotNo : initial(it.people[0])}</div>
                 <div className="grow">
                   <b>{names(it.people)}</b>
                   <small>⛪ {it.churchName} · {t(it.issues === 1 ? '{n} issue' : '{n} issues', { n: it.issues })}{it.departments.length ? ' · ' + t('with {x}', { x: it.departments.join(', ') }) : ''}</small>

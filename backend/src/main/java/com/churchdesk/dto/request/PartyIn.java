@@ -14,4 +14,5 @@ public record PartyIn(@NotBlank @Size(max = 160) String fullName,
                       @Size(max = 1000) String involvement,
                       @Size(max = 40) String employeeId,
                       @Size(max = 5) List<@Size(max = 40) String> extraPhones,
-                      Boolean phoneExempt) {}
+                      Boolean phoneExempt,
+                      @Size(max = 40) String sebekaGubayeNo) {}
