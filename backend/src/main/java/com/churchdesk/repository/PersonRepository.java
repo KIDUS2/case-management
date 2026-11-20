@@ -17,7 +17,7 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     Optional<Person> findFirstByFullNameIgnoreCaseAndMotherNameIgnoreCase(String fullName, String motherName);
     List<Person> findByFirstNameIsNull();
     boolean existsByEmployeeId(String employeeId);
-    List<Person> findByEmployeeIdIsNullAndWorkingStatusNot(WorkingStatus status);
+    List<Person> findByEmployeeIdIsNullAndWorkingStatusNot(String status);
 
     /** People whose main phone, or any extra phone, ends with these 9 digits, however it was typed (spaces, dashes, +251). */
     @Query(value = "select p.id from person p where regexp_replace(coalesce(p.phone,''), '[^0-9]', '', 'g') like '%' || :tail "
@@ -27,7 +27,7 @@ public interface PersonRepository extends JpaRepository<Person, Long> {
     @Query("select p from Person p join fetch p.church where (lower(p.fullName) like :pattern or lower(coalesce(p.employeeId,'')) like :digits or lower(coalesce(p.churchRef,'')) like :pattern or coalesce(p.phone,'') like :pattern or coalesce(p.phone,'') like :digits or lower(coalesce(p.motherName,'')) like :pattern) order by p.fullName")
     List<Person> search(@Param("pattern") String pattern, @Param("digits") String digits, Pageable pageable);
 
-    @Query(value = "select p from Person p join fetch p.church c where (:cid is null or c.id = :cid) and (lower(p.fullName) like :q or lower(coalesce(p.employeeId,'')) like :q or lower(coalesce(p.churchRef,'')) like :q or lower(coalesce(p.phone,'')) like :q or lower(coalesce(p.profession,'')) like :q or lower(coalesce(p.motherName,'')) like :q or lower(coalesce(p.christianName,'')) like :q) and (:all = true or p.workingStatus <> com.churchdesk.enums.WorkingStatus.CHURCH_MEMBER)",
-           countQuery = "select count(p) from Person p where (:cid is null or p.church.id = :cid) and (lower(p.fullName) like :q or lower(coalesce(p.employeeId,'')) like :q or lower(coalesce(p.churchRef,'')) like :q or lower(coalesce(p.phone,'')) like :q or lower(coalesce(p.profession,'')) like :q or lower(coalesce(p.motherName,'')) like :q or lower(coalesce(p.christianName,'')) like :q) and (:all = true or p.workingStatus <> com.churchdesk.enums.WorkingStatus.CHURCH_MEMBER)")
+    @Query(value = "select p from Person p join fetch p.church c where (:cid is null or c.id = :cid) and (lower(p.fullName) like :q or lower(coalesce(p.employeeId,'')) like :q or lower(coalesce(p.churchRef,'')) like :q or lower(coalesce(p.phone,'')) like :q or lower(coalesce(p.profession,'')) like :q or lower(coalesce(p.motherName,'')) like :q or lower(coalesce(p.christianName,'')) like :q) and (:all = true or p.workingStatus <> 'CHURCH_MEMBER')",
+           countQuery = "select count(p) from Person p where (:cid is null or p.church.id = :cid) and (lower(p.fullName) like :q or lower(coalesce(p.employeeId,'')) like :q or lower(coalesce(p.churchRef,'')) like :q or lower(coalesce(p.phone,'')) like :q or lower(coalesce(p.profession,'')) like :q or lower(coalesce(p.motherName,'')) like :q or lower(coalesce(p.christianName,'')) like :q) and (:all = true or p.workingStatus <> 'CHURCH_MEMBER')")
     org.springframework.data.domain.Page<Person> directory(@Param("q") String q, @Param("cid") Long churchId, @Param("all") boolean all, Pageable pageable);
 }

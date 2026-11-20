@@ -11,7 +11,7 @@ import IssueFlags from '../components/IssueFlags.jsx'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { InvestigationCard, SubcityCard } from '../components/Collaboration.jsx'
 import { previewFile, kindOf } from '../preview.js'
-import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
+import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, workingOptions, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -381,7 +381,7 @@ function AddPerson({ c, churches, onChange, setErr, onDone }) {
         <div><label>Phone (optional)</label><input value={f.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} /></div>
       </div>
       <label>This person is</label>
-      <select value={f.workingStatus} onChange={e => set({ workingStatus: e.target.value })}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+      <select value={f.workingStatus} onChange={e => set({ workingStatus: e.target.value })}>{workingOptions().map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
       <label>What are they involved in? (what they said or provided)</label>
       <textarea rows={3} value={f.involvement} maxLength={1000} onChange={e => set({ involvement: e.target.value })} placeholder="e.g. Cashier in 2024, handed over the cash book." />
       <div className="iact"><button className="btn sm" disabled={busy}>{busy ? 'Adding…' : '➕ Add to case'}</button><button type="button" className="btn ghost sm" onClick={onDone}>Cancel</button></div>

@@ -31,7 +31,7 @@ public class OptionService {
 
     @Transactional(readOnly = true)
     public OptionLists lists() {
-        return new OptionLists(dtos(OptionItem.ISSUE_TYPE), dtos(OptionItem.SUB_CITY));
+        return new OptionLists(dtos(OptionItem.ISSUE_TYPE), dtos(OptionItem.SUB_CITY), dtos(OptionItem.WORKING_STATUS));
     }
 
     private List<OptionDto> dtos(String key) {
@@ -45,6 +45,8 @@ public class OptionService {
         if (OptionItem.ISSUE_TYPE.equals(o.getListKey()))
             return count("select count(i) from CaseIssue i where i.category = :c", o.getCode())
                     + count("select count(d) from Department d where d.handlesCategory = :c", o.getCode());
+        if (OptionItem.WORKING_STATUS.equals(o.getListKey()))
+            return count("select count(p) from Person p where p.workingStatus = :c", o.getCode());
         return count("select count(c) from Church c where c.subCity = :c", o.getCode());
     }
 
@@ -79,6 +81,14 @@ public class OptionService {
         return o.getCode();
     }
 
+    /** Throws 400 unless the status exists and is switched on. Returns its code. */
+    @Transactional(readOnly = true)
+    public String requireWorkingStatus(String code) {
+        OptionItem o = code == null ? null : repo.findByListKeyAndCode(OptionItem.WORKING_STATUS, code.trim()).orElse(null);
+        if (o == null || !o.isActive()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That choice for \"This person is\" is not available. Pick one from the list.");
+        return o.getCode();
+    }
+
     /** The saved name of a sub-city (matching its name in English or Amharic), or null when blank. Throws 400 when it is not in the list. */
     @Transactional(readOnly = true)
     public String requireSubCity(String name) {
@@ -103,7 +113,7 @@ public class OptionService {
 
     @Transactional
     public OptionDto add(String listKey, OptionEdit e) {
-        if (!OptionItem.ISSUE_TYPE.equals(listKey) && !OptionItem.SUB_CITY.equals(listKey))
+        if (!OptionItem.ISSUE_TYPE.equals(listKey) && !OptionItem.SUB_CITY.equals(listKey) && !OptionItem.WORKING_STATUS.equals(listKey))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown list");
         String label = clean(e.label());
         if (label == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a name");
@@ -112,7 +122,7 @@ public class OptionService {
         o.setLabel(label);
         o.setLabelAm(clean(e.labelAm()));
         o.setIcon(OptionItem.ISSUE_TYPE.equals(listKey) ? (clean(e.icon()) == null ? "🗂️" : clean(e.icon())) : null);
-        o.setCode(OptionItem.SUB_CITY.equals(listKey) ? label : newTypeCode(label));
+        o.setCode(OptionItem.SUB_CITY.equals(listKey) ? label : newTypeCode(listKey, label));
         if (repo.existsByListKeyAndCodeIgnoreCase(listKey, o.getCode()) || labelTaken(listKey, label, null))
             throw new ResponseStatusException(HttpStatus.CONFLICT, "“" + label + "” is already in the list");
         o.setSortNo(repo.findByListKeyOrderBySortNoAscIdAsc(listKey).stream().mapToInt(OptionItem::getSortNo).max().orElse(0) + 1);
@@ -156,12 +166,12 @@ public class OptionService {
         return false;
     }
 
-    private String newTypeCode(String label) {
+    private String newTypeCode(String listKey, String label) {
         String base = label.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]+", "_").replaceAll("^_+|_+$", "");
-        if (base.isEmpty()) base = "TYPE";
+        if (base.isEmpty()) base = "CUSTOM";
         if (base.length() > 24) base = base.substring(0, 24);
         String code = base;
-        for (int n = 2; repo.existsByListKeyAndCodeIgnoreCase(OptionItem.ISSUE_TYPE, code); n++) code = base + "_" + n;
+        for (int n = 2; repo.existsByListKeyAndCodeIgnoreCase(listKey, code); n++) code = base + "_" + n;
         return code;
     }
 

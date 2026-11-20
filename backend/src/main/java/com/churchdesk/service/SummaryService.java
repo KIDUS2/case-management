@@ -137,7 +137,7 @@ public class SummaryService {
             int open = openByCase.getOrDefault(c.getId(), 0);
             if (open > 0) withOpen++;
             for (CaseParty cp : c.getParties()) {
-                if (cp.getPerson().getWorkingStatus() == WorkingStatus.LEADER_PRIEST && leaders.size() < 200)
+                if (WorkingStatus.LEADER_PRIEST.equals(cp.getPerson().getWorkingStatus()) && leaders.size() < 200)
                     leaders.add(new LeaderRow(c.getId(), c.getCode(), cp.getPerson().getFullName(), cp.getRole() == PartyRole.SUBJECT ? "SUBJECT" : "COMPLAINANT",
                             cp.getPerson().getChurch().getName(), cp.getPerson().getChurch().getSubCity(), c.getStatus(), new ArrayList<>(cats), c.getIssues().size(), done, c.getCreatedAt()));
             }

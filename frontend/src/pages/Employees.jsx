@@ -2,7 +2,7 @@ import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
-import { WORKING, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
+import { WORKING, workingOptions, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 import { askConfirm, notify } from '../dialog.js'
 import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
@@ -520,7 +520,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
           <h3 className="sect">Work and contact</h3>
           <div className="grid">
             <div><label>Church</label><input list="emp-church-list" value={form.churchName} onChange={f('churchName')} required placeholder="Start typing…" /></div>
-            <div><label>Working status</label><select value={form.workingStatus} onChange={f('workingStatus')}>{Object.entries(WORKING).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+            <div><label>Working status</label><select value={form.workingStatus} onChange={f('workingStatus')}>{workingOptions().map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
             <div><label>Profession</label><input value={form.profession} onChange={f('profession')} maxLength={120} placeholder="e.g. Accountant, Teacher, Priest" /></div>
             <div><label>Position at the church</label><input value={form.position} onChange={f('position')} maxLength={120} /></div>
             {me.role === 'ADMIN' && <div><label>{t('Monthly salary (birr)')}</label><input type="number" min="0" step="0.01" value={form.salary} onChange={f('salary')} inputMode="decimal" /></div>}

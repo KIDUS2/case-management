@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "option_item")
 public class OptionItem {
-    public static final String ISSUE_TYPE = "ISSUE_TYPE", SUB_CITY = "SUB_CITY";
+    public static final String ISSUE_TYPE = "ISSUE_TYPE", SUB_CITY = "SUB_CITY", WORKING_STATUS = "WORKING_STATUS";
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @Column(name = "list_key", nullable = false) private String listKey;

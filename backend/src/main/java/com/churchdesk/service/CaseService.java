@@ -192,14 +192,14 @@ public class CaseService {
         person.setFullName(name);
         if (person.getFirstName() == null) person.splitFullName();
         person.setChurch(church);
-        person.setWorkingStatus(in.workingStatus());
+        person.setWorkingStatus(options.requireWorkingStatus(in.workingStatus()));
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
         if (in.extraPhones() != null) person.setExtraPhoneList(in.extraPhones());
         // the phone number is mandatory; only the administrator can allow a person to have none
         if (in.phoneExempt() != null && actor.getRole() == Role.ADMIN) person.setPhoneExempt(in.phoneExempt());
         if (person.getPhone() == null && !person.isPhoneExempt())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a phone number for " + name + ". Only the administrator can allow a person without one.");
-        if (person.getEmployeeId() == null && in.workingStatus() != WorkingStatus.CHURCH_MEMBER)
+        if (person.getEmployeeId() == null && !WorkingStatus.CHURCH_MEMBER.equals(in.workingStatus()))
             person.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         person = persons.save(person);
 
@@ -219,7 +219,7 @@ public class CaseService {
      * their Sebeka Gubaye number. Nothing is asked again if we already hold it from an earlier case.
      */
     private static void requireIdNumber(Person person, PartyIn in, String typedEmployeeId, String name) {
-        if (in.workingStatus() == WorkingStatus.CHURCH_MEMBER) {
+        if (WorkingStatus.CHURCH_MEMBER.equals(in.workingStatus())) {
             if (person.getSebekaGubayeNo() == null)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the Sebeka Gubaye number of " + name + ".");
         } else if (typedEmployeeId == null && person.getEmployeeId() == null && person.getChurchRef() == null) {

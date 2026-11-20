@@ -25,11 +25,14 @@ export const CATEGORY = new Proxy(catStore, {
 })
 /** The issue types that can be chosen right now, as [code, {label, icon}]. */
 export const catOptions = () => Object.entries(catStore).filter(([, v]) => v.active)
+/** "This person is" choices, filled from Settings: code -> name (all, so old records still show), and the codes that can be picked now. */
 export const WORKING = {
   ACTIVE_EMPLOYEE: 'Active employee', LEADER_PRIEST: 'Leader / priest', RETIRED: 'Retired',
   SUSPENDED: 'Suspended', CONTRACT: 'Contract', VOLUNTEER: 'Volunteer',
   CHURCH_MEMBER: 'Church member (not an employee)',
 }
+const workingOn = new Set(Object.keys(WORKING))
+export const workingOptions = () => Object.entries(WORKING).filter(([k]) => workingOn.has(k))
 export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff', SUBCITY: 'Sub-city office', SERA_ASKIYAJIE: 'Sera Askiyajie (manager)', PAPAS: 'Papas (head · final decision)' }
 export const REVIEW = { PENDING: 'Awaiting review', ACCEPTED: 'Accepted', RETURNED: 'Returned' }
 export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎', APPOINTMENT: '📅', SMS: '📱', HOLD: '⏸️', ESCALATED: '⬆️', INVESTIGATION: '🔎', SUBCITY_REFERRAL: '🏙️' }
@@ -70,7 +73,7 @@ export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d
 /** The sub-city (sub-cities) that can be chosen right now; filled from Settings. */
 export const SUB_CITIES = ['Addis Ketema', 'Akaki Kaliti', 'Arada', 'Bole', 'Gullele', 'Kirkos', 'Kolfe Keranio', 'Lideta', 'Lemi Kura', 'Nifas Silk-Lafto', 'Yeka']
 /** The full lists as the server has them (with ids, both languages and use counts), for the Settings page. */
-export const OPTION_LISTS = { issueTypes: [], subCities: [] }
+export const OPTION_LISTS = { issueTypes: [], subCities: [], workingStatuses: [] }
 
 /** Put the lists from /api/options in place. Names show in Amharic when that language is on and an Amharic name exists. */
 export function applyOptions(o) {
@@ -80,6 +83,11 @@ export function applyOptions(o) {
   o.issueTypes.forEach(x => { catStore[x.code] = { label: name(x), icon: x.icon || '🗂️', active: x.active } })
   SUB_CITIES.length = 0
   o.subCities.filter(x => x.active).forEach(x => SUB_CITIES.push(x.code))
+  if (o.workingStatuses?.length) {
+    Object.keys(WORKING).forEach(k => delete WORKING[k]); workingOn.clear()
+    o.workingStatuses.forEach(x => { WORKING[x.code] = name(x); if (x.active) workingOn.add(x.code) })
+  }
+  OPTION_LISTS.workingStatuses = o.workingStatuses || []
   OPTION_LISTS.issueTypes = o.issueTypes
   OPTION_LISTS.subCities = o.subCities
 }

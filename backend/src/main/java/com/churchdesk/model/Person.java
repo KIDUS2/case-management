@@ -3,7 +3,6 @@ package com.churchdesk.model;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import java.time.Instant;
-import com.churchdesk.enums.WorkingStatus;
 import com.churchdesk.util.Times;
 
 @Entity
@@ -39,7 +38,7 @@ public class Person {
     @Column(name = "church_ref") private String churchRef;
     @Column(name = "sebeka_gubaye_no") private String sebekaGubayeNo;
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "church_id", nullable = false) private Church church;
-    @Enumerated(EnumType.STRING) @Column(name = "working_status", nullable = false) private WorkingStatus workingStatus;
+    @Column(name = "working_status", nullable = false) private String workingStatus;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
     public Long getId() { return id; }
@@ -120,8 +119,8 @@ public class Person {
     }
     public Church getChurch() { return church; }
     public void setChurch(Church v) { church = v; }
-    public WorkingStatus getWorkingStatus() { return workingStatus; }
-    public void setWorkingStatus(WorkingStatus v) { workingStatus = v; }
+    public String getWorkingStatus() { return workingStatus; }
+    public void setWorkingStatus(String v) { workingStatus = v; }
     public java.math.BigDecimal getSalary() { return salary; }
     public void setSalary(java.math.BigDecimal v) { salary = v; }
 }

@@ -10,7 +10,7 @@ import com.churchdesk.enums.WorkingStatus;
 public record PartyIn(@NotBlank @Size(max = 160) String fullName,
                       @NotNull Long churchId,
                       @Size(max = 40) String phone,
-                      @NotNull WorkingStatus workingStatus,
+                      @NotBlank String workingStatus,
                       @Size(max = 1000) String involvement,
                       @Size(max = 40) String employeeId,
                       @Size(max = 5) List<@Size(max = 40) String> extraPhones,

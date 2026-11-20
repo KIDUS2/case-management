@@ -111,7 +111,7 @@ public class EmployeeController {
 
     /** Moving to another church, or taking another position, closes the current posting and opens a new one. */
     private void recordPosting(Person p, Long oldChurchId, String oldPosition) {
-        if (p.getWorkingStatus() == WorkingStatus.CHURCH_MEMBER) return;
+        if (WorkingStatus.CHURCH_MEMBER.equals(p.getWorkingStatus())) return;
         var open = postings.findFirstByPersonIdAndEndDateIsNullOrderByStartDateDescIdDesc(p.getId());
         boolean same = open.isPresent() && oldChurchId != null && oldChurchId.equals(p.getChurch().getId())
                 && java.util.Objects.equals(oldPosition, p.getPosition());
@@ -187,8 +187,8 @@ public class EmployeeController {
         p.setAddress(blank(r.address())); p.setNotes(blank(r.notes()));
         p.setChristianName(blank(r.christianName())); p.setFatherConfessor(blank(r.fatherConfessor()));
         p.setSpiritualRank(blank(r.spiritualRank())); p.setOrdainedOn(r.ordainedOn());
-        p.setWorkingStatus(r.workingStatus());
-        if (p.getEmployeeId() == null && r.workingStatus() != WorkingStatus.CHURCH_MEMBER)
+        p.setWorkingStatus(options.requireWorkingStatus(r.workingStatus()));
+        if (p.getEmployeeId() == null && !WorkingStatus.CHURCH_MEMBER.equals(r.workingStatus()))
             p.assignId(EmployeeIds.generate(persons::existsByEmployeeId));
         if (p.getEmployeeId() != null && r.idExpiresOn() != null) p.setIdExpiresOn(r.idExpiresOn());
     }

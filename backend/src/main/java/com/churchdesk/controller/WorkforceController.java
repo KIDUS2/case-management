@@ -25,7 +25,7 @@ import com.churchdesk.model.Person;
 @PreAuthorize("hasRole('ADMIN')")
 public class WorkforceController {
     /** People on the payroll side of the church: not church members, retired people or volunteers. */
-    private static final List<WorkingStatus> STAFF = List.of(WorkingStatus.ACTIVE_EMPLOYEE, WorkingStatus.LEADER_PRIEST, WorkingStatus.CONTRACT, WorkingStatus.SUSPENDED);
+    private static final List<String> NOT_STAFF = List.of(WorkingStatus.CHURCH_MEMBER, WorkingStatus.RETIRED, WorkingStatus.VOLUNTEER);
 
     @PersistenceContext private EntityManager em;
 
@@ -33,8 +33,8 @@ public class WorkforceController {
     public WorkforceOverview overview() {
         Map<Long, Object[]> churches = new LinkedHashMap<>();
         for (Object[] r : em.createQuery("select c.id, c.name, c.subCity from Church c order by c.name", Object[].class).getResultList()) churches.put((Long) r[0], r);
-        List<Person> staff = em.createQuery("select p from Person p join fetch p.church where p.workingStatus in :s order by p.fullName", Person.class)
-                .setParameter("s", STAFF).getResultList();
+        List<Person> staff = em.createQuery("select p from Person p join fetch p.church where p.workingStatus not in :s order by p.fullName", Person.class)
+                .setParameter("s", NOT_STAFF).getResultList();
 
         Map<Long, List<Person>> byChurch = new HashMap<>();
         for (Person p : staff) byChurch.computeIfAbsent(p.getChurch().getId(), k -> new ArrayList<>()).add(p);
@@ -58,7 +58,7 @@ public class WorkforceController {
                 if (p.getSalary() == null) no++;
                 posPay.merge(position, s, BigDecimal::add);
                 pay = pay.add(s);
-                if (p.getWorkingStatus() == WorkingStatus.LEADER_PRIEST) lead.add(new WorkforceLeader(p.getId(), p.getFullName(), p.getPosition(), p.getPhone()));
+                if (WorkingStatus.LEADER_PRIEST.equals(p.getWorkingStatus())) lead.add(new WorkforceLeader(p.getId(), p.getFullName(), p.getPosition(), p.getPhone()));
             }
             List<PositionRow> positions = pos.entrySet().stream().map(e -> new PositionRow(e.getKey(), e.getValue()[0], posPay.get(e.getKey())))
                     .sorted((a, b) -> Long.compare(b.employees(), a.employees())).toList();

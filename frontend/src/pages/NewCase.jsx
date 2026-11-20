@@ -4,7 +4,7 @@ import { t } from '../i18n.js'
 import GroupSheet, { blankRow } from '../components/GroupSheet.jsx'
 import { askConfirm } from '../dialog.js'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
-import { CATEGORY, catOptions, WORKING, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
+import { CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
 const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status, sebekaGubayeNo: '' })
@@ -12,6 +12,22 @@ const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: 
 function Chips({ options, value, onChange }) {
   return <div className="chips">{Object.entries(options).map(([k, v]) =>
     <button type="button" key={k} className={'chip' + (value === k ? ' on' : '')} onClick={() => onChange(k)}>{v}</button>)}</div>
+}
+
+/** "This person is": type to narrow the list, then pick one. Scrolls when the list is long. */
+function StatusPicker({ value, onChange }) {
+  const [q, setQ] = useState('')
+  const all = workingOptions()
+  const list = all.filter(([, v]) => v.toLowerCase().includes(q.trim().toLowerCase()) || t(v).toLowerCase().includes(q.trim().toLowerCase()))
+  return (
+    <div className="spick">
+      {all.length > 5 && <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={'🔎 ' + t('Search')} aria-label={t('Search')} />}
+      <div className="chips">
+        {list.map(([k, v]) => <button type="button" key={k} className={'chip' + (value === k ? ' on' : '')} onClick={() => onChange(k)}>{t(v)}</button>)}
+        {list.length === 0 && <span className="muted">{t('Nothing found')}</span>}
+      </div>
+    </div>
+  )
 }
 
 function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub, needId }) {
@@ -103,7 +119,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
         {isAdmin && <label className="chk"><input type="checkbox" checked={!!party.phoneExempt} onChange={e => set({ phoneExempt: e.target.checked })} /> {t('This person has no phone (admin allows it)')}</label>}
       </div>
       <label>This person is</label>
-      <Chips options={WORKING} value={party.workingStatus} onChange={v => set({ workingStatus: v })} />
+      <StatusPicker value={party.workingStatus} onChange={v => set({ workingStatus: v })} />
     </div>
   )
 }
