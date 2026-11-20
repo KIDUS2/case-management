@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
@@ -81,7 +82,7 @@ export default function Inbox({ me, onOpen }) {
         <button className={'chip' + (tab === 'pending' ? ' on' : '')} onClick={() => setTab('pending')}>⏳ {data ? t('Waiting ({n})', { n: data.pending }) : t('Waiting')}</button>
         <button className={'chip' + (tab === 'done' ? ' on' : '')} onClick={() => setTab('done')}>✅ {t('Finished')}</button>
       </div>}
-      {!data && !err && <div className="muted">Loading…</div>}
+      {!data && !err && <Skeleton rows={4} tall />}
       {data && data.items.length === 0 && <div className="card empty">{tab === 'pending' ? '🎉 ' + t('Nothing is waiting. Great work!') : t('Nothing finished yet.')}</div>}
       {data && data.items.map(it => {
         const st = ISSUE_STATUS[it.status]

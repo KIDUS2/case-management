@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
@@ -118,7 +119,7 @@ export default function Summary({ me, onOpen }) {
         </div>
       </div>
 
-      {!d ? <div className="muted">{t('Loading…')}</div> : (
+      {!d ? <Skeleton rows={4} /> : (
         <>
           {d.truncated && <div className="banner warn">{t('Very many cases match. Showing the newest 5000; narrow the period to see them all.')}</div>}
           <section className="ledger">

@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
@@ -31,7 +32,7 @@ export default function Notifications({ onOpen, onChanged, channel = null }) {
         <button className={'chip' + (tab === 'all' ? ' on' : '')} onClick={() => setTab('all')}>All</button>
       </div>
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {!data && !err && <div className="gmsg">Loading…</div>}
+        {!data && !err && <Skeleton rows={5} />}
         {data && data.items.length === 0 && <div className="empty">🔔<br />{tab === 'unread' ? 'You are all caught up.' : 'No notifications yet.'}</div>}
         {data && data.items.map(n => (
           <button key={n.id} className={'nitem' + (n.read ? '' : ' unread') + (n.channel === 'SUBCITY' ? ' subc' : '')} onClick={() => click(n)} title={fmtDate(n.createdAt)}>

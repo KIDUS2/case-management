@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t as tt, locale } from '../i18n.js'
@@ -102,7 +103,7 @@ export default function Dashboard({ me, onOpen, goNew, go }) {
   }, [period])
 
   if (err) return <div className="err">{err}</div>
-  if (!d) return <div className="muted">Loading your reports…</div>
+  if (!d) return <Skeleton rows={6} tall />
 
   const t = d.totals
   const active = d.byStatus.OPEN + d.byStatus.REFERRED + d.byStatus.COURT

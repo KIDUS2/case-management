@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
@@ -26,7 +27,7 @@ export default function AuditLog() {
       {err && <div className="err">{err}</div>}
       <input className="search" placeholder={t('Search by person, action or case…')} value={q} onChange={e => setQ(e.target.value)} />
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {!data && !err && <div className="gmsg">{t('Loading…')}</div>}
+        {!data && !err && <Skeleton rows={6} />}
         {data && data.items.length === 0 && <div className="empty">🗒️<br />{t('Nothing recorded yet.')}</div>}
         {data && data.items.map(a => {
           const [icon, label] = LABEL[a.action] || ['•', a.action]

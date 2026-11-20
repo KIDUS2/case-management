@@ -1,3 +1,4 @@
+import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t } from '../i18n.js'
@@ -35,7 +36,7 @@ export default function Queue({ onOpen, goNew }) {
         <button className="btn" onClick={goNew}>➕ Register case</button></div>
       {err && <div className="err">{err}</div>}
       <input className="search" placeholder="Filter this list by name, church or code…" value={filter} onChange={e => setFilter(e.target.value)} />
-      {items === null && <div className="muted">Loading…</div>}
+      {items === null && <Skeleton rows={4} />}
       {items && items.length === 0 && <div className="card empty">🚪<br />{t('There are no appointments right now.')}</div>}
       {GROUPS.map(g => {
         const rows = shown.filter(i => g.test(dayDiff(i.returnOn)))

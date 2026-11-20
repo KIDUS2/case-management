@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api.js'
 import { ROLES, NOTE_ICON, applyOptions } from './ui.js'
 import Login from './pages/Login.jsx'
@@ -28,21 +28,21 @@ const BOSS = ['SERA_ASKIYAJIE', 'PAPAS']
 const DESK = ['ADMIN', 'OFFICER', 'RECEPTION', ...BOSS]
 /** Which pages each role sees. */
 const NAV = [
-  { key: 'dashboard', icon: '📊', label: 'Dashboard', roles: ['ADMIN'] },
-  { key: 'summary', icon: '🗂️', label: 'Summary', roles: [...DESK, 'DEPARTMENT'] },
-  { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER', ...BOSS] },
-  { key: 'queue', icon: '🚪', label: 'Appointments', roles: DESK },
-  { key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
-  { key: 'cases', icon: '📁', label: 'All cases', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
-  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], badge: true },
-  { key: 'subinbox', icon: '🏙️', label: 'From sub-cities', roles: ['ADMIN'], badge: 'sub' },
-  { key: 'hr', icon: '👥', label: 'HR management', roles: DESK },
-  { key: 'churches', icon: '⛪', label: 'Churches', roles: DESK },
-  { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
-  { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
-  { key: 'audit', icon: '🗒️', label: 'Audit log', roles: ['ADMIN'] },
-  { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
-  { key: 'account', icon: '⚙️', label: 'My account', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'] },
+  { group: 'work', key: 'dashboard', icon: '📊', label: 'Dashboard', roles: ['ADMIN'] },
+  { group: 'work', key: 'summary', icon: '🗂️', label: 'Summary', roles: [...DESK, 'DEPARTMENT'] },
+  { group: 'work', key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER', ...BOSS] },
+  { group: 'work', key: 'queue', icon: '🚪', label: 'Appointments', roles: DESK },
+  { group: 'work', key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
+  { group: 'work', key: 'cases', icon: '📁', label: 'All cases', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
+  { group: 'news', key: 'notifications', icon: '🔔', label: 'Notifications', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], badge: true },
+  { group: 'news', key: 'subinbox', icon: '🏙️', label: 'From sub-cities', roles: ['ADMIN'], badge: 'sub' },
+  { group: 'org', key: 'hr', icon: '👥', label: 'HR management', roles: DESK },
+  { group: 'org', key: 'churches', icon: '⛪', label: 'Churches', roles: DESK },
+  { group: 'admin', key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
+  { group: 'admin', key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
+  { group: 'admin', key: 'audit', icon: '🗒️', label: 'Audit log', roles: ['ADMIN'] },
+  { group: 'admin', key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
+  { group: 'me', key: 'account', icon: '⚙️', label: 'My account', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'] },
 ]
 /** Switching language reloads the page; remember where the person was so they come back to the same place. */
 const readView = () => { try { const v = JSON.parse(sessionStorage.getItem('view') || 'null'); if (v && (v.page === 'employees' || v.page === 'workforce')) v.page = 'hr'; return v } catch { return null } }
@@ -50,6 +50,7 @@ const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(
 /** Every page and case has its own link (#/cases/12), so Back works and a link can be sent to a colleague. */
 const parseHash = () => { const m = /^#\/([a-z]+)(?:\/(\d+))?$/.exec(location.hash); return m ? { page: m[1], openId: m[2] ? Number(m[2]) : null } : null }
 const toHash = (page, openId) => (page ? '#/' + page + (page === 'cases' && openId ? '/' + openId : '') : '')
+const GROUP = { work: 'Cases', news: 'News', org: 'Churches and people', admin: 'Administration', me: '' }
 const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases', SUBCITY: 'cases', SERA_ASKIYAJIE: 'inbox', PAPAS: 'inbox' }
 
 export default function App() {
@@ -160,12 +161,15 @@ export default function App() {
           </div>
         </div>
         <nav className="navlist">
-          {items.map(n => (
-            <button key={n.key} className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
+          {items.map((n, i) => (
+            <Fragment key={n.key}>
+            {n.group !== items[i - 1]?.group && GROUP[n.group] && <div className="navhead">{t(GROUP[n.group])}</div>}
+            <button className={'nav' + (current === n.key ? ' on' : '')} onClick={() => go(n.key)}>
               <span>{n.icon}</span> {user.role === 'SUBCITY' && n.subLabel ? n.subLabel : n.label}
               {n.badge === true && (user.role === 'ADMIN' ? counts.general : unread) > 0 && <span className="nbadge">{Math.min(user.role === 'ADMIN' ? counts.general : unread, 99)}</span>}
               {n.badge === 'sub' && counts.subCity > 0 && <span className="nbadge sub">{Math.min(counts.subCity, 99)}</span>}
             </button>
+            </Fragment>
           ))}
         </nav>
       </aside>

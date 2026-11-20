@@ -177,6 +177,7 @@ const AM = {
   'Signed in': 'ገብቷል', 'Wrong password': 'የተሳሳተ የይለፍ ቃል', 'Blocked (locked)': 'ታግዷል (ተቆልፏል)', 'Opened a case': 'ጉዳይ ከፈተ', 'Downloaded a file': 'ፋይል አወረደ', 'Case checked by the public': 'በህዝብ የተፈተሸ ጉዳይ', 'Wrong case check': 'የተሳሳተ ፍተሻ',
   'Check my case': 'ጉዳዬን ልመልከት', 'Enter the case number from your text message and the phone number you gave us.': 'በጽሑፍ መልዕክቱ የደረሰዎትን የጉዳይ ቁጥርና የሰጡንን ስልክ ቁጥር ያስገቡ።', 'Case number': 'የጉዳይ ቁጥር', 'Phone number': 'ስልክ ቁጥር', 'Check': 'ተመልከት', 'Checking…': 'በመፈተሽ ላይ…', 'Home': 'መነሻ',
   'Your case has been received and is waiting to be looked at by the diocese.': 'ጉዳይዎ ደርሷል፤ ሀገረ ስብከቱ እስኪመለከተው እየጠበቀ ነው።', '{a} of {b} finished': '{a} ከ{b} ተጠናቋል', 'With a department': 'በክፍል እጅ', 'In court': 'በፍርድ ቤት', 'Finished': 'ተጠናቋል', 'Being looked at': 'እየታየ ነው', 'Your appointment: {d}, spot {n}': 'ቀጠሮዎ፦ {d}፣ ተራ ቁጥር {n}',
+  'News': 'ዜና', 'Churches and people': 'አብያተ ክርስቲያናትና ሰዎች', 'Administration': 'አስተዳደር', '1 day': '1 ቀን', 'Time since this case was registered': 'ጉዳዩ ከተመዘገበ ጀምሮ ያለፈ ጊዜ',
   'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
   'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
   'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',

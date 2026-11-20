@@ -1,3 +1,4 @@
+import Skeleton, { Waiting } from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { askConfirm } from '../dialog.js'
 import { api, upload, download } from '../api.js'
@@ -64,6 +65,7 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
         {[['', t('All kinds')], ['ISSUE', t('Issues')], ['CHARITY', '🤝 ' + t('Charity requests')]].map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}</div>}
       <input className="search" placeholder="Filter this list by name, church or case code…" value={q} onChange={e => setQ(e.target.value)} />
       <div className={loading ? 'fade' : ''}>
+        {loading && !data.items.length && <Skeleton rows={5} />}
         {data.items.map(c => (
           <button key={c.id} className={'case ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
             <div className="avatar">{initial(c.complainants[0])}</div>
@@ -73,7 +75,7 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
               {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
               <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
             </div>
-            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{t('{a}/{b} resolved', { a: c.resolvedCount, b: c.issueCount })}{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small></div>
+            <div className="cside"><span className="codechip">{fmtCode(c.code)}</span><span>{t('{a}/{b} resolved', { a: c.resolvedCount, b: c.issueCount })}{c.letterIssued ? ' · ✉️' : ''}</span><small>{fmtDate(c.createdAt)}</small>{c.status !== 'RESOLVED' && <Waiting since={c.createdAt} />}</div>
           </button>
         ))}
         {!loading && !data.items.length && (

@@ -34,6 +34,7 @@ export default function SearchBar({ onOpen, onSeeAll }) {
   useEffect(() => {
     const down = e => { if (box.current && !box.current.contains(e.target)) setOpen(false) }
     const key = e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.current?.focus(); input.current?.select(); return }
       if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)) { e.preventDefault(); input.current?.focus() }
     }
     document.addEventListener('mousedown', down); document.addEventListener('keydown', key)
@@ -60,7 +61,7 @@ export default function SearchBar({ onOpen, onSeeAll }) {
       <span className="gicon">🔍</span>
       <input ref={input} value={q} placeholder="Search a name, church or case code…" aria-label="Search cases"
         onChange={e => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} onKeyDown={onKey} autoComplete="off" />
-      {q ? <button type="button" className="gclear" aria-label="Clear search" onClick={() => { setQ(''); setHits(null); input.current?.focus() }}>×</button> : <kbd>/</kbd>}
+      {q ? <button type="button" className="gclear" aria-label="Clear search" onClick={() => { setQ(''); setHits(null); input.current?.focus() }}>×</button> : <kbd>Ctrl K</kbd>}
       {showPanel && (
         <div className="gpanel">
           {q.trim().length < 2 && <div className="gmsg">Keep typing…</div>}
