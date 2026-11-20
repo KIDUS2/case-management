@@ -1065,3 +1065,4 @@ main>.head{margin-bottom:0}main>.head .muted,main>h1+.muted{margin:0 0 6px}
 /* searchable "This person is" picker */
 .spick input[type=search]{max-width:320px;margin-bottom:8px}
 .spick .chips{max-height:150px;overflow:auto;padding:2px}
+.formgrid>*{min-width:0}

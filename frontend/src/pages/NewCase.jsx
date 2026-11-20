@@ -4,6 +4,7 @@ import { t } from '../i18n.js'
 import GroupSheet, { blankRow } from '../components/GroupSheet.jsx'
 import { askConfirm } from '../dialog.js'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
+import { previewFile } from '../preview.js'
 import { CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
@@ -297,6 +298,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <p className="hint">Attach the letter, scans or evidence. They are saved with the case.</p>
         {files.map((f, k) => (
           <div className="filerow" key={k}><span className="iicon">📄</span><div className="grow"><div className="fname">{f.name}</div><small>{fmtSize(f.size)}</small></div>
+            <button type="button" className="btn ghost sm" onClick={() => previewFile(null, f.name, f.size, f)}>👁 {t('Preview')}</button>
             <button type="button" className="btn x" onClick={() => setFiles(l => l.filter((_, j) => j !== k))}>Remove</button></div>
         ))}
         <label className="drop">📎 Choose files (PDF, image, Word, Excel · up to 10 MB each)

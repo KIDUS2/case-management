@@ -20,7 +20,7 @@ export default function FilePreview() {
     if (file.kind === 'none') { setState({ loading: false, url: null, text: '', err: '' }); return }
     let live = true
     setState({ loading: true, url: null, text: '', err: '' })
-    blob(file.path).then(async b => {
+    (file.local ? Promise.resolve(file.local) : blob(file.path)).then(async b => {
       if (!live) return
       const kind = file.kind
       if (kind === 'text') { setState({ loading: false, url: null, text: (await b.text()).slice(0, 200000), err: '' }); return }
@@ -41,7 +41,7 @@ export default function FilePreview() {
   }, [file])
 
   if (!file) return null
-  const download = async () => { try { const b = await blob(file.path); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000) } catch (e) { setState(s => ({ ...s, err: e.message })) } }
+  const download = async () => { try { const b = file.local || await blob(file.path); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 5000) } catch (e) { setState(s => ({ ...s, err: e.message })) } }
 
   return (
     <div className="pvback" ref={back} onMouseDown={e => { if (e.target === back.current) setFile(null) }}>
