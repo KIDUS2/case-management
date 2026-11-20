@@ -30,10 +30,10 @@ export async function printIdCard(e) {
   const expired = e.idExpired
   w.document.open()
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(e.fullName)} – ID</title><style>
-  @page{size:auto;margin:10mm}
+  @page{size:A4 portrait;margin:0}
   *{box-sizing:border-box}
   body{margin:0;font-family:"Noto Sans Ethiopic","Nyala",system-ui,sans-serif;background:#e7eadb;color:#231a33;display:flex;flex-direction:column;align-items:center;gap:14mm;padding:12mm 0}
-  .card{width:85.6mm;height:54mm;border-radius:3.2mm;background:#fff;position:relative;overflow:hidden;box-shadow:0 2px 14px #0003;border:.3mm solid #d9dcc8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card{flex:none;box-sizing:border-box;width:85.6mm;height:54mm;break-inside:avoid;border-radius:3.2mm;background:#fff;position:relative;overflow:hidden;box-shadow:0 2px 14px #0003;border:.3mm solid #d9dcc8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .band{height:13.5mm;background:linear-gradient(100deg,#231a33,#2d2147 55%,#1e5a2e);color:#fff;display:flex;align-items:center;gap:2mm;padding:0 2.4mm}
   .band img{width:11mm;height:11mm;object-fit:contain;background:#fff;border-radius:50%;padding:.3mm}
   .band .t{flex:1;text-align:center;line-height:1.15}
@@ -43,16 +43,16 @@ export async function printIdCard(e) {
   .photo{width:21mm;height:26mm;border:.35mm solid #1e5a2e;border-radius:1.2mm;background:#eef1e6;overflow:hidden;display:grid;place-items:center;color:#8aa;font-size:7mm;flex:none}
   .photo img{width:100%;height:100%;object-fit:cover}
   .f{flex:1;min-width:0;line-height:1.2}
-  .f .lbl{font-size:1.65mm;color:#6b6678;text-transform:uppercase;letter-spacing:.04em;margin-top:.9mm}
+  .f .lbl{font-size:1.65mm;color:#6b6678;text-transform:uppercase;letter-spacing:.04em;margin-top:.6mm}
   .f .v{font-size:2.5mm;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .f .name{font-size:3.5mm;font-weight:800;color:#1e5a2e;white-space:normal;line-height:1.12}
-  .idno{position:absolute;left:2.6mm;bottom:6.6mm;font:800 4.1mm ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32mm;color:#1e5a2e}
+  .idno{position:absolute;left:2.6mm;bottom:6.3mm;font:800 3.8mm ui-monospace,Menlo,Consolas,monospace;letter-spacing:.32mm;color:#1e5a2e}
   .exp{color:#b00020}
   .back .body{padding-top:3mm}.qr{width:24mm;height:24mm;flex:none;border:.3mm solid #d9dcc8;padding:.8mm;border-radius:1mm}
   .small{font-size:1.85mm;color:#445;line-height:1.35;margin-top:1.4mm}
   .wm{position:absolute;right:-5mm;bottom:3mm;width:30mm;opacity:.07}
   .hint{font:12px system-ui;color:#456}
-  @media print{body{background:#fff;padding:0;gap:8mm}.card{box-shadow:none}.hint{display:none}}
+  @media print{body{background:#fff;padding:15mm 0 0;gap:8mm}.card{box-shadow:none}.hint{display:none}}
   </style></head><body>
   <div class="card front">
     <div class="band"><img src="${cross}" alt=""><div class="t"><b>የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተ ክርስቲያን</b><span>Ethiopian Orthodox Tewahedo Church</span><span>አዲስ አበባ ሀገረ ስብከት · Addis Ababa Diocese</span></div><i style="width:11mm;flex:none"></i></div>
