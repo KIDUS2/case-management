@@ -1,3 +1,4 @@
+import DateInput from './DateInput.jsx'
 import { useEffect, useRef, useState } from 'react'
 import { t } from '../i18n.js'
 import { todayStr, addDays, fmtDay } from '../ui.js'
@@ -35,8 +36,8 @@ export default function DateFilter({ value, onChange }) {
           </div>
           <div className="dfcustom">
             <b>{t('Choose dates')}</b>
-            <label>{t('From')}<input type="date" value={value.key === 'custom' ? value.from : ''} max={value.to || todayStr()} onChange={e => onChange({ key: 'custom', from: e.target.value, to: value.key === 'custom' ? value.to : todayStr() })} /></label>
-            <label>{t('To')}<input type="date" value={value.key === 'custom' ? value.to : ''} min={value.from || undefined} max={todayStr()} onChange={e => onChange({ key: 'custom', from: value.key === 'custom' ? value.from : addDays(todayStr(), -29), to: e.target.value })} /></label>
+            <label>{t('From')}<DateInput value={value.key === 'custom' ? value.from : ''} max={value.to || todayStr()} onChange={e => onChange({ key: 'custom', from: e.target.value, to: value.key === 'custom' ? value.to : todayStr() })} /></label>
+            <label>{t('To')}<DateInput value={value.key === 'custom' ? value.to : ''} min={value.from || undefined} max={todayStr()} onChange={e => onChange({ key: 'custom', from: value.key === 'custom' ? value.from : addDays(todayStr(), -29), to: e.target.value })} /></label>
             <button type="button" className="btn sm" onClick={() => setOpen(false)}>{t('Done')}</button>
           </div>
         </div>

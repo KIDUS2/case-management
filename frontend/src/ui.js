@@ -42,7 +42,14 @@ export const isStaff = role => ['ADMIN', 'OFFICER', 'RECEPTION', 'SERA_ASKIYAJIE
 export const isDiocese = role => ['ADMIN', 'OFFICER', 'SERA_ASKIYAJIE', 'PAPAS'].includes(role)
 
 import { t, locale, getLang } from './i18n.js'
-export const fmtDate = iso => new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
+import { isEC, ecText } from './ethcal.js'
+const TZ = 'Africa/Addis_Ababa'
+const isAm = () => getLang() === 'am'
+/** The calendar day (in Addis Ababa) of an instant, as YYYY-MM-DD. */
+const dayOf = iso => new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ })
+export const fmtDate = iso => isEC()
+  ? ecText(dayOf(iso), isAm()) + ', ' + new Date(iso).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit', timeZone: TZ })
+  : new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
 export const initial = s => (s || '?').trim()[0]?.toUpperCase() || '?'
 /** K7M2QX -> K7M-2QX, easier to read out and write down */
 export const fmtCode = c => (c && c.length > 3 ? c.slice(0, 3) + '-' + c.slice(3) : c || '')
@@ -54,7 +61,13 @@ export async function copyText(t) {
 /** Dates are Ethiopian local time (Addis Ababa) as YYYY-MM-DD. */
 export const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Addis_Ababa' })
 export const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
-export const fmtDay = iso => new Date(iso + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })
+export const fmtDay = iso => isEC()
+  ? new Date(iso + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'short' }) + ', ' + ecText(iso, isAm(), { short: true })
+  : new Date(iso + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'short', month: 'short', day: 'numeric' })
+/** A plain date with the year, in the chosen calendar. */
+export const fmtDayFull = d => (d ? (isEC() ? ecText(d, isAm()) : new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' })) : '—')
+/** Month and day only, for chart labels. */
+export const fmtMonthDay = d => (isEC() ? ecText(d, isAm(), { short: true }) : new Date(d + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))
 export const dayDiff = iso => Math.round((new Date(iso + 'T00:00:00Z') - new Date(todayStr() + 'T00:00:00Z')) / 86400000)
 
 export function ago(iso) {
@@ -63,7 +76,7 @@ export function ago(iso) {
   if (s < 3600) return t('{n} min ago', { n: Math.floor(s / 60) })
   if (s < 86400) return t('{n} h ago', { n: Math.floor(s / 3600) })
   if (s < 86400 * 7) return t('{n} d ago', { n: Math.floor(s / 86400) })
-  return new Date(iso).toLocaleDateString(locale(), { month: 'short', day: 'numeric' })
+  return fmtMonthDay(dayOf(iso))
 }
 export const fmtSize = n => (n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB')
 

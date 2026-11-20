@@ -1,12 +1,13 @@
 import QRCode from 'qrcode'
 import { blob } from './api.js'
 import { fmtId } from './ui.js'
+import { isEC, ecText } from './ethcal.js'
 
 const RANKS = { LAYPERSON: 'Layperson', DEACON: 'Deacon', PRIEST: 'Priest', MONK: 'Monk', NUN: 'Nun', CHANTER: 'Chanter', TEACHER: 'Teacher', OTHER: 'Other' }
 export const SPIRITUAL_RANK = RANKS
 
 const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-const day = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
+const day = d => (d ? (isEC() ? ecText(d, false) : new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })) : '—')
 const toDataUrl = b => new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(b) })
 
 /** The link inside the QR code: scanning it opens the employee's file in this app (after sign-in). */

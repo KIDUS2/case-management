@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getLang, setLang, t } from '../i18n.js'
+import { getCal, setCal } from '../ethcal.js'
 
 const ORDER = ['system', 'light', 'dark']
 const ICON = { system: '🖥️', light: '☀️', dark: '🌙' }
@@ -18,12 +19,17 @@ export default function Prefs({ compact }) {
   useEffect(() => { applyTheme(theme) }, [theme])
   const next = () => setTheme(ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length])
   const lang = getLang()
+  const cal = getCal()
   return (
     <div className={'prefs' + (compact ? ' compact' : '')}>
       <button type="button" className="pbtn" onClick={next} title={t(LABEL[theme])} aria-label={t('Theme') + ': ' + t(LABEL[theme])}>{ICON[theme]}</button>
       <div className="lang" role="group" aria-label={t('Language')}>
         <button type="button" className={lang === 'en' ? 'on' : ''} onClick={() => lang !== 'en' && setLang('en')}>EN</button>
         <button type="button" className={lang === 'am' ? 'on' : ''} onClick={() => lang !== 'am' && setLang('am')}>አማ</button>
+      </div>
+      <div className="lang cal" role="group" aria-label={t('Calendar')} title={t('Calendar')}>
+        <button type="button" className={cal === 'gc' ? 'on' : ''} onClick={() => cal !== 'gc' && setCal('gc')}>GC</button>
+        <button type="button" className={cal === 'ec' ? 'on' : ''} onClick={() => cal !== 'ec' && setCal('ec')}>ዓ.ም</button>
       </div>
     </div>
   )

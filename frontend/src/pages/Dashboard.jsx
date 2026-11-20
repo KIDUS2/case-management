@@ -2,7 +2,7 @@ import Skeleton from '../components/Skeleton.jsx'
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { t as tt, locale } from '../i18n.js'
-import { STATUS, CATEGORY, fmtDate, initial, fmtCode, names } from '../ui.js'
+import { STATUS, CATEGORY, fmtDate, fmtMonthDay, initial, fmtCode, names } from '../ui.js'
 import PeriodFilter, { periodOf, periodQuery } from '../components/PeriodFilter.jsx'
 
 const STATUS_COLOR = { OPEN: '#1b7f7a', REFERRED: '#c99a2e', COURT: '#b23a2a', RESOLVED: '#2d7a3e' }
@@ -32,7 +32,7 @@ function AreaChart({ data }) {
   const line = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')
   const area = line + ` L${x(data.length - 1)} ${H - B} L${x(0)} ${H - B} Z`
   const ticks = [0, Math.round(max / 2), max]
-  const label = d => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' })
+  const label = fmtMonthDay
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="area" role="img" aria-label="Cases per day">
       <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2d7a3e" stopOpacity=".4" /><stop offset="100%" stopColor="#2d7a3e" stopOpacity="0" /></linearGradient></defs>

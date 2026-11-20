@@ -1,13 +1,14 @@
+import DateInput from '../components/DateInput.jsx'
 import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
-import { WORKING, workingOptions, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
+import { fmtDayFull, WORKING, workingOptions, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 import { askConfirm, notify } from '../dialog.js'
 import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
 
-const fmtDay = d => (d ? new Date(d + 'T00:00:00').toLocaleDateString(locale(), { dateStyle: 'medium' }) : '—')
+const fmtDay = fmtDayFull
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
 const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, salary: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
 const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
@@ -181,8 +182,8 @@ function ServiceCard({ e, churches, canWrite, setErr }) {
           <div className="grid">
             <div><label>Church or office</label><input list="svc-places" value={form.place} onChange={f('place')} required maxLength={200} autoFocus /></div>
             <div><label>Position</label><input value={form.position} onChange={f('position')} maxLength={160} /></div>
-            <div><label>From</label><input type="date" value={form.startDate} onChange={f('startDate')} /></div>
-            <div><label>Until (leave empty if still serving)</label><input type="date" value={form.endDate} onChange={f('endDate')} /></div>
+            <div><label>From</label><DateInput value={form.startDate} onChange={f('startDate')} /></div>
+            <div><label>Until (leave empty if still serving)</label><DateInput value={form.endDate} onChange={f('endDate')} /></div>
           </div>
           <label>Notes</label><input value={form.notes} onChange={f('notes')} maxLength={1000} />
           <div className="iact"><button className="btn sm">Save</button><button type="button" className="btn ghost sm" onClick={() => setForm(null)}>Cancel</button></div>
@@ -259,8 +260,8 @@ function SvcDraft({ items, setItems, churches }) {
           <div className="grid">
             <div><label>{t('Church or office')}</label><input list="svc-places" value={row.place} onChange={f('place')} maxLength={200} autoFocus /></div>
             <div><label>{t('Position')}</label><input value={row.position} onChange={f('position')} maxLength={160} /></div>
-            <div><label>{t('From')}</label><input type="date" value={row.startDate} onChange={f('startDate')} /></div>
-            <div><label>{t('Until (leave empty if still serving)')}</label><input type="date" value={row.endDate} onChange={f('endDate')} /></div>
+            <div><label>{t('From')}</label><DateInput value={row.startDate} onChange={f('startDate')} /></div>
+            <div><label>{t('Until (leave empty if still serving)')}</label><DateInput value={row.endDate} onChange={f('endDate')} /></div>
           </div>
           <div className="iact"><button type="button" className="btn sm" onClick={add}>{t('Add to the list')}</button><button type="button" className="btn ghost sm" onClick={() => setRow(null)}>{t('Cancel')}</button></div>
         </div>
@@ -509,7 +510,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
           <div className="grid">
             <div><label>Mother’s name</label><input value={form.motherName} onChange={f('motherName')} required maxLength={160} /></div>
             <div><label>Gender</label><select value={form.gender} onChange={f('gender')} required><option value="">—</option><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
-            <div><label>Date of birth</label><input type="date" value={form.birthDate} onChange={f('birthDate')} required /></div>
+            <div><label>Date of birth</label><DateInput value={form.birthDate} onChange={f('birthDate')} required /></div>
             <div><label>Photo</label><input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={e => setPhoto(e.target.files[0] || null)} />{photo && <small className="muted">{photo.name}</small>}</div>
           </div>
           <h3 className="sect">Spiritual life</h3>
@@ -517,7 +518,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
             <div><label>Christian name</label><input value={form.christianName} onChange={f('christianName')} maxLength={120} /></div>
             <div><label>Father confessor</label><input value={form.fatherConfessor} onChange={f('fatherConfessor')} maxLength={160} /></div>
             <div><label>Service in the church</label><select value={form.spiritualRank} onChange={f('spiritualRank')}><option value="">—</option>{Object.entries(SPIRITUAL_RANK).map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}</select></div>
-            <div><label>Ordained on</label><input type="date" value={form.ordainedOn} onChange={f('ordainedOn')} /></div>
+            <div><label>Ordained on</label><DateInput value={form.ordainedOn} onChange={f('ordainedOn')} /></div>
           </div>
           <h3 className="sect">Work and contact</h3>
           <div className="grid">
@@ -540,10 +541,10 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
               </div>
             </div>
             <div><label>Email</label><input type="email" value={form.email} onChange={f('email')} maxLength={120} /></div>
-            <div><label>Hired on</label><input type="date" value={form.hireDate} onChange={f('hireDate')} /></div>
+            <div><label>Hired on</label><DateInput value={form.hireDate} onChange={f('hireDate')} /></div>
             <div><label>Address</label><input value={form.address} onChange={f('address')} maxLength={255} /></div>
             <div><label>Church’s own number (optional)</label><input value={form.churchRef} onChange={f('churchRef')} maxLength={40} /></div>
-            {form.id && form.employeeId && <div><label>Card valid until</label><input type="date" value={form.idExpiresOn} onChange={f('idExpiresOn')} /></div>}
+            {form.id && form.employeeId && <div><label>Card valid until</label><DateInput value={form.idExpiresOn} onChange={f('idExpiresOn')} /></div>}
           </div>
           <label>Notes</label><textarea rows={3} value={form.notes} onChange={f('notes')} maxLength={4000} />
           </>}

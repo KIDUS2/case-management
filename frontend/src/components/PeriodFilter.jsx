@@ -1,3 +1,4 @@
+import DateInput from './DateInput.jsx'
 import { t } from '../i18n.js'
 import { todayStr, addDays } from '../ui.js'
 
@@ -37,8 +38,8 @@ export default function PeriodFilter({ value, onChange }) {
       </div>
       {value.key === 'custom' && (
         <div className="daterange">
-          <label>{t('From')}<input type="date" value={value.from} max={value.to || undefined} onChange={e => onChange({ ...value, from: e.target.value })} /></label>
-          <label>{t('To')}<input type="date" value={value.to} min={value.from || undefined} onChange={e => onChange({ ...value, to: e.target.value })} /></label>
+          <label>{t('From')}<DateInput value={value.from} max={value.to || undefined} onChange={e => onChange({ ...value, from: e.target.value })} /></label>
+          <label>{t('To')}<DateInput value={value.to} min={value.from || undefined} onChange={e => onChange({ ...value, to: e.target.value })} /></label>
         </div>
       )}
     </div>
