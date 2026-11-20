@@ -910,3 +910,45 @@ main>:not(.topbar){animation:pagein .32s cubic-bezier(.2,.7,.2,1) both}
   .c-case{grid-area:case}.c-issues{grid-area:issues}.c-prog{grid-area:prog}.c-status{grid-area:status;justify-content:flex-end}.c-wait{grid-area:wait}.c-date{grid-area:date;text-align:right}
   .lcount{display:none}}
 .lkind{padding:11px 12px;height:48px}
+
+/* ===== design pass for every page: one set of controls, tables and work cards ===== */
+.head{align-items:center;margin-bottom:4px}.head h1{margin:0}
+.head+*,h1+.muted+*{margin-top:14px}
+.tabs{display:inline-flex;gap:4px;padding:4px;margin:14px 0;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);flex-wrap:wrap;max-width:100%}
+.tabs .chip{border:0;background:none;border-radius:10px;padding:9px 16px;min-height:0;font-weight:600;color:var(--mute)}
+.tabs .chip:hover{background:var(--soft);color:var(--ink)}
+.tabs .chip.on{background:linear-gradient(180deg,var(--solid2),var(--solid));color:#fff;box-shadow:0 6px 14px -8px var(--solid)}
+.btn{border-radius:11px;letter-spacing:.01em;transition:transform .12s,box-shadow .12s,filter .12s}
+.btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.05)}
+.btn:active:not(:disabled){transform:none}
+.btn:focus-visible,.crow:focus-visible,.segb:focus-visible,.chip:focus-visible,.nav:focus-visible{outline:3px solid color-mix(in srgb,var(--crown) 70%,transparent);outline-offset:2px}
+.btn.ghost{background:var(--card);color:var(--pri);box-shadow:inset 0 0 0 1.5px var(--line)}
+.btn.ghost:hover:not(:disabled){background:var(--soft);box-shadow:inset 0 0 0 1.5px var(--pri2)}
+.card input,.card select,.card textarea,.panel input,.panel select,.panel textarea{background:var(--card)}
+input,select,textarea{border-radius:11px;transition:border-color .15s,box-shadow .15s}
+input::placeholder,textarea::placeholder{color:color-mix(in srgb,var(--mute) 70%,transparent)}
+.addform{border-top:4px solid var(--crown);animation:pagein .25s ease both}
+.card.empty{border-style:dashed;background:transparent;box-shadow:none;padding:56px 20px}
+.search{background:var(--card)}
+
+/* work cards (department inbox, door queue) */
+.case{position:relative;overflow:hidden;border:1px solid var(--line);border-left:1px solid var(--line);border-radius:16px;padding:16px 18px 14px 24px;box-shadow:var(--shadow)}
+.case::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal)}
+.case.s-ref::before{background:var(--gold)}.case.s-court::before{background:var(--court)}.case.s-ok::before{background:var(--ok)}
+.case.urgentcase{border-left:1px solid var(--line)!important}.case.urgentcase::before{background:var(--court);width:7px}
+.case .iact{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.qrow{position:relative;overflow:hidden;border-left:1px solid var(--line);border-radius:14px;padding-left:20px;box-shadow:var(--shadow)}
+.qrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--teal)}
+.qrow.today::before{background:var(--gold)}.qrow.late::before{background:var(--court)}
+.group{margin:26px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+.group .count{min-width:26px;text-align:center;padding:1px 9px;border-radius:999px;background:var(--soft);font-weight:800;font-size:.8rem}
+
+/* notifications and list rows */
+.nitem{padding:14px 18px;transition:background .12s}
+.nitem:hover{filter:none;background:var(--soft)}
+.row{padding:14px 4px}
+.card.list{padding:6px 18px}
+.card.list .row:hover{background:color-mix(in srgb,var(--soft) 45%,transparent)}
+@media(max-width:640px){.tabs{display:flex}.tabs .chip{flex:1;text-align:center;padding:9px 8px}.row{flex-wrap:wrap}}
+main>h1,main>form>h1,main>.head h1{padding-bottom:8px;margin-bottom:4px}
+main>.head{margin-bottom:0}main>.head .muted,main>h1+.muted{margin:0 0 6px}

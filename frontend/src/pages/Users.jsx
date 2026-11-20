@@ -15,6 +15,7 @@ export default function Users({ me }) {
   const [role, setRole] = useState('')
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
   const [edit, setEdit] = useState(null) // { id, fullName, jobTitle, phone, email, canViewAll }
 
   const load = () => api('/users').then(setUsers).catch(e => setErr(e.message))
@@ -26,7 +27,7 @@ export default function Users({ me }) {
     e.preventDefault(); setErr(''); setOk('')
     try {
       await api('/users', { method: 'POST', body: { ...form, departmentId: form.role === 'DEPARTMENT' ? Number(form.departmentId) || null : null, subCity: form.role === 'SUBCITY' ? form.subCity : null, canViewAll: form.role !== 'ADMIN' && form.canViewAll } })
-      setForm(empty); setOk('User added 🎉'); load()
+      setForm(empty); setOk('User added 🎉'); setShowAdd(false); load()
     } catch (x) { setErr(x.message) }
   }
   const patch = async (u, body) => {
@@ -51,9 +52,10 @@ export default function Users({ me }) {
 
   return (
     <>
-      <h1>Users</h1><p className="muted">Add staff and choose what each person can do. Department staff only see the issues sent to their own department.</p>
+      <div className="head"><div><h1>Users</h1><p className="muted">Add staff and choose what each person can do. Department staff only see the issues sent to their own department.</p></div>
+        <button className="btn" onClick={() => setShowAdd(v => !v)}>{showAdd ? '✕ ' + t('Close') : '➕ ' + t('Add user')}</button></div>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
-      <form className="card grid" onSubmit={add}>
+      {showAdd && <form className="card grid addform" onSubmit={add}>
         <div><label>Full name</label><input value={form.fullName} onChange={set('fullName')} required /></div>
         <div><label>Username</label><input value={form.username} onChange={set('username')} required minLength={3} autoCapitalize="none" /></div>
         <div><label>Password</label><PasswordInput value={form.password} onChange={set('password')} required minLength={6} autoComplete="new-password" /></div>
@@ -78,7 +80,7 @@ export default function Users({ me }) {
         <div className="span"><label>Email (optional)</label><input type="email" value={form.email} onChange={set('email')} maxLength={120} /></div>
         {form.role !== 'ADMIN' && form.role !== 'SUBCITY' && <label className="check span"><input type="checkbox" checked={form.canViewAll} onChange={e => setForm({ ...form, canViewAll: e.target.checked })} /> 🔓 Can see every case (otherwise only cases they registered or are added to)</label>}
         <button className="btn span">➕ Add user</button>
-      </form>
+      </form>}
 
       <div className="card list">
         <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
