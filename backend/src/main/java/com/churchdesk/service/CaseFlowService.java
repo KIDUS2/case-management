@@ -77,6 +77,7 @@ public class CaseFlowService {
                     "Appointment on " + returnOn + ", spot " + ap.getSpotNo(), actor.getUsername()));
         }
         i.setEscalationLevel(0); i.setEscalatedAt(null);
+        i.setHandlerLevel(0); i.setHeld(false); i.setHoldReason(null); i.setHeldAt(null);
         i.setResolvedAt(null); i.setResolvedBy(null); i.setResolutionNote(null);
 
         StringBuilder msg = new StringBuilder(label(i.getCategory())).append(" issue sent to ").append(d.getName());
@@ -103,8 +104,8 @@ public class CaseFlowService {
     /** An officer or the administrator accepts a submitted case, or returns it to the sub-city with a reason. */
     @Transactional
     public void review(Long caseId, boolean accept, String note, AppUser actor) {
-        if (actor.getRole() != Role.ADMIN && actor.getRole() != Role.OFFICER)
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the administrator or an officer can review a submitted case");
+        if (!actor.getRole().isDiocese())
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the diocese (administrator, officer, Sera Askiyajie or Papas) can review a submitted case");
         ChurchCase c = load(caseId);
         if (c.getReviewStatus() != ReviewStatus.PENDING) throw new ResponseStatusException(HttpStatus.CONFLICT, "This case is not waiting for review");
         String reason = blankToNull(note);
@@ -149,7 +150,7 @@ public class CaseFlowService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the department that received this issue (or an officer) can resolve it");
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
         // departments serve in order; only the administrator or an officer may jump the queue (or mark an issue urgent)
-        if (actor.getRole() == Role.DEPARTMENT && i.getDepartment() != null && i.getStatus() == IssueStatus.REFERRED) {
+        if (actor.getRole() == Role.DEPARTMENT && i.getDepartment() != null && i.getStatus() == IssueStatus.REFERRED && !i.isHeld()) {
             long ahead = issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
             if (ahead > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Serve the cases in order. " + ahead + (ahead == 1 ? " case is" : " cases are")
                     + " ahead of this one in your queue. If this one cannot wait, ask the administrator to mark it urgent.");
@@ -159,9 +160,10 @@ public class CaseFlowService {
         i.setResolvedBy(actor.getUsername());
         i.setResolutionNote(blankToNull(note));
         i.setReturnOn(null);
+        i.setHeld(false); i.setHoldReason(null); i.setHeldAt(null);
         refreshStatus(c);
 
-        String by = i.getDepartment() != null ? i.getDepartment().getName() : actor.getFullName();
+        String by = i.getHandlerLevel() >= 1 || i.getDepartment() == null ? actor.getFullName() + roleLabel(actor.getRole()) : i.getDepartment().getName();
         events.save(new CaseEvent(c.getId(), i.getId(), EventType.RESOLVED,
                 label(i.getCategory()) + " issue resolved by " + by + (i.getResolutionNote() == null ? "" : ". " + i.getResolutionNote()), actor.getUsername()));
 
@@ -172,6 +174,81 @@ public class CaseFlowService {
                 whole ? "Case " + code(c) + " fully resolved" : label(i.getCategory()) + " issue resolved by " + by,
                 "Case " + code(c) + " · " + complainant(c) + (i.getResolutionNote() == null ? "" : " — " + i.getResolutionNote()),
                 c.getId(), c.getCode(), actor.getUsername());
+    }
+
+    private static String roleLabel(Role r) {
+        return switch (r) { case PAPAS -> " (Papas, final decision)"; case SERA_ASKIYAJIE -> " (Sera Askiyajie)"; default -> ""; };
+    }
+
+    /**
+     * Sets an issue aside because it needs time (documents, a witness, a meeting). The issues behind it are no
+     * longer blocked; it keeps its place and comes back when it is put back in the line.
+     */
+    @Transactional
+    public void hold(Long caseId, Long issueId, boolean hold, String reason, AppUser actor) {
+        ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
+        assertReviewed(c);
+        CaseIssue i = issue(c, issueId);
+        if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
+        if (!CaseAccess.canResolve(actor, i))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the department handling this issue, or the diocese, can set it aside");
+        if (i.isHeld() == hold) return;
+        String why = blankToNull(reason);
+        if (hold && why == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please write what it is waiting for");
+        i.setHeld(hold);
+        i.setHoldReason(hold ? why : null);
+        i.setHeldAt(hold ? Instant.now() : null);
+        events.save(new CaseEvent(c.getId(), i.getId(), EventType.HOLD,
+                hold ? label(i.getCategory()) + " issue set aside. Waiting for: " + why : label(i.getCategory()) + " issue is back in the line", actor.getUsername()));
+    }
+
+    /**
+     * Passes an issue up: department -> Sera Askiyajie -> Papas. Each level can see everything below it and can give
+     * the decision; Papas gives the final one.
+     */
+    @Transactional
+    public void escalate(Long caseId, Long issueId, String reason, AppUser actor) {
+        ChurchCase c = load(caseId);
+        access.assertCanView(c, actor);
+        assertReviewed(c);
+        CaseIssue i = issue(c, issueId);
+        if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
+        String why = blankToNull(reason);
+        if (why == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please write why this needs a higher decision");
+        int from = i.getHandlerLevel();
+        Role role = actor.getRole();
+        int to;
+        if (role == Role.PAPAS) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Papas gives the final decision. It cannot go higher.");
+        else if (role == Role.SERA_ASKIYAJIE) to = 2;
+        else if (role == Role.ADMIN || role == Role.OFFICER || role == Role.RECEPTION) to = Math.min(from + 1, 2);
+        else if (role == Role.DEPARTMENT && CaseAccess.canResolve(actor, i)) to = 1;
+        else throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You cannot pass this issue up");
+        if (to <= from) throw new ResponseStatusException(HttpStatus.CONFLICT, "This issue is already with " + (from == 1 ? "Sera Askiyajie" : "Papas"));
+        i.setHandlerLevel(to);
+        i.setHeld(false); i.setHoldReason(null); i.setHeldAt(null);
+        String who = to == 1 ? "Sera Askiyajie" : "Papas";
+        events.save(new CaseEvent(c.getId(), i.getId(), EventType.ESCALATED, label(i.getCategory()) + " issue passed up to " + who + ". " + why, actor.getUsername()));
+        List<AppUser> to_ = new ArrayList<>(users.findByRoleAndActiveTrue(to == 1 ? Role.SERA_ASKIYAJIE : Role.PAPAS));
+        to_.addAll(users.findByRoleAndActiveTrue(Role.ADMIN));
+        notifier.send(to_, "ESCALATED", "Needs " + (to == 1 ? "your attention" : "your final decision") + " · case " + code(c),
+                label(i.getCategory()) + " · " + complainant(c) + " — " + why, c.getId(), c.getCode(), actor.getUsername());
+    }
+
+    /** A sub-city solved the case itself: every issue is closed with its solution and the diocese is shown it. */
+    @Transactional
+    public void resolveLocally(ChurchCase c, String solution, AppUser actor) {
+        c.setSubCitySolved(true);
+        for (CaseIssue i : c.getIssues()) {
+            if (i.getStatus() == IssueStatus.RESOLVED) continue;
+            i.setStatus(IssueStatus.RESOLVED);
+            i.setResolvedAt(Instant.now());
+            i.setResolvedBy(actor.getUsername());
+            i.setResolutionNote(solution);
+        }
+        refreshStatus(c);
+        events.save(new CaseEvent(c.getId(), null, EventType.RESOLVED,
+                "Solved by the " + actor.getSubCity() + " sub-city and shared with the diocese. " + solution, actor.getUsername()));
     }
 
     /** Only the administrator decides what jumps the queue. */

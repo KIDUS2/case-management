@@ -20,7 +20,7 @@ import com.churchdesk.service.SmsService;
 @RestController
 @RequestMapping("/api")
 public class AppointmentController {
-    private static final String STAFF = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String STAFF = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private final AppointmentService appointments;
     private final SmsService sms;
     private final CurrentUser current;

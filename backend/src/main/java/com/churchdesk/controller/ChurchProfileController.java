@@ -32,7 +32,7 @@ import com.churchdesk.repository.ChurchRepository;
 @RestController
 @RequestMapping("/api")
 public class ChurchProfileController {
-    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
     private static final Set<String> KINDS = Set.of("CARTA", "MAP", "LETTER", "PHOTO", "OTHER");
     private static final Set<String> TYPES = Set.of("pdf", "jpg", "jpeg", "png", "webp", "doc", "docx", "xls", "xlsx", "txt");

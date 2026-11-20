@@ -44,7 +44,7 @@ import com.churchdesk.util.Times;
 @RestController
 @RequestMapping("/api/employees")
 public class EmployeeController {
-    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
 
     private final PersonRepository persons;

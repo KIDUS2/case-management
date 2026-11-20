@@ -745,3 +745,20 @@ button.chx-stat{cursor:pointer}.chx-stat b{font-size:1.7rem;font-family:var(--se
 .smsrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0 0 14px;padding:10px 14px;border-radius:12px;border:1px solid var(--line,#d8d2c4);background:var(--card,#fff)}
 .smsrow span{flex:1 1 240px}.smsrow .ok{color:#1d6b3a;font-weight:600}
 .apset .chips{margin-bottom:4px}
+
+/* Workflow: hold, pass up, committee, sub-city, charity */
+.idept.lvl{background:#e5ddf5;color:#3b2a73}.idept.hold{background:#fbe9c4;color:#6b4a00}
+.holdbox{margin:8px 0;padding:8px 12px;border-radius:10px;border:1px dashed #d0a640;background:#fff8e6;color:#5a4300}
+.holdbox small{display:block;opacity:.8}
+.collab .cbox{border:1px solid var(--line,#d8d2c4);border-radius:12px;padding:12px 14px;margin:10px 0;background:#fffdf8}
+.collab .chead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.charitybar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border-radius:14px;border:1px solid #9cc8a8;background:linear-gradient(180deg,#eef9f0,#e1f3e6);color:#1d4a2b}
+.charitybar.solved{border-color:#a7bfdc;background:linear-gradient(180deg,#eef4fb,#e0ebf7);color:#1f3a5f}
+.badge.charity{background:#d9f0e0;color:#1d5b33}
+.kindpick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.kind{display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px 14px;border:1.5px solid var(--line,#d8d2c4);border-radius:14px;background:var(--card,#fff);color:inherit;cursor:pointer;font:inherit}
+.kind small{opacity:.75}.kind.on{border-color:var(--gold,#c9a227);background:#fbf3d6;box-shadow:0 0 0 2px #c9a22733}
+.kind:focus-visible{outline:3px solid var(--gold,#c9a227);outline-offset:2px}
+@media (max-width:560px){.kindpick{grid-template-columns:1fr}}
+.solvedbox{margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid #a7bfdc;background:#f1f6fc}
+.solvedbox textarea{width:100%;margin-top:8px}

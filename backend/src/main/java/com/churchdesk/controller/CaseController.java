@@ -10,12 +10,14 @@ import java.util.List;
 import com.churchdesk.dto.common.PageDto;
 import com.churchdesk.dto.request.AddPartyRequest;
 import com.churchdesk.dto.request.CreateCaseRequest;
+import com.churchdesk.dto.request.HoldRequest;
 import com.churchdesk.dto.request.IssueIn;
 import com.churchdesk.dto.request.LetterRequest;
 import com.churchdesk.dto.request.LinkRequest;
 import com.churchdesk.dto.request.NoteRequest;
 import com.churchdesk.dto.request.ReferRequest;
 import com.churchdesk.dto.request.ReviewRequest;
+import com.churchdesk.dto.request.TextRequest;
 import com.churchdesk.dto.request.UrgentRequest;
 import com.churchdesk.dto.response.CaseDetail;
 import com.churchdesk.dto.response.CaseSummary;
@@ -23,6 +25,7 @@ import com.churchdesk.dto.response.InboxDto;
 import com.churchdesk.dto.response.PersonInfo;
 import com.churchdesk.dto.response.QueueItem;
 import com.churchdesk.dto.response.Summary;
+import com.churchdesk.enums.CaseKind;
 import com.churchdesk.enums.CaseStatus;
 import com.churchdesk.enums.ReviewStatus;
 import com.churchdesk.enums.Role;
@@ -35,7 +38,7 @@ import com.churchdesk.util.CaseAccess;
 @RestController
 @RequestMapping("/api")
 public class CaseController {
-    private static final String STAFF = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String STAFF = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private final CaseService service;
     private final CaseFlowService flow;
     private final CurrentUser current;
@@ -48,9 +51,10 @@ public class CaseController {
     public PageDto<CaseSummary> list(@RequestParam(required = false) String q,
                                      @RequestParam(required = false) CaseStatus status,
                                      @RequestParam(required = false) ReviewStatus review,
+                                     @RequestParam(required = false) CaseKind kind,
                                      @RequestParam(defaultValue = "0") int page,
                                      @RequestParam(defaultValue = "12") int size, Authentication auth) {
-        return service.list(q, status, review, page, size, current.get(auth));
+        return service.list(q, status, review, kind, page, size, current.get(auth));
     }
 
     @GetMapping("/cases/summary")
@@ -74,7 +78,7 @@ public class CaseController {
     }
 
     /** Accept a submitted case, or return it to the sub-city with a reason. */
-    @PostMapping("/cases/{id}/review") @PreAuthorize("hasAnyRole('ADMIN','OFFICER')")
+    @PostMapping("/cases/{id}/review") @PreAuthorize("hasAnyRole('ADMIN','OFFICER','SERA_ASKIYAJIE','PAPAS')")
     public CaseDetail review(@PathVariable Long id, @Valid @RequestBody ReviewRequest r, Authentication auth) {
         AppUser u = current.get(auth);
         flow.review(id, r.accept(), r.note(), u);
@@ -104,6 +108,20 @@ public class CaseController {
     public CaseDetail resolve(@PathVariable Long id, @PathVariable Long issueId, @Valid @RequestBody(required = false) NoteRequest r, Authentication auth) {
         AppUser u = current.get(auth);
         flow.resolve(id, issueId, r == null ? null : r.note(), u);
+        return service.get(id, u);
+    }
+
+    @PostMapping("/cases/{id}/issues/{issueId}/hold")
+    public CaseDetail hold(@PathVariable Long id, @PathVariable Long issueId, @Valid @RequestBody HoldRequest r, Authentication auth) {
+        AppUser u = current.get(auth);
+        flow.hold(id, issueId, r.hold(), r.reason(), u);
+        return service.get(id, u);
+    }
+
+    @PostMapping("/cases/{id}/issues/{issueId}/escalate")
+    public CaseDetail escalate(@PathVariable Long id, @PathVariable Long issueId, @Valid @RequestBody TextRequest r, Authentication auth) {
+        AppUser u = current.get(auth);
+        flow.escalate(id, issueId, r.text(), u);
         return service.get(id, u);
     }
 
@@ -174,6 +192,12 @@ public class CaseController {
     @GetMapping("/queue") @PreAuthorize(STAFF)
     public List<QueueItem> queue(@RequestParam(defaultValue = "14") int days) { return service.queue(days); }
 
+    /** What was passed up: Sera Askiyajie sees what waits for him, Papas what waits for the final decision. */
+    @GetMapping("/inbox/passed-up") @PreAuthorize("hasAnyRole('ADMIN','SERA_ASKIYAJIE','PAPAS')")
+    public InboxDto passedUp(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size, Authentication auth) {
+        return service.escalatedInbox(current.get(auth), page, size);
+    }
+
     @GetMapping("/inbox")
     public InboxDto inbox(@RequestParam(required = false) Long departmentId,
                           @RequestParam(defaultValue = "false") boolean resolved,
@@ -182,7 +206,7 @@ public class CaseController {
         AppUser u = current.get(auth);
         Long dept;
         if (u.getRole() == Role.DEPARTMENT) dept = CaseAccess.departmentId(u);
-        else if (u.getRole() == Role.ADMIN || u.getRole() == Role.OFFICER) dept = departmentId;
+        else if (u.getRole().isDiocese()) dept = departmentId;
         else throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not available for your role");
         if (dept == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please choose a department");
         return service.inbox(dept, resolved, page, size);

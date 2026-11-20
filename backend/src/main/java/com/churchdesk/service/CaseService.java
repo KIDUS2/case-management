@@ -35,6 +35,7 @@ import com.churchdesk.dto.response.IssueDto;
 import com.churchdesk.dto.response.PersonInfo;
 import com.churchdesk.dto.response.QueueItem;
 import com.churchdesk.dto.response.Summary;
+import com.churchdesk.enums.CaseKind;
 import com.churchdesk.enums.CaseStatus;
 import com.churchdesk.enums.EventType;
 import com.churchdesk.enums.IssueStatus;
@@ -123,15 +124,23 @@ public class CaseService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ch.getName() + " is not in " + actor.getSubCity() + ". You can only submit cases for your own sub-city.");
         }
         List<IssueIn> issues = r.issues().stream().map(i -> new IssueIn(i.category(), i.description(), null, null)).toList();
-        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false);
+        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false, r.kind(), null);
         CaseDetail d = createCase(clean, actor, ReviewStatus.PENDING);
-        flow.notifySubmitted(cases.findById(d.id()).orElseThrow(), actor);
+        ChurchCase made = cases.findById(d.id()).orElseThrow();
+        flow.notifySubmitted(made, actor);
+        // the sub-city already solved it: record the solution and share it with the diocese
+        if (r.localSolution() != null && !r.localSolution().isBlank()) {
+            flow.resolveLocally(made, r.localSolution().trim(), actor);
+            return toDetail(made);
+        }
         return d;
     }
 
     private CaseDetail createCase(CreateCaseRequest r, AppUser actor, ReviewStatus review) {
         ChurchCase c = new ChurchCase();
         c.setReviewStatus(review);
+        final boolean charity = "CHARITY".equalsIgnoreCase(r.kind());
+        c.setKind(charity ? CaseKind.CHARITY : CaseKind.ISSUE);
         c.setCode(newCode());
         c.setDiscussionNotes(blankToNull(r.discussionNotes()));
         c.setLetterIssued(r.letterIssued());
@@ -148,7 +157,8 @@ public class CaseService {
         for (IssueIn in : r.issues()) {
             CaseIssue i = new CaseIssue();
             i.setChurchCase(c);
-            i.setCategory(options.requireIssueType(in.category()));
+            // a charity request is not an issue: it always has the charity type
+            i.setCategory(options.requireIssueType(charity ? "CHARITY" : in.category()));
             i.setDescription(blankToNull(in.description()));
             i.setSortOrder(issueOrder++);
             c.getIssues().add(i);
@@ -227,13 +237,16 @@ public class CaseService {
     }
 
     @Transactional(readOnly = true)
-    public PageDto<CaseSummary> list(String q, CaseStatus status, ReviewStatus review, int page, int size, AppUser actor) {
+    public PageDto<CaseSummary> list(String q, CaseStatus status, ReviewStatus review, CaseKind kind, int page, int size, AppUser actor) {
         Specification<ChurchCase> spec = access.visibleTo(actor);
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
         if (review != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("reviewStatus"), review));
+        }
+        if (kind != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("kind"), kind));
         }
         if (q != null && !q.isBlank()) {
             final String like = "%" + q.trim().toLowerCase() + "%";
@@ -294,7 +307,7 @@ public class CaseService {
 
     /** 1 = next to be served in the department; 0 = not waiting in a queue. */
     private int queuePosition(CaseIssue i) {
-        if (i.getStatus() != IssueStatus.REFERRED || i.getDepartment() == null || i.getReferredAt() == null) return 0;
+        if (i.getStatus() != IssueStatus.REFERRED || i.isHeld() || i.getDepartment() == null || i.getReferredAt() == null) return 0;
         return 1 + (int) issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
     }
 
@@ -305,18 +318,31 @@ public class CaseService {
         PageRequest pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50));
         Page<CaseIssue> result = resolved ? issueRepo.findForDepartment(departmentId, statuses, pr) : issueRepo.findQueueForDepartment(departmentId, statuses, pr);
         LocalDate today = Times.today();
-        List<InboxItem> items = result.getContent().stream().map(i -> {
-            ChurchCase c = i.getChurchCase();
-            List<Person> who = peopleIn(c, PartyRole.COMPLAINANT);
-            return new InboxItem(i.getId(), c.getId(), c.getCode(), i.getCategory(), i.getDescription(), i.getStatus(),
-                    i.getDepartment().getName(), i.getReferredAt(), i.getReturnOn(), who.stream().map(Person::getFullName).toList(),
-                    peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
-                    who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote(),
-                    i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, today), i.getEscalationLevel(), queuePosition(i),
-                    who.isEmpty() ? null : who.get(0).getChurch().getSubCity());
-        }).toList();
+        List<InboxItem> items = result.getContent().stream().map(i -> toInbox(i, today)).toList();
         long pending = issueRepo.countByDepartmentIdAndStatus(departmentId, IssueStatus.REFERRED);
         return new InboxDto(items, result.getTotalElements(), result.getNumber(), result.getSize(), pending);
+    }
+
+    private InboxItem toInbox(CaseIssue i, LocalDate today) {
+        ChurchCase c = i.getChurchCase();
+        List<Person> who = peopleIn(c, PartyRole.COMPLAINANT);
+        return new InboxItem(i.getId(), c.getId(), c.getCode(), i.getCategory(), i.getDescription(), i.getStatus(),
+                i.getDepartment() == null ? "" : i.getDepartment().getName(), i.getReferredAt(), i.getReturnOn(), who.stream().map(Person::getFullName).toList(),
+                peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
+                who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote(),
+                i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, today), i.getEscalationLevel(), queuePosition(i),
+                who.isEmpty() ? null : who.get(0).getChurch().getSubCity(), i.isHeld(), i.getHandlerLevel());
+    }
+
+    /** Issues a department passed up: Sera Askiyajie sees level 1, Papas level 2, the administrator both. */
+    @Transactional(readOnly = true)
+    public InboxDto escalatedInbox(AppUser actor, int page, int size) {
+        int min = actor.getRole() == Role.PAPAS ? 2 : 1;
+        int max = actor.getRole() == Role.SERA_ASKIYAJIE ? 1 : 2;
+        PageRequest pr = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 50));
+        Page<CaseIssue> result = issueRepo.findAtLevel(min, max, IssueStatus.RESOLVED, pr);
+        LocalDate today = Times.today();
+        return new InboxDto(result.getContent().stream().map(i -> toInbox(i, today)).toList(), result.getTotalElements(), result.getNumber(), result.getSize(), result.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -373,7 +399,7 @@ public class CaseService {
                 complainants.stream().map(Person::getFullName).toList(),
                 peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
                 church, c.getStatus(), c.getIssues().size(),
-                (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt(), c.getReviewStatus());
+                (int) c.getIssues().stream().filter(i -> i.getStatus() == IssueStatus.RESOLVED).count(), cats, c.isLetterIssued(), c.getCreatedAt(), c.getReviewStatus(), c.getKind());
     }
 
     private PersonInfo toPerson(Person p) { return toPerson(p, null); }
@@ -482,7 +508,8 @@ public class CaseService {
                 i.getDepartment() == null ? null : i.getDepartment().getId(), i.getDepartment() == null ? null : i.getDepartment().getName(),
                 i.getReferredAt(), i.getReturnOn(), i.getResolutionNote(), i.getResolvedBy(), i.getResolvedAt(),
                 i.getCourtAt(), i.getCourtAckBy(), i.getCourtAckAt(),
-                i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, Times.today()), i.getEscalationLevel(), queuePosition(i))).toList();
+                i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, Times.today()), i.getEscalationLevel(), queuePosition(i),
+                i.isHeld(), i.getHoldReason(), i.getHandlerLevel())).toList();
         List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
                 .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
         List<CaseFileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()
@@ -490,7 +517,7 @@ public class CaseService {
         return new CaseDetail(c.getId(), c.getCode(), c.getStatus(), c.getDiscussionNotes(), c.isLetterIssued(),
                 c.getCreatedBy(), c.getCreatedAt(), complainants.stream().map(this::toPerson).toList(),
                 subjects.stream().map(this::toPerson).toList(), involved, issues, related, new ArrayList<>(linkedIds), events, files,
-                c.getReviewStatus(), c.getReviewNote(), c.getReviewedBy());
+                c.getReviewStatus(), c.getReviewNote(), c.getReviewedBy(), c.getKind(), c.isSubCitySolved());
     }
 
     private static String blankToNull(String s) { return s == null || s.isBlank() ? null : s.trim(); }

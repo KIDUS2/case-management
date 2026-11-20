@@ -5,7 +5,8 @@ import { t } from '../i18n.js'
 import ChurchLoop from '../components/ChurchLoop.jsx'
 import IssueFlags from '../components/IssueFlags.jsx'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
-import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, fmtId } from '../ui.js'
+import { InvestigationCard, SubcityCard } from '../components/Collaboration.jsx'
+import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -15,6 +16,7 @@ export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuer
 function CaseList({ me, onOpen, goNew, initialQuery }) {
   const [q, setQ] = useState(initialQuery || '')
   const [status, setStatus] = useState('')
+  const [kind, setKind] = useState('')
   const [page, setPage] = useState(0)
   const [data, setData] = useState({ items: [], total: 0, size: 12 })
   const [sum, setSum] = useState(null)
@@ -22,18 +24,19 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { api('/cases/summary').then(setSum).catch(e => setErr(e.message)) }, [])
-  useEffect(() => { setPage(0) }, [q, status])
+  useEffect(() => { setPage(0) }, [q, status, kind])
   useEffect(() => {
     setLoading(true)
     const t = setTimeout(() => {
       const p = new URLSearchParams({ page, size: 12 })
       if (q.trim()) p.set('q', q.trim())
+      if (kind) p.set('kind', kind)
       if (status === '@PENDING') p.set('review', 'PENDING')
       else if (status) p.set('status', status)
       api('/cases?' + p).then(d => { setData(d); setErr('') }).catch(e => setErr(e.message)).finally(() => setLoading(false))
     }, 250)
     return () => clearTimeout(t)
-  }, [q, status, page])
+  }, [q, status, kind, page])
 
   const pages = Math.max(1, Math.ceil(data.total / data.size))
   const tiles = [
@@ -57,13 +60,15 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
           </button>
         ))}
       </div>
+ {me.role !== 'SUBCITY' && <div className="tabs" style={{ marginBottom: 8 }}>
+        {[['', t('All kinds')], ['ISSUE', t('Issues')], ['CHARITY', '🤝 ' + t('Charity requests')]].map(([k, l]) => <button key={k} className={'chip' + (kind === k ? ' on' : '')} onClick={() => setKind(k)}>{l}</button>)}</div>}
       <input className="search" placeholder="Filter this list by name, church or case code…" value={q} onChange={e => setQ(e.target.value)} />
       <div className={loading ? 'fade' : ''}>
         {data.items.map(c => (
           <button key={c.id} className={'case ' + STATUS[c.status].cls} onClick={() => onOpen(c.id)}>
             <div className="avatar">{initial(c.complainants[0])}</div>
             <div className="grow">
-              <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>{c.reviewStatus && c.reviewStatus !== 'ACCEPTED' && <span className={'badge review ' + c.reviewStatus.toLowerCase()}>{t(REVIEW[c.reviewStatus])}</span>}</div>
+              <div className="ctitle"><b>{names(c.complainants)}</b><span className={'badge ' + STATUS[c.status].cls}>{STATUS[c.status].label}</span>{c.kind === 'CHARITY' && <span className="badge charity">🤝 {t('Charity')}</span>}{c.reviewStatus && c.reviewStatus !== 'ACCEPTED' && <span className={'badge review ' + c.reviewStatus.toLowerCase()}>{t(REVIEW[c.reviewStatus])}</span>}</div>
               <small>⛪ {c.churchName}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</small>
               {c.subjects.length > 0 && <small className="about">👤 {t('About: {x}', { x: names(c.subjects) })}</small>}
               <div className="cats">{c.categories.map(k => <span key={k} className="cat">{CATEGORY[k].icon} {CATEGORY[k].label}</span>)}</div>
@@ -114,7 +119,7 @@ function ReviewBanner({ c, me, onChange, setErr }) {
   const [returning, setReturning] = useState(false)
   const [busy, setBusy] = useState(false)
   if (!c.reviewStatus || c.reviewStatus === 'ACCEPTED') return null
-  const canReview = ['ADMIN', 'OFFICER'].includes(me.role)
+  const canReview = isDiocese(me.role)
   const decide = async accept => {
     setErr(''); setBusy(true)
     try { onChange(await api(`/cases/${c.id}/review`, { method: 'POST', body: { accept, note } })); setReturning(false); setNote('') }
@@ -163,12 +168,17 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
   useEffect(() => { if (!dept && suggested) setDept(suggested.id) }, [suggested]) // eslint-disable-line react-hooks/exhaustive-deps
   const st = ISSUE_STATUS[i.status]
   const done = i.status === 'RESOLVED'
-  const desk = ['ADMIN', 'OFFICER', 'RECEPTION'].includes(me.role)
+  const desk = isStaff(me.role)
   const held = !!c.reviewStatus && c.reviewStatus !== 'ACCEPTED'   // not reviewed yet: nothing moves
   const canRefer = desk && !done && !held
-  const myTurn = me.role !== 'DEPARTMENT' || i.queuePosition <= 1
-  const canResolve = !done && !held && (['ADMIN', 'OFFICER'].includes(me.role) || (me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId && myTurn))
+  const myTurn = me.role !== 'DEPARTMENT' || i.held || i.queuePosition <= 1
+  const ownDept = me.role === 'DEPARTMENT' && i.status === 'REFERRED' && i.departmentId === me.departmentId && i.handlerLevel === 0
+  const canResolve = !done && !held && (['ADMIN', 'OFFICER', 'PAPAS'].includes(me.role) || (me.role === 'SERA_ASKIYAJIE' && i.handlerLevel <= 1) || (ownDept && myTurn))
   const canCourt = ['ADMIN', 'OFFICER'].includes(me.role) && !done && !held && i.status !== 'COURT'
+  const canHold = !done && !held && i.status === 'REFERRED' && (canResolve || ownDept)
+  const upTo = me.role === 'SERA_ASKIYAJIE' ? 2 : me.role === 'PAPAS' ? 0 : Math.min(i.handlerLevel + 1, 2)
+  const canPassUp = !done && !held && i.handlerLevel < 2 && (ownDept || (isDiocese(me.role) && me.role !== 'PAPAS' && upTo > i.handlerLevel))
+  const finalWord = me.role === 'PAPAS' || i.handlerLevel === 2
   const d = i.returnOn ? dayDiff(i.returnOn) : null
 
   const run = async (path, body) => {
@@ -215,8 +225,11 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
         <div className="ihead"><b>{k + 1}. {CATEGORY[i.category].label}</b><span className={'badge ' + st.cls}>{st.icon} {st.label}</span>
           {i.departmentName && <span className="idept">🏢 {i.departmentName}</span>}
           <IssueFlags i={i} />
+          {i.handlerLevel > 0 && !done && <span className="idept lvl">⬆️ {i.handlerLevel === 1 ? t('With Sera Askiyajie') : t('With Papas for the final decision')}</span>}
+          {i.held && !done && <span className="idept hold">⏸️ {t('Set aside')}</span>}
           {i.returnOn && !done && <span className={'iret' + (d < 0 ? ' late' : d <= 1 ? ' soon' : '')}>🚪 {t('Returns {x}', { x: fmtDay(i.returnOn) + (d < 0 ? ' (overdue)' : d === 0 ? ' (today)' : '') })}</span>}</div>
         <p>{i.description || <span className="muted">No detail written yet.</span>}</p>
+        {i.held && !done && <div className="holdbox">⏸️ {t('Set aside. Waiting for: {x}', { x: i.holdReason || '' })} <small>{t('The cases behind it can be served meanwhile.')}</small></div>}
         {done && <div className="resbox">✅ {t('Resolved {when}{by} (@{who}){note}', { when: ago(i.resolvedAt), by: i.departmentName ? ' by ' + i.departmentName : '', who: i.resolvedBy, note: i.resolutionNote ? ' — ' + i.resolutionNote : '' })}</div>}
         {myFiles.length > 0 && (
           <div style={{ marginTop: 8 }}>
@@ -235,12 +248,33 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
         )}
         <div className="iact">
           {canRefer && <button className="btn ghost sm" onClick={() => open('refer')}>{i.departmentId ? '🔁 Send to another department' : '📤 Send to department'}</button>}
-          {!done && !myTurn && me.role === 'DEPARTMENT' && i.departmentId === me.departmentId && <small className="muted">⏳ {t('Serve the cases ahead of this one first, or ask the administrator to mark it urgent.')}</small>}
-          {canResolve && <button className="btn ok sm" onClick={() => open('resolve')}>✅ Mark resolved</button>}
+          {!done && !myTurn && me.role === 'DEPARTMENT' && i.departmentId === me.departmentId && <small className="muted">⏳ {t('Please finish the cases ahead of this one first. If one of them must wait, set it aside. Or ask the administrator to mark this one urgent.')}</small>}
+          {canResolve && <button className="btn ok sm" onClick={() => open('resolve')}>{finalWord ? '⚖️ ' + t('Give the final decision') : '✅ ' + t('Mark as finished')}</button>}
+          {canHold && <button className="btn ghost sm" onClick={() => open('hold')}>⏸️ {t('Set aside for now')}</button>}
+          {i.held && !done && !held && (canResolve || ownDept || desk) && <button className="btn ghost sm" disabled={busy} onClick={() => run('hold', { hold: false })}>▶️ {t('Put back in line')}</button>}
+          {canPassUp && <button className="btn ghost sm" onClick={() => open('passup')}>⬆️ {upTo === 2 ? t('Pass up to Papas') : t('Pass up to Sera Askiyajie')}</button>}
           {canCourt && <button className="btn court sm" onClick={() => open('court')}>⚖️ Take to court</button>}
           {me.role === 'ADMIN' && !done && i.departmentId && i.status === 'REFERRED' && <button className="btn ghost sm" disabled={busy} onClick={toggleUrgent}>{i.priority === 'URGENT' ? '↩ ' + t('Remove urgent') : '🔥 ' + t('Mark urgent')}</button>}
           {(desk || me.role === 'DEPARTMENT') && <label className="btn ghost sm" style={{ margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>📎 Attach file<input type="file" multiple hidden disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={attach} /></label>}
         </div>
+        {panel === 'hold' && (
+          <div className="panel">
+            <label>{t('What is it waiting for?')}</label>
+            <textarea rows={2} autoFocus value={note} maxLength={500} onChange={e => setNote(e.target.value)} placeholder={t('e.g. papers from the church, a meeting with the priest')} />
+            <div className="iact"><button className="btn sm" disabled={busy || !note.trim()} onClick={() => run('hold', { hold: true, reason: note })}>{busy ? t('Saving…') : '⏸️ ' + t('Set aside')}</button>
+              <button className="btn ghost sm" onClick={() => setPanel(null)}>{t('Cancel')}</button></div>
+            <small>{t('A long case should not keep simple cases waiting. Set it aside and serve the next one. It keeps its place and can be put back in line.')}</small>
+          </div>
+        )}
+        {panel === 'passup' && (
+          <div className="panel">
+            <label>{upTo === 2 ? t('Why does Papas need to decide this?') : t('Why does Sera Askiyajie need to see this?')}</label>
+            <textarea rows={3} autoFocus value={note} maxLength={2000} onChange={e => setNote(e.target.value)} />
+            <div className="iact"><button className="btn sm" disabled={busy || !note.trim()} onClick={() => run('escalate', { text: note })}>{busy ? t('Sending…') : '⬆️ ' + t('Pass it up')}</button>
+              <button className="btn ghost sm" onClick={() => setPanel(null)}>{t('Cancel')}</button></div>
+            <small>{t('The department can no longer close it. You will see it again when it is decided.')}</small>
+          </div>
+        )}
         {panel === 'refer' && (
           <div className="panel">
             <div className="two">
@@ -261,11 +295,11 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
         )}
         {panel === 'resolve' && (
           <div className="panel">
-            <label>What was done? (the desk and admin are notified)</label>
+            <label>{finalWord ? t('What is your decision?') : t('What was done? (the desk and admin are notified)')}</label>
             <textarea rows={3} autoFocus value={note} maxLength={4000} onChange={e => setNote(e.target.value)} />
             <label className="drop" style={{ marginTop: 8, padding: 10 }}>📎 {picked.length ? picked.map(f => f.name).join(', ') : 'Attach the paper or proof (optional)'}
               <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={e => { const f = Array.from(e.target.files); e.target.value = ''; setPicked(l => [...l, ...f]) }} /></label>
-            <div className="iact"><button className="btn ok sm" disabled={busy} onClick={resolveNow}>{busy ? 'Saving…' : '✅ Confirm resolved'}</button>
+            <div className="iact"><button className="btn ok sm" disabled={busy} onClick={resolveNow}>{busy ? t('Saving…') : finalWord ? '⚖️ ' + t('Save the decision') : '✅ ' + t('Confirm finished')}</button>
               <button className="btn ghost sm" onClick={() => setPanel(null)}>Cancel</button></div>
           </div>
         )}
@@ -541,6 +575,8 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
       )}
       {err && <div className="err">{err}</div>}
       <ReviewBanner c={c} me={me} onChange={setC} setErr={setErr} />
+      {c.kind === 'CHARITY' && <div className="charitybar">🤝 <b>{t('Charity request')}</b> {t('This is a request for help, not an issue. Decide whether and how the church helps, and write it when you finish.')}</div>}
+      {c.subCitySolved && <div className="charitybar solved">🏙️ <b>{t('Already solved by the sub-city')}</b> {t('Shared with the diocese for your information.')}</div>}
       {c.reviewStatus !== 'PENDING' && <SmsRow c={c} me={me} setErr={setErr} />}
       <div className={'hero-card ' + st.cls}>
         <div className="grow">
@@ -585,6 +621,8 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
             {c.subjects.map(p => <PersonRow key={p.id} p={p} />)}
           </div>
           {me.role === 'ADMIN' && <AccessCard c={c} setErr={setErr} />}
+          {me.role !== 'RECEPTION' && <InvestigationCard c={c} me={me} setErr={setErr} />}
+          {c.reviewStatus !== 'PENDING' && <SubcityCard c={c} me={me} setErr={setErr} />}
           {me.role !== 'SUBCITY' && <InvolvedCard c={c} churches={churches} onChange={setC} setErr={setErr} />}
           <Files c={c} me={me} onChange={setC} setErr={setErr} />
           {me.role !== 'SUBCITY' && <RelatedCard c={c} onOpen={onOpen} onChange={setC} setErr={setErr} />}

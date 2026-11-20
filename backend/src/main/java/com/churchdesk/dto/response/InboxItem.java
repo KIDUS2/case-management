@@ -9,4 +9,5 @@ import com.churchdesk.enums.IssueStatus;
 public record InboxItem(Long issueId, Long caseId, String code, String category, String description, IssueStatus status,
                         String departmentName, Instant referredAt, LocalDate returnOn, List<String> complainants,
                         List<String> subjects, String churchName, Instant resolvedAt, String resolvedBy, String resolutionNote,
-                        String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition, String subCity) {}
+                        String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition, String subCity,
+                        boolean held, int handlerLevel) {}

@@ -112,6 +112,9 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const [issues, setIssues] = useState([blankIssue()])
   const [notes, setNotes] = useState('')
   const [letter, setLetter] = useState(false)
+  const [charity, setCharity] = useState(false)   // a request for help, not an issue
+  const [solved, setSolved] = useState(false)     // sub-city only: already solved at the sub-city
+  const [solution, setSolution] = useState('')
   const [churches, setChurches] = useState([])
   const [departments, setDepartments] = useState([])
   const [files, setFiles] = useState([])
@@ -146,14 +149,15 @@ export default function NewCase({ me, onCreated, goChurches }) {
         return toPayload(p, t('Person {n} reporting', { n: i + 1 }), true)
       })
       const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 })))
-      const bad = issues.findIndex(i => i.category !== 'UNCLEAR' && !i.description.trim())
-      if (bad >= 0) throw new Error(t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }))
+      const bad = issues.findIndex(i => (charity || i.category !== 'UNCLEAR') && !i.description.trim())
+      if (bad >= 0) throw new Error(charity ? t('Please write what help is needed.') : t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }))
+      if (sub && solved && !solution.trim()) throw new Error(t('Please write what the sub-city did to solve it.'))
       setBusy(true)
       const payload = issues.map(i => ({
         category: i.category, description: i.description,
         departmentId: i.departmentId ? Number(i.departmentId) : null, returnOn: i.departmentId ? i.returnOn || null : null,
       }))
-      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter } })
+      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter, kind: charity ? 'CHARITY' : 'ISSUE', localSolution: sub && solved ? solution.trim() : null } })
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
@@ -169,6 +173,11 @@ export default function NewCase({ me, onCreated, goChurches }) {
       <datalist id="church-list">{churches.map(c => <option key={c.id} value={c.name} label={c.subCity || ''} />)}</datalist>
       {churches.length === 0 && <div className="banner warn">No churches yet. {me.role === 'ADMIN' ? <a href="#" onClick={e => { e.preventDefault(); goChurches() }}>Add the church list first →</a> : 'Ask an administrator to add the church list.'}</div>}
       {sub && churches.length > 0 && <div className="banner">📍 {t('You can choose churches of {x} only.', { x: me.subCity || '' })}</div>}
+
+      <div className="kindpick" role="radiogroup" aria-label={t('What kind of case is it?')}>
+        <button type="button" role="radio" aria-checked={!charity} className={'kind' + (!charity ? ' on' : '')} onClick={() => setCharity(false)}><b>⚖️ {t('A problem to solve')}</b><small>{t('A complaint, a dispute or a matter that needs a decision.')}</small></button>
+        <button type="button" role="radio" aria-checked={charity} className={'kind' + (charity ? ' on' : '')} onClick={() => setCharity(true)}><b>🤝 {t('A charity request')}</b><small>{t('Someone asks the church for help. It is not an issue.')}</small></button>
+      </div>
 
       <div className="formgrid">
       <div className="card">
@@ -192,15 +201,15 @@ export default function NewCase({ me, onCreated, goChurches }) {
       </div>
 
       <div className="card">
-        <h2><span className="num">3</span>What are the issues?</h2>
-        <p className="hint">Add each issue separately. Not sure yet? Choose “Not clear yet”.</p>
+        <h2><span className="num">3</span>{charity ? t('What help is needed?') : 'What are the issues?'}</h2>
+        <p className="hint">{charity ? t('Write what the person needs and why. The desk decides how the church can help.') : 'Add each issue separately. Not sure yet? Choose “Not clear yet”.'}</p>
         {issues.map((it, i) => (
           <div className="issue" key={i}>
             <div className="top"><b>{t('Issue {n}', { n: i + 1 })}</b>{issues.length > 1 && <button type="button" className="btn x" onClick={() => setIssues(l => l.filter((_, k) => k !== i))}>Remove</button>}</div>
-            <select value={it.category} onChange={e => setIssue(i, { category: e.target.value })}>
-              {catOptions().map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
-            </select>
-            <textarea rows={3} placeholder="Describe the cause…" value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
+            {!charity && <select value={it.category} onChange={e => setIssue(i, { category: e.target.value })}>
+              {catOptions().filter(([k]) => k !== 'CHARITY').map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+            </select>}
+            <textarea rows={3} placeholder={charity ? t('What help does the person need?') : 'Describe the cause…'} value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
             {!sub && departments.length > 0 && (
               <div className="grid" style={{ marginTop: 8 }}>
                 <div><label>Send to a department now? (optional)</label>
@@ -214,7 +223,14 @@ export default function NewCase({ me, onCreated, goChurches }) {
           </div>
         ))}
         {issues.length >= 3 && <div className="banner">📎 {t('{n} issues in one case. Consider noting which one is most urgent.', { n: issues.length })}</div>}
-        <button type="button" className="btn ghost" onClick={() => setIssues(l => [...l, blankIssue()])}>➕ Add another issue</button>
+        {!charity && <button type="button" className="btn ghost" onClick={() => setIssues(l => [...l, blankIssue()])}>➕ Add another issue</button>}
+        {sub && (
+          <div className="solvedbox">
+            <label className="chk"><input type="checkbox" checked={solved} onChange={e => setSolved(e.target.checked)} /> 🏙️ {t('We already solved this at the sub-city')}</label>
+            {solved && <><textarea rows={3} value={solution} maxLength={4000} onChange={e => setSolution(e.target.value)} placeholder={t('What did the sub-city do?')} />
+              <small className="muted">{t('The case is shared with the diocese with your solution, so the head diocese knows.')}</small></>}
+          </div>
+        )}
       </div>
 
       <div className="card">

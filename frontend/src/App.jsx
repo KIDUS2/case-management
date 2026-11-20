@@ -22,27 +22,28 @@ import Prefs from './components/Prefs.jsx'
 import { notify } from './dialog.js'
 import { t } from './i18n.js'
 
-const DESK = ['ADMIN', 'OFFICER', 'RECEPTION']
+const BOSS = ['SERA_ASKIYAJIE', 'PAPAS']
+const DESK = ['ADMIN', 'OFFICER', 'RECEPTION', ...BOSS]
 /** Which pages each role sees. */
 const NAV = [
   { key: 'dashboard', icon: '📊', label: 'Dashboard', roles: ['ADMIN'] },
-  { key: 'summary', icon: '🗂️', label: 'Summary', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT'] },
-  { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER'] },
+  { key: 'summary', icon: '🗂️', label: 'Summary', roles: [...DESK, 'DEPARTMENT'] },
+  { key: 'inbox', icon: '📥', label: 'Department inbox', roles: ['DEPARTMENT', 'ADMIN', 'OFFICER', ...BOSS] },
   { key: 'queue', icon: '🚪', label: 'Appointments', roles: DESK },
   { key: 'new', icon: '➕', label: 'Register case', roles: [...DESK, 'SUBCITY'], subLabel: 'Submit a case' },
-  { key: 'cases', icon: '📁', label: 'All cases', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
-  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'], badge: true },
-  { key: 'hr', icon: '👥', label: 'HR management', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
-  { key: 'churches', icon: '⛪', label: 'Churches', roles: ['ADMIN', 'OFFICER', 'RECEPTION'] },
+  { key: 'cases', icon: '📁', label: 'All cases', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], subLabel: 'My cases' },
+  { key: 'notifications', icon: '🔔', label: 'Notifications', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'], badge: true },
+  { key: 'hr', icon: '👥', label: 'HR management', roles: DESK },
+  { key: 'churches', icon: '⛪', label: 'Churches', roles: DESK },
   { key: 'departments', icon: '🏢', label: 'Departments', roles: ['ADMIN'] },
   { key: 'users', icon: '👥', label: 'Users', roles: ['ADMIN'] },
   { key: 'settings', icon: '🛠️', label: 'Settings', roles: ['ADMIN'] },
-  { key: 'account', icon: '⚙️', label: 'My account', roles: ['ADMIN', 'OFFICER', 'RECEPTION', 'DEPARTMENT', 'SUBCITY'] },
+  { key: 'account', icon: '⚙️', label: 'My account', roles: [...DESK, 'DEPARTMENT', 'SUBCITY'] },
 ]
 /** Switching language reloads the page; remember where the person was so they come back to the same place. */
 const readView = () => { try { const v = JSON.parse(sessionStorage.getItem('view') || 'null'); if (v && (v.page === 'employees' || v.page === 'workforce')) v.page = 'hr'; return v } catch { return null } }
 const saveView = v => { try { v ? sessionStorage.setItem('view', JSON.stringify(v)) : sessionStorage.removeItem('view') } catch { /* private mode */ } }
-const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases', SUBCITY: 'cases' }
+const HOME = { ADMIN: 'dashboard', DEPARTMENT: 'inbox', RECEPTION: 'queue', OFFICER: 'cases', SUBCITY: 'cases', SERA_ASKIYAJIE: 'inbox', PAPAS: 'inbox' }
 
 export default function App() {
   const [user, setUser] = useState(null)

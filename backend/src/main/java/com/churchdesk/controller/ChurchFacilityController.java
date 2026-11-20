@@ -20,7 +20,7 @@ import com.churchdesk.repository.ChurchRepository;
 @RestController
 @RequestMapping("/api")
 public class ChurchFacilityController {
-    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
     private static final Set<String> KINDS = Set.of("HALL", "SCHOOL", "CLINIC", "LIBRARY", "CEMETERY", "GUEST_HOUSE", "HOLY_WATER", "RENTAL", "PARKING", "OTHER");
     private static final Set<String> CONDITIONS = Set.of("GOOD", "FAIR", "NEEDS_REPAIR");

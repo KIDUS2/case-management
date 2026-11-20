@@ -28,12 +28,12 @@ public class InquiryController {
     public List<InquiryDto> waiting(Authentication auth) { return service.waitingForAdmin(current.get(auth)); }
 
     @PostMapping("/cases/{id}/inquiries") @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN','OFFICER','RECEPTION','DEPARTMENT')")
+    @PreAuthorize("hasAnyRole('ADMIN','OFFICER','RECEPTION','DEPARTMENT','SERA_ASKIYAJIE','PAPAS')")
     public InquiryDto ask(@PathVariable Long id, @Valid @RequestBody AskRequest r, Authentication auth) {
         return service.ask(id, r.issueId(), r.question(), current.get(auth));
     }
 
-    @PostMapping("/inquiries/{id}/finding") @PreAuthorize("hasAnyRole('ADMIN','OFFICER','RECEPTION')")
+    @PostMapping("/inquiries/{id}/finding") @PreAuthorize("hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')")
     public InquiryDto finding(@PathVariable Long id, @Valid @RequestBody FindingRequest r, Authentication auth) {
         return service.recordFinding(id, r.finding(), current.get(auth));
     }

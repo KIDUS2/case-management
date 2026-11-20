@@ -21,7 +21,7 @@ import com.churchdesk.repository.PersonRepository;
 @RestController
 @RequestMapping("/api")
 public class EmployeeRecordsController {
-    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
 
     private final PersonRepository persons;

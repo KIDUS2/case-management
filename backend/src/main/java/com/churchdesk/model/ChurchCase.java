@@ -21,6 +21,8 @@ public class ChurchCase {
     @Column(name = "review_note") private String reviewNote;
     @Column(name = "reviewed_by") private String reviewedBy;
     @Column(name = "reviewed_at") private Instant reviewedAt;
+    @Enumerated(EnumType.STRING) @Column(nullable = false) private com.churchdesk.enums.CaseKind kind = com.churchdesk.enums.CaseKind.ISSUE;
+    @Column(name = "sub_city_solved", nullable = false) private boolean subCitySolved;
     @Column(name = "created_by", nullable = false) private String createdBy;
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
@@ -43,6 +45,10 @@ public class ChurchCase {
     public void setDiscussionNotes(String v) { discussionNotes = v; }
     public boolean isLetterIssued() { return letterIssued; }
     public void setLetterIssued(boolean v) { letterIssued = v; }
+    public com.churchdesk.enums.CaseKind getKind() { return kind; }
+    public void setKind(com.churchdesk.enums.CaseKind v) { kind = v; }
+    public boolean isSubCitySolved() { return subCitySolved; }
+    public void setSubCitySolved(boolean v) { subCitySolved = v; }
     public ReviewStatus getReviewStatus() { return reviewStatus; }
     public void setReviewStatus(ReviewStatus v) { reviewStatus = v; }
     public String getReviewNote() { return reviewNote; }

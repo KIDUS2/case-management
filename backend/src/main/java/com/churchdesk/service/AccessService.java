@@ -23,9 +23,10 @@ import com.churchdesk.util.CaseAccess;
 @Component
 public class AccessService {
     private final CaseGrantRepository grants;
-    public AccessService(CaseGrantRepository grants) { this.grants = grants; }
+    private final com.churchdesk.repository.SubcityReferralRepository subRefs;
+    public AccessService(CaseGrantRepository grants, com.churchdesk.repository.SubcityReferralRepository subRefs) { this.grants = grants; this.subRefs = subRefs; }
 
-    public boolean seesEverything(AppUser u) { return u.getRole() == Role.ADMIN || u.isCanViewAll(); }
+    public boolean seesEverything(AppUser u) { return u.getRole() == Role.ADMIN || u.getRole().isLeadership() || u.isCanViewAll(); }
 
     public boolean canView(ChurchCase c, AppUser u) {
         if (seesEverything(u)) return true;
@@ -33,6 +34,8 @@ public class AccessService {
         Long d = CaseAccess.departmentId(u);
         if (u.getRole() == Role.DEPARTMENT && d != null
                 && c.getIssues().stream().anyMatch(i -> i.getDepartment() != null && d.equals(i.getDepartment().getId()))) return true;
+        // a sub-city can open a case the diocese sent to it
+        if (u.getRole() == Role.SUBCITY && u.getSubCity() != null && subRefs.existsByCaseIdAndSubCity(c.getId(), u.getSubCity())) return true;
         return grants.existsByCaseIdAndUserId(c.getId(), u.getId());
     }
 
@@ -52,6 +55,12 @@ public class AccessService {
             Root<CaseGrant> g = granted.from(CaseGrant.class);
             granted.select(g.<Long>get("caseId")).where(cb.equal(g.get("userId"), uid));
             Predicate p = cb.or(cb.equal(root.get("createdBy"), username), root.get("id").in(granted));
+            if (u.getRole() == Role.SUBCITY && u.getSubCity() != null) {
+                Subquery<Long> sentTo = query.subquery(Long.class);
+                Root<com.churchdesk.model.SubcityReferral> sr = sentTo.from(com.churchdesk.model.SubcityReferral.class);
+                sentTo.select(sr.<Long>get("caseId")).where(cb.equal(sr.get("subCity"), u.getSubCity()));
+                p = cb.or(p, root.get("id").in(sentTo));
+            }
             if (dept != null) {
                 Subquery<Long> sent = query.subquery(Long.class);
                 Root<CaseIssue> i = sent.from(CaseIssue.class);

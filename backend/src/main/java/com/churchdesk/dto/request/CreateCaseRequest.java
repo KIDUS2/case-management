@@ -9,4 +9,8 @@ public record CreateCaseRequest(@NotEmpty @Valid List<PartyIn> complainants,
                                 @Valid List<PartyIn> subjects,
                                 @NotEmpty @Valid List<IssueIn> issues,
                                 @Size(max = 8000) String discussionNotes,
-                                boolean letterIssued) {}
+                                boolean letterIssued,
+                                /** ISSUE (default) or CHARITY. */
+                                @Size(max = 10) String kind,
+                                /** A sub-city that already solved the case writes what it did here; the diocese is shown it. */
+                                @Size(max = 4000) String localSolution) {}

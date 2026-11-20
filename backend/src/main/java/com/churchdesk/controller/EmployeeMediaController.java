@@ -30,7 +30,7 @@ import com.churchdesk.repository.PersonRepository;
 @RestController
 @RequestMapping("/api")
 public class EmployeeMediaController {
-    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION')";
+    private static final String READ = "hasAnyRole('ADMIN','OFFICER','RECEPTION','SERA_ASKIYAJIE','PAPAS')";
     private static final String WRITE = "hasAnyRole('ADMIN','OFFICER')";
     private static final Map<String, String> PHOTO_TYPES = Map.of("jpg", "image/jpeg", "jpeg", "image/jpeg", "png", "image/png", "webp", "image/webp");
     private static final Set<String> DOC_TYPES = Set.of("pdf", "jpg", "jpeg", "png", "doc", "docx", "xls", "xlsx", "txt");

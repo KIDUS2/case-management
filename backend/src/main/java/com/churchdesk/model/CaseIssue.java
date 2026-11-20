@@ -26,6 +26,10 @@ public class CaseIssue {
     @Column(name = "urgent_at") private Instant urgentAt;
     @Column(name = "escalation_level", nullable = false) private int escalationLevel;
     @Column(name = "escalated_at") private Instant escalatedAt;
+    @Column(nullable = false) private boolean held;
+    @Column(name = "hold_reason") private String holdReason;
+    @Column(name = "held_at") private Instant heldAt;
+    @Column(name = "handler_level", nullable = false) private int handlerLevel;
     @Column(name = "court_at") private Instant courtAt;
     @Column(name = "court_ack_by") private String courtAckBy;
     @Column(name = "court_ack_at") private Instant courtAckAt;
@@ -70,4 +74,12 @@ public class CaseIssue {
     public void setCourtAckBy(String v) { courtAckBy = v; }
     public Instant getCourtAckAt() { return courtAckAt; }
     public void setCourtAckAt(Instant v) { courtAckAt = v; }
+    public boolean isHeld() { return held; }
+    public void setHeld(boolean v) { held = v; }
+    public String getHoldReason() { return holdReason; }
+    public void setHoldReason(String v) { holdReason = v; }
+    public Instant getHeldAt() { return heldAt; }
+    public void setHeldAt(Instant v) { heldAt = v; }
+    public int getHandlerLevel() { return handlerLevel; }
+    public void setHandlerLevel(int v) { handlerLevel = v; }
 }
