@@ -31,7 +31,27 @@ function StatusPicker({ value, onChange }) {
   )
 }
 
-function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub, needId }) {
+/** A validation problem that knows which field to point at (a CSS selector). */
+class Problem extends Error { constructor(msg, sel) { super(msg); this.sel = sel } }
+const clearFlags = () => {
+  document.querySelectorAll('.fielderr').forEach(n => n.remove())
+  document.querySelectorAll('.invalid').forEach(n => n.classList.remove('invalid'))
+}
+/** Mark the field, show the message right under it, scroll to it and put the cursor there. */
+function flagField(sel, msg) {
+  const el = sel && document.querySelector(sel)
+  if (!el) return false
+  el.classList.add('invalid')
+  const m = document.createElement('small'); m.className = 'fielderr'; m.setAttribute('role', 'alert'); m.textContent = msg.charAt(0).toUpperCase() + msg.slice(1)
+  const host = el.parentElement && getComputedStyle(el.parentElement).display === 'flex' ? el.parentElement : el
+  host.insertAdjacentElement('afterend', m)
+  const clear = () => { el.classList.remove('invalid'); m.remove() }
+  el.addEventListener('input', clear, { once: true }); el.addEventListener('change', clear, { once: true })
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus({ preventScroll: true })
+  return true
+}
+
+function PartyEditor({ pk, title, party, onChange, onRemove, churches, autoFocus, isAdmin, sub, needId }) {
   const [matches, setMatches] = useState([])
   const set = patch => onChange({ ...party, ...patch })
 
@@ -69,7 +89,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
   const use = m => set({ fullName: m.fullName, churchName: m.churchName, phone: m.phone || party.phone, extraPhones: m.extraPhones?.length ? m.extraPhones : party.extraPhones, phoneExempt: !!m.phoneExempt, workingStatus: m.workingStatus })
 
   return (
-    <div className="issue">
+    <div className="issue" data-pk={pk}>
       <div className="top"><b>{title}</b>{onRemove && <button type="button" className="btn x" onClick={onRemove}>Remove</button>}</div>
       {!sub && <><label>{t('Find an existing person')}</label>
       <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder={t('Name, phone or ID number')} maxLength={80} /></>}
@@ -80,14 +100,14 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
       {q.trim().length >= 3 && hits.length === 0 && <small className="muted">{t('No one found. Fill in the details below to add a new person.')}</small>}
       {party.workingStatus === 'CHURCH_MEMBER' ? <>
         <label>{t('Sebeka Gubaye number')}{needId && <span className="req"> *</span>}</label>
-        <input value={party.sebekaGubayeNo || ''} onChange={e => set({ sebekaGubayeNo: e.target.value })} maxLength={40} required={!!needId} placeholder={t('Number on the Sebeka Gubaye card')} />
+        <input data-f="id" value={party.sebekaGubayeNo || ''} onChange={e => set({ sebekaGubayeNo: e.target.value })} maxLength={40} required={!!needId} placeholder={t('Number on the Sebeka Gubaye card')} />
         <small className="muted">{t('Asked for people who are not employees.')}</small></>
       : sub ? <>
         <label>{t('Employee ID')}{needId && <span className="req"> *</span>}</label>
-        <input value={party.employeeId} onChange={e => set({ employeeId: e.target.value })} maxLength={40} required={!!needId} placeholder="0000 0000 0000" autoCapitalize="characters" /></>
+        <input data-f="id" value={party.employeeId} onChange={e => set({ employeeId: e.target.value })} maxLength={40} required={!!needId} placeholder="0000 0000 0000" autoCapitalize="characters" /></>
       : <><label>{t('Employee ID (12 digits) or the church’s own number')}{needId && <span className="req"> *</span>}</label>
       <div style={{ display: 'flex', gap: 8 }}>
-        <input value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
+        <input data-f="id" value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" required={!!needId} />
         <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
       </div></>}
@@ -95,7 +115,7 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
         {found.complaintsAgainst > 0 && <div className="warn">⚠️ {t('{n} earlier cases are about this person', { n: found.complaintsAgainst })}</div>}</div>}
       {idMsg && <small className="muted">{idMsg}</small>}
       <label>Full name</label>
-      <input value={party.fullName} onChange={e => set({ fullName: e.target.value })} maxLength={160} autoFocus={autoFocus} />
+      <input data-f="name" value={party.fullName} onChange={e => set({ fullName: e.target.value })} maxLength={160} autoFocus={autoFocus} />
       {exact.map(m => (
         <div className="banner" key={m.id}>
           <b>👋 {t('Already on record:')}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: m.fullName, b: m.churchName, c: m.totalCases, d: m.openCases })}
@@ -104,10 +124,10 @@ function PartyEditor({ title, party, onChange, onRemove, churches, autoFocus, is
         </div>
       ))}
       <div className="grid">
-        <div><label>Church</label><input list="church-list" value={party.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" />
+        <div><label>Church</label><input data-f="church" list="church-list" value={party.churchName} onChange={e => set({ churchName: e.target.value })} placeholder="Start typing…" />
           {chosen && <small className={'subnote' + (chosen.subCity ? '' : ' warn')}>📍 {chosen.subCity ? t('Sub-city: {x}', { x: chosen.subCity }) : t('Sub-city not set for this church yet. Ask the administrator to set it in Churches.')}</small>}</div>
         <div><label>{t('Phone number')}{!party.phoneExempt && <span className="req"> *</span>}</label>
-          <input value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} required={!party.phoneExempt} placeholder="09…" /></div>
+          <input data-f="phone" value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} required={!party.phoneExempt} placeholder="09…" /></div>
       </div>
       {(party.extraPhones || []).map((ph, k) => (
         <div className="phrow" key={k}>
@@ -165,17 +185,18 @@ export default function NewCase({ me, onCreated, goChurches }) {
   const setIssue = (i, patch) => setIssues(l => l.map((x, k) => (k === i ? { ...x, ...patch } : x)))
   const findChurch = name => churches.find(c => c.name.toLowerCase() === name.trim().toLowerCase())
 
-  const toPayload = (p, label, needId) => {
-    if (needId && p.workingStatus === 'CHURCH_MEMBER' && !(p.sebekaGubayeNo || '').trim()) throw new Error(t('{x}: please enter the Sebeka Gubaye number.', { x: label }))
-    if (needId && p.workingStatus !== 'CHURCH_MEMBER' && !p.employeeId.trim()) throw new Error(t('{x}: please enter the Employee ID.', { x: label }))
+  const toPayload = (p, label, needId, pk) => {
+    const at = f => `[data-pk="${pk}"] [data-f="${f}"]`
+    if (needId && p.workingStatus === 'CHURCH_MEMBER' && !(p.sebekaGubayeNo || '').trim()) throw new Problem(t('{x}: please enter the Sebeka Gubaye number.', { x: label }), at('id'))
+    if (needId && p.workingStatus !== 'CHURCH_MEMBER' && !p.employeeId.trim()) throw new Problem(t('{x}: please enter the Employee ID.', { x: label }), at('id'))
     const church = findChurch(p.churchName)
-    if (!church) throw new Error(t('{x}: please choose the church from the list (start typing its name).', { x: label }))
-    if (!p.phoneExempt && !p.phone.trim()) throw new Error(t('{x}: please enter a phone number.', { x: label }))
+    if (!church) throw new Problem(t('{x}: please choose the church from the list (start typing its name).', { x: label }), at('church'))
+    if (!p.phoneExempt && !p.phone.trim()) throw new Problem(t('{x}: please enter a phone number.', { x: label }), at('phone'))
     return { fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.workingStatus === 'CHURCH_MEMBER' ? null : p.employeeId.trim() || null, sebekaGubayeNo: p.workingStatus === 'CHURCH_MEMBER' ? (p.sebekaGubayeNo || '').trim() || null : null }
   }
 
   const submit = async e => {
-    e.preventDefault(); setErr('')
+    e.preventDefault(); setErr(''); clearFlags()
     try {
       // for a big group, the people after the first use the first person's church and kind; empty lines are ignored
       const lead = complainants[0]
@@ -183,14 +204,14 @@ export default function NewCase({ me, onCreated, goChurches }) {
         ? [lead, ...rows.filter(r => r.fullName.trim() || r.phone.trim() || r.idNo.trim()).map(r => ({ ...blankParty(lead.workingStatus), churchName: lead.churchName, workingStatus: lead.workingStatus, fullName: r.fullName, phone: r.phone, employeeId: lead.workingStatus === 'CHURCH_MEMBER' ? '' : r.idNo, sebekaGubayeNo: lead.workingStatus === 'CHURCH_MEMBER' ? r.idNo : '' }))]
         : complainants
       const comp = people.map((p, i) => {
-        if (!p.fullName.trim()) throw new Error(t('{x}: please enter the name.', { x: t('Person {n} reporting', { n: i + 1 }) }))
-        return toPayload(p, t('Person {n} reporting', { n: i + 1 }), true)
+        if (!p.fullName.trim()) throw new Problem(t('{x}: please enter the name.', { x: t('Person {n} reporting', { n: i + 1 }) }), `[data-pk="c${i}"] [data-f="name"]`)
+        return toPayload(p, t('Person {n} reporting', { n: i + 1 }), true, 'c' + i)
       })
       if (many && comp.length < expected && !(await askConfirm(t('Only {a} of {b} people are listed. Save the case now? You can add the others later from the case page.', { a: comp.length, b: expected }), { title: t('Not everyone is listed'), confirmText: t('Save anyway') }))) return
-      const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 })))
+      const subj = subjects.filter(p => p.fullName.trim()).map((p, i) => toPayload(p, t('Person {n} it is about', { n: i + 1 }), false, 's' + i))
       const bad = issues.findIndex(i => (charity || i.category !== 'UNCLEAR') && !i.description.trim())
-      if (bad >= 0) throw new Error(charity ? t('Please write what help is needed.') : t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }))
-      if (sub && solved && !solution.trim()) throw new Error(t('Please write what the sub-city did to solve it.'))
+      if (bad >= 0) throw new Problem(charity ? t('Please write what help is needed.') : t('Issue {n}: please describe the cause, or mark it “Not clear yet”.', { n: bad + 1 }), `[data-pk="issue${bad}"]`)
+      if (sub && solved && !solution.trim()) throw new Problem(t('Please write what the sub-city did to solve it.'), '[data-pk="solution"]')
       setBusy(true)
       const payload = issues.map(i => ({
         category: i.category, description: i.description,
@@ -201,11 +222,14 @@ export default function NewCase({ me, onCreated, goChurches }) {
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
       onCreated(c.id, failed)
-    } catch (x) { setErr(x.message) } finally { setBusy(false) }
+    } catch (x) {
+      setErr(x.message)
+      if (x instanceof Problem) setTimeout(() => flagField(x.sel, x.message.replace(/^[^:]+: /, '')), 0)
+    } finally { setBusy(false) }
   }
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} noValidate>
       <h1>{sub ? t('Submit a case') : 'Register a case'}</h1>
       <p className="muted">{sub ? t('Cases from {x} are sent to the diocese for review. You will be told when it is accepted or returned.', { x: me.subCity || '' }) : 'Listen first, then record. A short code is created when you save.'}</p>
       {err && <div className="err">{err}</div>}
@@ -229,13 +253,13 @@ export default function NewCase({ me, onCreated, goChurches }) {
         </div>
         {many ? (
           <>
-            <PartyEditor title={t('Person 1')} party={complainants[0]} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus onChange={setAt(setComplainants, 0)} onRemove={null} />
+            <PartyEditor title={t('Person 1')} party={complainants[0]} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} pk="c0" needId autoFocus onChange={setAt(setComplainants, 0)} onRemove={null} />
             <GroupSheet rows={rows} onChange={setRows} expected={expected} idLabel={complainants[0].workingStatus === 'CHURCH_MEMBER' ? t('Sebeka Gubaye number') : t('Employee ID')} />
           </>
         ) : (
           <>
             {complainants.map((p, i) => (
-              <PartyEditor key={i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus={i === 0}
+              <PartyEditor key={i} pk={'c' + i} title={complainants.length > 1 ? t('Person {n}', { n: i + 1 }) : t('Person reporting')} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub} needId autoFocus={i === 0}
                 onChange={setAt(setComplainants, i)} onRemove={complainants.length > 1 ? removeAt(setComplainants, i) : null} />
             ))}
             <button type="button" className="btn ghost" onClick={() => { setComplainants(l => [...l, blankParty(l[0]?.workingStatus)]); if (complainants.length >= 3) setSize('many') }}>➕ Add another person (group)</button>
@@ -247,7 +271,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         <h2><span className="num">2</span>Who is it about? <small className="inl">(optional)</small></h2>
         <p className="hint">If the report is about an employee or a leader, add them here. Leave empty for a request or general matter.</p>
         {subjects.map((p, i) => (
-          <PartyEditor key={i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub}
+          <PartyEditor key={i} pk={'s' + i} title={t('Person {n} it is about', { n: i + 1 })} party={p} churches={churches} isAdmin={me.role === 'ADMIN'} sub={sub}
             onChange={setAt(setSubjects, i)} onRemove={removeAt(setSubjects, i)} />
         ))}
         <button type="button" className="btn ghost" onClick={() => setSubjects(l => [...l, blankParty()])}>➕ Add an employee or leader</button>
@@ -262,7 +286,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
             {!charity && <select value={it.category} onChange={e => setIssue(i, { category: e.target.value })}>
               {catOptions().filter(([k]) => k !== 'CHARITY').map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
             </select>}
-            <textarea rows={3} placeholder={charity ? t('What help does the person need?') : 'Describe the cause…'} value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
+            <textarea data-pk={'issue' + i} rows={3} placeholder={charity ? t('What help does the person need?') : 'Describe the cause…'} value={it.description} maxLength={4000} onChange={e => setIssue(i, { description: e.target.value })} />
             {!sub && departments.length > 0 && (
               <div className="grid" style={{ marginTop: 8 }}>
                 <div><label>Send to a department now? (optional)</label>
@@ -280,7 +304,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
         {sub && (
           <div className="solvedbox">
             <label className="chk"><input type="checkbox" checked={solved} onChange={e => setSolved(e.target.checked)} /> 🏙️ {t('We already solved this at the sub-city')}</label>
-            {solved && <><textarea rows={3} value={solution} maxLength={4000} onChange={e => setSolution(e.target.value)} placeholder={t('What did the sub-city do?')} />
+            {solved && <><textarea data-pk="solution" rows={3} value={solution} maxLength={4000} onChange={e => setSolution(e.target.value)} placeholder={t('What did the sub-city do?')} />
               <small className="muted">{t('The case is shared with the diocese with your solution, so the head diocese knows.')}</small></>}
           </div>
         )}

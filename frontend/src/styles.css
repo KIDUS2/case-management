@@ -1079,3 +1079,10 @@ main>.head{margin-bottom:0}main>.head .muted,main>h1+.muted{margin:0 0 6px}
 .ecdate select:nth-child(2){flex:1.6}
 .ecreq{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none}
 .lang.cal button{min-width:40px;padding:0 11px}
+
+/* validation: the field is marked and the message sits right under it */
+input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--bad) 22%,transparent)!important}
+.fielderr{display:block;color:var(--bad);font-weight:600;margin:5px 2px 0}
+.fielderr::before{content:"⚠ "}
+/* the chosen case-type card must stay readable in dark mode */
+.kind.on{color:#2b2415}
