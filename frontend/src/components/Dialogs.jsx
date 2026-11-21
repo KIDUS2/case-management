@@ -11,8 +11,8 @@ export default function Dialogs() {
   const input = useRef(null)
 
   useEffect(() => onToast(m => {
-    setToasts(l => [...l.filter(x => x.message !== m.message), m].slice(-4))
-    setTimeout(() => setToasts(l => l.filter(x => x.id !== m.id)), m.kind === 'error' ? 8000 : 4500)
+    setToasts(l => [...l.filter(x => !x.message || x.message !== m.message), m].slice(-4))
+    setTimeout(() => setToasts(l => l.filter(x => x.id !== m.id)), m.kind === 'error' ? 8000 : m.kind === 'success' ? 7000 : 4500)
   }), [])
   useEffect(() => onAsk(d => { setText(''); setBad(''); setQ(d) }), [])
   useEffect(() => { if (q?.kind === 'text') setTimeout(() => input.current?.focus(), 30) }, [q])
@@ -49,7 +49,18 @@ export default function Dialogs() {
   return (
     <>
       <div className="msgs" aria-live="polite">
-        {toasts.map(m => (
+        {toasts.map(m => m.kind === 'success' ? (
+          <div key={m.id} className="msg success" role="status" onClick={() => setToasts(l => l.filter(x => x.id !== m.id))}>
+            <span className="okmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <span className="okbody">
+              <b>{m.title}</b>
+              {m.message && <small>{m.message}</small>}
+              {m.code && <span className="okcode"><code>{m.code}</code>
+                <button type="button" className="btn ghost sm" onClick={e => { e.stopPropagation(); navigator.clipboard?.writeText(m.code.replace(/-/g, '')).then(() => notify(t('Code copied'), 'ok')).catch(() => {}) }}>{t('Copy code')}</button></span>}
+            </span>
+            <i className="oktime" />
+          </div>
+        ) : (
           <div key={m.id} className={'msg ' + m.kind} role={m.kind === 'error' ? 'alert' : 'status'} onClick={() => setToasts(l => l.filter(x => x.id !== m.id))}>
             <span>{m.kind === 'error' ? '⚠️' : m.kind === 'ok' ? '✅' : 'ℹ️'}</span><span>{m.message}</span>
           </div>

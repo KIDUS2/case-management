@@ -5,6 +5,9 @@ let seq = 0
 /** A short message at the top of the screen. kind: 'error' | 'ok' | 'info' */
 export const notify = (message, kind = 'error') => bus.dispatchEvent(new CustomEvent('toast', { detail: { id: ++seq, message: String(message || ''), kind } }))
 
+/** A bigger "it worked" card: a title, a line of text and, if there is one, a code the person can copy. */
+export const celebrate = ({ title, message = '', code = '' }) => bus.dispatchEvent(new CustomEvent('toast', { detail: { id: ++seq, kind: 'success', title, message, code } }))
+
 const ask = detail => new Promise(resolve => bus.dispatchEvent(new CustomEvent('ask', { detail: { ...detail, resolve } })))
 
 /** Yes / no question. Resolves true or false. */

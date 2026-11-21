@@ -1086,3 +1086,17 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;
 .fielderr::before{content:"⚠ "}
 /* the chosen case-type card must stay readable in dark mode */
 .kind.on{color:#2b2415}
+
+/* "registered successfully" card */
+.msg.success{position:relative;overflow:hidden;align-items:center;gap:14px;padding:16px 18px 18px;border:1px solid color-mix(in srgb,var(--ok) 40%,var(--line));border-left:1px solid color-mix(in srgb,var(--ok) 40%,var(--line));border-radius:18px;box-shadow:0 18px 44px #0000004d,0 0 0 4px color-mix(in srgb,var(--ok) 14%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--ok) 12%,var(--card)),var(--card) 55%)}
+.msg.success .okmark{flex:none;width:44px;height:44px;border-radius:50%;background:var(--ok);display:grid;place-items:center;box-shadow:0 6px 16px color-mix(in srgb,var(--ok) 45%,transparent)}
+.msg.success .okmark svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:26;stroke-dashoffset:26;animation:okdraw .45s .15s ease forwards}
+.msg.success .okbody{display:grid;gap:3px;min-width:0;flex:1}
+.msg.success .okbody b{font-size:1.08rem}
+.msg.success .okbody small{color:var(--mute)}
+.msg.success .okcode{display:flex;align-items:center;gap:10px;margin-top:6px}
+.msg.success .okcode code{font:800 1.25rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;padding:7px 12px;border-radius:10px;background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ink)}
+.msg.success .oktime{position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--ok);transform-origin:left;animation:oktime 7s linear forwards}
+@keyframes okdraw{to{stroke-dashoffset:0}}
+@keyframes oktime{to{transform:scaleX(0)}}
+@media (prefers-reduced-motion:reduce){.msg.success .okmark svg{animation:none;stroke-dashoffset:0}.msg.success .oktime{animation:none;display:none}}

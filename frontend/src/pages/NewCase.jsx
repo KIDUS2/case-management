@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
 import GroupSheet, { blankRow } from '../components/GroupSheet.jsx'
-import { askConfirm } from '../dialog.js'
+import { askConfirm, celebrate } from '../dialog.js'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { previewFile } from '../preview.js'
-import { CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
+import { fmtCode, CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
 const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status, sebekaGubayeNo: '' })
@@ -221,6 +221,7 @@ export default function NewCase({ me, onCreated, goChurches }) {
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
+      celebrate({ title: sub ? t('Case submitted') : t('Case registered successfully'), message: sub ? t('The diocese will review it.') : t('Give this code to the person so they can follow the case.'), code: fmtCode(c.code) })
       onCreated(c.id, failed)
     } catch (x) {
       setErr(x.message)

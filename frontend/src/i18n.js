@@ -193,6 +193,7 @@ const AM = {
   'Search': 'ፈልግ', 'Nothing found': 'ምንም አልተገኘም', 'The choices shown when registering a person. Add your own, rename or switch one off. Built-in ones keep their special rules.': 'ሰውን ሲመዘግቡ የሚታዩ ምርጫዎች። የራስዎን ይጨምሩ፣ ስም ይቀይሩ ወይም ያጥፉ። አብሮ የተሰሩት ልዩ ደንባቸውን ይዘው ይቆያሉ።',
   'Update': 'አዘምን',
   'Day': 'ቀን', 'Month': 'ወር', 'Year': 'ዓመት', 'Calendar': 'የቀን አቆጣጠር',
+  'Case submitted': 'ጉዳዩ ተልኳል', 'Case registered successfully': 'ጉዳዩ በተሳካ ሁኔታ ተመዝግቧል', 'Give this code to the person so they can follow the case.': 'ሰውየው ጉዳዩን እንዲከታተል ይህን ኮድ ይስጡት።', 'The diocese will review it.': 'ሀገረ ስብከቱ ይመረምረዋል።', 'Code copied': 'ኮዱ ተቀድቷል',
   'Settings': 'ቅንብሮች', 'These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.': 'እነዚህ ዝርዝሮች በመተግበሪያው ያሉትን ሁሉንም ምርጫዎች ይሞላሉ። እዚህ አዲስ ሲጨምሩ በሁሉም ቅጽ፣ ማጣሪያና ሪፖርት ይታያል።',
   'Types of issue': 'የጉዳይ ዓይነቶች', 'Shown when registering a case or a sub-case, and when choosing what a department handles.': 'ጉዳይ ወይም ንዑስ ጉዳይ ሲመዘገብና ክፍል የሚያስተናግደውን ሲመርጡ ይታያል።',
   'Churches are grouped by these. Renaming one moves its churches along.': 'አብያተ ክርስቲያናት በእነዚህ ይመደባሉ። ስም ሲቀይሩ አብያተ ክርስቲያናቱ አብረው ይዛወራሉ።',
