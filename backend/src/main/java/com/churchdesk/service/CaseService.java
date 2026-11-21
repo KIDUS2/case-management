@@ -101,6 +101,8 @@ public class CaseService {
     /** The desk registers a case: it is accepted from the start. */
     @Transactional
     public CaseDetail create(CreateCaseRequest r, AppUser actor) {
+        CaseDetail again = alreadyRegistered(r, actor);
+        if (again != null) return again;
         CaseDetail d = createCase(r, actor, ReviewStatus.ACCEPTED);
         ChurchCase c = cases.findById(d.id()).orElseThrow();
         sms.sendCaseNumber(c, actor.getUsername()); // never fails the registration; see SmsService
@@ -113,6 +115,8 @@ public class CaseService {
      */
     @Transactional
     public CaseDetail submit(CreateCaseRequest r, AppUser actor) {
+        CaseDetail again = alreadyRegistered(r, actor);
+        if (again != null) return again;
         if (actor.getRole() != Role.SUBCITY || actor.getSubCity() == null)
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only a sub-city account can submit a case");
         List<PartyIn> everyone = new ArrayList<>(r.complainants());
@@ -124,7 +128,7 @@ public class CaseService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ch.getName() + " is not in " + actor.getSubCity() + ". You can only submit cases for your own sub-city.");
         }
         List<IssueIn> issues = r.issues().stream().map(i -> new IssueIn(i.category(), i.description(), null, null)).toList();
-        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false, r.kind(), null, r.expectedPeople());
+        CreateCaseRequest clean = new CreateCaseRequest(r.complainants(), r.subjects(), issues, r.discussionNotes(), false, r.kind(), null, r.expectedPeople(), r.clientRef());
         CaseDetail d = createCase(clean, actor, ReviewStatus.PENDING);
         ChurchCase made = cases.findById(d.id()).orElseThrow();
         flow.notifySubmitted(made, actor);
@@ -136,8 +140,19 @@ public class CaseService {
         return d;
     }
 
+    /** A device that was offline sends the same case again until it gets an answer; the second time it gets the first case back. */
+    private CaseDetail alreadyRegistered(CreateCaseRequest r, AppUser actor) {
+        String ref = blankToNull(r.clientRef());
+        if (ref == null) return null;
+        return cases.findByClientRef(ref).map(c -> {
+            if (!actor.getUsername().equals(c.getCreatedBy())) throw new ResponseStatusException(HttpStatus.CONFLICT, "This case reference was already used.");
+            return toDetail(c);
+        }).orElse(null);
+    }
+
     private CaseDetail createCase(CreateCaseRequest r, AppUser actor, ReviewStatus review) {
         ChurchCase c = new ChurchCase();
+        c.setClientRef(blankToNull(r.clientRef()));
         c.setReviewStatus(review);
         final boolean charity = "CHARITY".equalsIgnoreCase(r.kind());
         c.setKind(charity ? CaseKind.CHARITY : CaseKind.ISSUE);

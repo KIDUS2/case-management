@@ -12,7 +12,7 @@ export default function Dialogs() {
 
   useEffect(() => onToast(m => {
     setToasts(l => [...l.filter(x => !x.message || x.message !== m.message), m].slice(-4))
-    setTimeout(() => setToasts(l => l.filter(x => x.id !== m.id)), m.kind === 'error' ? 8000 : m.kind === 'success' ? 7000 : 4500)
+    setTimeout(() => setToasts(l => l.filter(x => x.id !== m.id)), m.kind === 'error' ? 8000 : m.kind === 'success' ? (m.tone === 'wait' ? 10000 : 7000) : 4500)
   }), [])
   useEffect(() => onAsk(d => { setText(''); setBad(''); setQ(d) }), [])
   useEffect(() => { if (q?.kind === 'text') setTimeout(() => input.current?.focus(), 30) }, [q])
@@ -50,8 +50,8 @@ export default function Dialogs() {
     <>
       <div className="msgs" aria-live="polite">
         {toasts.map(m => m.kind === 'success' ? (
-          <div key={m.id} className="msg success" role="status" onClick={() => setToasts(l => l.filter(x => x.id !== m.id))}>
-            <span className="okmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+          <div key={m.id} className={'msg success ' + (m.tone || 'ok')} role="status" onClick={() => setToasts(l => l.filter(x => x.id !== m.id))}>
+            <span className="okmark" aria-hidden="true">{m.tone === 'wait' ? '💾' : <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>}</span>
             <span className="okbody">
               <b>{m.title}</b>
               {m.message && <small>{m.message}</small>}

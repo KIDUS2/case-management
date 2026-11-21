@@ -46,6 +46,9 @@ public class ChurchCase {
     public boolean isLetterIssued() { return letterIssued; }
     public void setLetterIssued(boolean v) { letterIssued = v; }
     @Column(name = "expected_people") private Integer expectedPeople;
+    @Column(name = "client_ref", length = 64) private String clientRef;
+    public String getClientRef() { return clientRef; }
+    public void setClientRef(String v) { clientRef = v; }
     public Integer getExpectedPeople() { return expectedPeople; }
     public void setExpectedPeople(Integer v) { expectedPeople = v; }
     public com.churchdesk.enums.CaseKind getKind() { return kind; }

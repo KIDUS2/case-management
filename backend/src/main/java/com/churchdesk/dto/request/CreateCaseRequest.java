@@ -15,4 +15,6 @@ public record CreateCaseRequest(@NotEmpty @Valid List<PartyIn> complainants,
                                 /** A sub-city that already solved the case writes what it did here; the diocese is shown it. */
                                 @Size(max = 4000) String localSolution,
                                 /** For a large group: how many people were expected, so the desk can see who is still missing. */
-                                @jakarta.validation.constraints.Min(2) @jakarta.validation.constraints.Max(1000) Integer expectedPeople) {}
+                                @jakarta.validation.constraints.Min(2) @jakarta.validation.constraints.Max(1000) Integer expectedPeople,
+                                /** Made by the device that registers the case. Sending the same one twice gives back the first case, so a retry after a lost connection never creates a duplicate. */
+                                @Size(max = 64) String clientRef) {}

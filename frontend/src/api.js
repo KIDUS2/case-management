@@ -4,12 +4,26 @@ function headers(json) {
 }
 
 /** fetch that never shows the browser's raw network error. */
-async function send(url, opts) {
-  try { return await fetch(url, opts) } catch { throw new Error('Cannot reach the server. Please check the connection and try again.') }
+const NET_MSG = 'Cannot reach the server. Please check the connection and try again.'
+const netError = () => Object.assign(new Error(NET_MSG), { network: true })
+/** `limit` (ms) gives up on a request that hangs, which is common on a weak connection. */
+async function send(url, opts, limit = 0) {
+  const ctl = limit ? new AbortController() : null
+  const timer = limit ? setTimeout(() => ctl.abort(), limit) : null
+  try {
+    const res = await fetch(url, ctl ? { ...opts, signal: ctl.signal } : opts)
+    window.dispatchEvent(new Event('net-ok'))
+    return res
+  } catch { window.dispatchEvent(new Event('net-fail')); throw netError() } finally { if (timer) clearTimeout(timer) }
 }
 
+/** Lists the forms need (churches, options, the signed-in user) are kept on this device and used when the server cannot be reached. */
+const KEEP = /^\/(churches|options|departments|auth\/me)(\?|$)/
+const kept = p => { try { return JSON.parse(localStorage.getItem('keep:' + p)) } catch { return null } }
+export const forgetKept = () => Object.keys(localStorage).filter(k => k.startsWith('keep:')).forEach(k => localStorage.removeItem(k))
+
 async function check(res) {
-  if (res.status === 401 && localStorage.getItem('token')) { localStorage.removeItem('token'); window.dispatchEvent(new Event('session-expired')) }
+  if (res.status === 401 && localStorage.getItem('token')) { localStorage.removeItem('token'); forgetKept(); window.dispatchEvent(new Event('session-expired')) }
   if (!res.ok) {
     const e = await res.json().catch(() => ({}))
     throw new Error(e.message || 'Something went wrong. Please try again.')
@@ -25,8 +39,16 @@ async function readJson(res) {
 }
 
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await check(await send('/api' + path, { method, headers: headers(true), body: body ? JSON.stringify(body) : undefined }))
-  return readJson(res)
+  let res
+  try { res = await check(await send('/api' + path, { method, headers: headers(true), body: body ? JSON.stringify(body) : undefined }, 30000)) }
+  catch (e) {
+    const old = e.network && method === 'GET' && KEEP.test(path) ? kept(path) : null
+    if (old) return old
+    throw e
+  }
+  const data = await readJson(res)
+  if (method === 'GET' && KEEP.test(path) && data != null) { try { localStorage.setItem('keep:' + path, JSON.stringify(data)) } catch { /* storage full */ } }
+  return data
 }
 
 /** Send one file as multipart/form-data. */

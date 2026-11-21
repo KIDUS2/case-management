@@ -1113,3 +1113,14 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;
 .bkrow small{display:block;color:var(--mute)}
 .bkrestore{margin-top:12px}.bkrestore summary{cursor:pointer;font-weight:700}
 .bkrestore code{display:block;margin:4px 0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:auto;white-space:pre-wrap}
+.msg.success.wait{--ok:#c28a14;border-color:color-mix(in srgb,#c28a14 45%,var(--line))}
+.msg.success.wait .okmark{background:color-mix(in srgb,#c28a14 22%,transparent);box-shadow:none;font-size:1.4rem}
+
+/* offline / waiting-to-send bar */
+.syncbar{margin:0 0 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);padding:10px 14px;border-left:6px solid var(--gold)}
+.syncbar.down{border-left-color:#c28a14;background:color-mix(in srgb,#c28a14 10%,var(--card))}
+.syncbar.bad{border-left-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--card))}
+.synchead{display:flex;align-items:center;gap:12px}
+.synchead small,.syncrow small{display:block;color:var(--mute)}
+.syncrow{display:flex;align-items:center;gap:10px;padding:8px 0 2px;border-top:1px solid var(--line);margin-top:8px}
+.syncerr{color:var(--bad)!important;font-weight:600}

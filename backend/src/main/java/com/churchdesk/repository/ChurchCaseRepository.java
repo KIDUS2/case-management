@@ -14,6 +14,7 @@ import com.churchdesk.model.ChurchCase;
 public interface ChurchCaseRepository extends JpaRepository<ChurchCase, Long>, JpaSpecificationExecutor<ChurchCase> {
     boolean existsByCode(String code);
     Optional<ChurchCase> findByCode(String code);
+    Optional<ChurchCase> findByClientRef(String clientRef);
     long countByStatus(CaseStatus status);
 
     /** Other cases that involve any of the given people. */

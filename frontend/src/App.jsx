@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
-import { api } from './api.js'
+import { api, forgetKept } from './api.js'
+import SyncBar from './components/SyncBar.jsx'
 import { ROLES, NOTE_ICON, applyOptions } from './ui.js'
 import Login from './pages/Login.jsx'
 import Landing from './components/Landing.jsx'
@@ -66,6 +67,7 @@ export default function App() {
   const [track, setTrack] = useState(() => location.hash === '#track')
   const [ring, setRing] = useState(false)
   const [toast, setToast] = useState(null)
+  const [newKey, setNewKey] = useState(0)
   const lastUnread = useRef(0)
   const [signIn, setSignIn] = useState(() => !!new URLSearchParams(location.search).get('emp'))
   const [focusEmp, setFocusEmp] = useState(() => new URLSearchParams(location.search).get('emp'))
@@ -136,7 +138,7 @@ export default function App() {
     return () => window.removeEventListener('session-expired', h)
   }, [])
 
-  const logout = () => { history.replaceState(null, '', location.pathname); saveView(null); localStorage.removeItem('token'); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
+  const logout = () => { history.replaceState(null, '', location.pathname); saveView(null); localStorage.removeItem('token'); forgetKept(); setUser(null); setPage(null); setOpenId(null); setFresh(null); lastUnread.current = 0; setUnread(0) }
   const go = key => { setOpenId(null); setFresh(null); setQuery(''); setPage(key) }
   const openCase = (id, isNew = false, failed = []) => { setOpenId(id); setFresh(isNew ? { failed } : null); setPage('cases') }
   const seeAll = q => { setOpenId(null); setFresh(null); setQuery(q); setPage('cases') }
@@ -174,6 +176,7 @@ export default function App() {
         </nav>
       </aside>
       <main>
+        <SyncBar me={user} />
         <div className="topbar">
           <SearchBar onOpen={id => openCase(id)} onSeeAll={seeAll} />
           <div className="tbspace">
@@ -185,7 +188,7 @@ export default function App() {
         {current === 'inbox' && <Inbox me={user} onOpen={openCase} />}
         {current === 'queue' && <Queue onOpen={openCase} goNew={() => go('new')} />}
         {current === 'cases' && <Cases me={user} openId={openId} setOpenId={id => { setOpenId(id); setFresh(null) }} goNew={() => go('new')} fresh={fresh} initialQuery={query} />}
-        {current === 'new' && <NewCase me={user} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
+        {current === 'new' && <NewCase key={newKey} me={user} onQueued={() => setNewKey(k => k + 1)} onCreated={(id, failed) => openCase(id, true, failed)} goChurches={() => go('churches')} />}
         {current === 'summary' && <Summary me={user} onOpen={id => openCase(id)} />}
         {current === 'notifications' && <Notifications channel={user.role === 'ADMIN' ? 'GENERAL' : null} onOpen={id => openCase(id)} onChanged={refreshUnread} />}
         {current === 'subinbox' && <Notifications channel="SUBCITY" onOpen={id => openCase(id)} onChanged={refreshUnread} />}

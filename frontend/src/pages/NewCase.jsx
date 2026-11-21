@@ -3,6 +3,7 @@ import { api, upload } from '../api.js'
 import { t } from '../i18n.js'
 import GroupSheet, { blankRow } from '../components/GroupSheet.jsx'
 import { askConfirm, celebrate } from '../dialog.js'
+import { newRef, queueCase, flush } from '../offline.js'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { previewFile } from '../preview.js'
 import { fmtCode, CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
@@ -145,7 +146,8 @@ function PartyEditor({ pk, title, party, onChange, onRemove, churches, autoFocus
   )
 }
 
-export default function NewCase({ me, onCreated, goChurches }) {
+export default function NewCase({ me, onCreated, onQueued, goChurches }) {
+  const [ref] = useState(newRef)   // identifies this case, so sending it twice never makes two
   const [complainants, setComplainants] = useState([blankParty()])
   const [size, setSize] = useState('1')              // 1, 2, 3 or 'many' (more than 3)
   const [expected, setExpected] = useState(4)         // how many people are expected when the group is big
@@ -217,7 +219,19 @@ export default function NewCase({ me, onCreated, goChurches }) {
         category: i.category, description: i.description,
         departmentId: i.departmentId ? Number(i.departmentId) : null, returnOn: i.departmentId ? i.returnOn || null : null,
       }))
-      const c = await api(sub ? '/cases/submit' : '/cases', { method: 'POST', body: { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter, kind: charity ? 'CHARITY' : 'ISSUE', expectedPeople: many ? expected : null, localSolution: sub && solved ? solution.trim() : null } })
+      const path = sub ? '/cases/submit' : '/cases'
+      const body = { complainants: comp, subjects: subj, issues: payload, discussionNotes: notes, letterIssued: letter, kind: charity ? 'CHARITY' : 'ISSUE', expectedPeople: many ? expected : null, localSolution: sub && solved ? solution.trim() : null, clientRef: ref }
+      let c
+      try { c = await api(path, { method: 'POST', body }) }
+      catch (x) {
+        if (!x.network) throw x
+        // no connection: keep the whole case (documents too) on this device; it is sent by itself when the internet is back
+        await queueCase({ id: ref, owner: me.username, path, body, files, label: comp[0].fullName + (comp.length > 1 ? ' +' + (comp.length - 1) : '') })
+        celebrate({ tone: 'wait', title: t('Saved on this device'), message: t('There is no internet right now. The case will be sent by itself when the connection is back. You can keep working.') })
+        onQueued?.(); flush(me.username)
+        return
+      }
+
       // the case exists now, so attach the files one by one; a failed file never loses the case
       const failed = []
       for (const f of files) { try { await upload(`/cases/${c.id}/files`, f) } catch (x) { failed.push(f.name + ': ' + x.message) } }
