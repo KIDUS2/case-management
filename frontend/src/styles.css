@@ -1100,3 +1100,16 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;
 @keyframes okdraw{to{stroke-dashoffset:0}}
 @keyframes oktime{to{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){.msg.success .okmark svg{animation:none;stroke-dashoffset:0}.msg.success .oktime{animation:none;display:none}}
+
+/* backups card */
+.bkcard{margin:16px 0}
+.bkhead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.bkhead h2{margin:0 0 4px}
+.bkstate{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:14px;margin:12px 0;border:1px solid var(--line)}
+.bkstate small{display:block;color:var(--mute);margin-top:2px}
+.bkstate.good{background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+.bkstate.bad{background:color-mix(in srgb,var(--bad) 10%,transparent);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.bkrow{display:flex;align-items:center;gap:12px;padding:9px 2px;border-top:1px solid var(--line)}
+.bkrow small{display:block;color:var(--mute)}
+.bkrestore{margin-top:12px}.bkrestore summary{cursor:pointer;font-weight:700}
+.bkrestore code{display:block;margin:4px 0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,transparent);overflow:auto;white-space:pre-wrap}

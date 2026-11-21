@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { t } from '../i18n.js'
 import { askConfirm } from '../dialog.js'
 import { applyOptions } from '../ui.js'
+import BackupCard from '../components/BackupCard.jsx'
 
 /** One editable list: add a new entry, rename it, give it an Amharic name, switch it off or delete it. */
 function ListEditor({ title, hint, list, kind, withIcon, onChange, setErr, setOk }) {
@@ -114,6 +115,7 @@ export default function Settings() {
       <p className="muted">{t('These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.')}</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <AppointmentSettings setErr={setErr} setOk={setOk} />
+      <BackupCard setErr={setErr} />
       {lists && (
         <div className="cols">
           <ListEditor kind="ISSUE_TYPE" withIcon title={t('Types of issue')} hint={t('Shown when registering a case or a sub-case, and when choosing what a department handles.')}
