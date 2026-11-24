@@ -126,23 +126,25 @@ function CaseList({ me, onOpen, goNew, initialQuery }) {
   )
 }
 
-/** The text message with the case number: staff can see what was sent and send it again. */
+/** The message with the case number (text and/or email): staff can see what was sent and send it again. */
 function SmsRow({ c, me, setErr }) {
   const [items, setItems] = useState(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState('')
   const [ok, setOk] = useState('')
   const load = () => api(`/cases/${c.id}/sms`).then(setItems).catch(() => setItems([]))
   useEffect(() => { load() }, [c.id])
   if (!isStaff(me.role)) return null
-  const again = async () => {
-    setBusy(true); setOk(''); setErr('')
-    try { await api(`/cases/${c.id}/sms`, { method: 'POST' }); setOk(t('Text message sent.')); await load() } catch (x) { setErr(x.message) } finally { setBusy(false) }
+  const again = async ch => {
+    setBusy(ch); setOk(''); setErr('')
+    try { await api(`/cases/${c.id}/sms?channel=${ch}`, { method: 'POST' }); setOk(ch === 'EMAIL' ? t('Email sent.') : t('Text message sent.')); await load() } catch (x) { setErr(x.message) } finally { setBusy('') }
   }
   const last = items && items[0]
+  const mail = last && last.channel === 'EMAIL'
   return (
     <div className="smsrow">
-      <span>📱 {last ? (last.status === 'FAILED' ? t('The last text could not be sent.') : last.status === 'LOGGED' ? t('Text prepared (SMS sending is not switched on yet).') : t('Case number sent by text.')) : t('No text message sent yet.')}</span>
-      <button className="btn ghost sm" disabled={busy} onClick={again}>{busy ? t('Sending…') : t('Send the text again')}</button>
+      <span>{mail ? '✉️' : '📱'} {last ? (last.status === 'FAILED' ? (mail ? t('The last email could not be sent.') : t('The last text could not be sent.')) : last.status === 'LOGGED' ? (mail ? t('Email prepared (email sending is not switched on yet).') : t('Text prepared (SMS sending is not switched on yet).')) : (mail ? t('Case number sent by email.') : t('Case number sent by text.'))) : t('Nothing sent to the person yet.')}</span>
+      <button className="btn ghost sm" disabled={!!busy} onClick={() => again('SMS')}>{busy === 'SMS' ? t('Sending…') : '📱 ' + t('Send by text')}</button>
+      <button className="btn ghost sm" disabled={!!busy} onClick={() => again('EMAIL')}>{busy === 'EMAIL' ? t('Sending…') : '✉️ ' + t('Send by email')}</button>
       {ok && <small className="ok">{ok}</small>}
     </div>
   )

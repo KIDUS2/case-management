@@ -37,19 +37,19 @@ public class AppointmentController {
     }
 
     @GetMapping("/appointments/settings") @PreAuthorize(STAFF)
-    public AppointmentSettingsDto settings() { return appointments.currentSettings(sms.mode()); }
+    public AppointmentSettingsDto settings() { return appointments.currentSettings(sms.mode(), sms.emailMode()); }
 
     @PutMapping("/appointments/settings") @PreAuthorize("hasRole('ADMIN')")
     public AppointmentSettingsDto saveSettings(@Valid @RequestBody AppointmentSettingsRequest r) {
         appointments.saveSettings(r);
-        return appointments.currentSettings(sms.mode());
+        return appointments.currentSettings(sms.mode(), sms.emailMode());
     }
 
     @GetMapping("/cases/{id}/sms") @PreAuthorize(STAFF)
     public List<SmsLogItem> history(@PathVariable Long id, Authentication auth) { return sms.history(id, current.get(auth)); }
 
     @PostMapping("/cases/{id}/sms") @PreAuthorize(STAFF)
-    public Map<String, Integer> resend(@PathVariable Long id, Authentication auth) {
-        return Map.of("sent", sms.resend(id, current.get(auth)));
+    public Map<String, Integer> resend(@PathVariable Long id, @RequestParam(required = false) String channel, Authentication auth) {
+        return Map.of("sent", sms.resend(id, channel, current.get(auth)));
     }
 }

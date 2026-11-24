@@ -10,6 +10,7 @@ import com.churchdesk.enums.WorkingStatus;
 public record PartyIn(@NotBlank @Size(max = 160) String fullName,
                       @NotNull Long churchId,
                       @Size(max = 40) String phone,
+                      @jakarta.validation.constraints.Email @Size(max = 120) String email,
                       @NotBlank String workingStatus,
                       @Size(max = 1000) String involvement,
                       @Size(max = 40) String employeeId,

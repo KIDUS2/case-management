@@ -8,4 +8,5 @@ import java.util.List;
 
 public record AppointmentSettingsRequest(@Min(1) @Max(500) int capacity,
                                          @NotEmpty List<String> openDays,
-                                         @Pattern(regexp = "EN|AM|BOTH") String smsLanguage) {}
+                                         @Pattern(regexp = "EN|AM|BOTH") String smsLanguage,
+                                         @Pattern(regexp = "SMS|EMAIL|BOTH") String notifyChannel) {}

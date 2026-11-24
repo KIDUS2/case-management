@@ -77,7 +77,7 @@ function AppointmentSettings({ setErr, setOk }) {
   const toggle = d => setF({ ...f, openDays: f.openDays.includes(d) ? f.openDays.filter(x => x !== d) : [...f.openDays, d] })
   const save = async e => {
     e.preventDefault(); setErr(''); setOk(''); setBusy(true)
-    try { setF(await api('/appointments/settings', { method: 'PUT', body: { capacity: Number(f.capacity), openDays: f.openDays, smsLanguage: f.smsLanguage } })); setOk(t('Saved')) }
+    try { setF(await api('/appointments/settings', { method: 'PUT', body: { capacity: Number(f.capacity), openDays: f.openDays, smsLanguage: f.smsLanguage, notifyChannel: f.notifyChannel || 'SMS' } })); setOk(t('Saved')) }
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
   return (
@@ -92,6 +92,13 @@ function AppointmentSettings({ setErr, setOk }) {
       <select value={f.smsLanguage} onChange={e => setF({ ...f, smsLanguage: e.target.value })} style={{ maxWidth: 260 }}>
         <option value="BOTH">{t('Amharic and English')}</option><option value="AM">{t('Amharic only')}</option><option value="EN">{t('English only')}</option>
       </select>
+      <label>{t('How the case number is sent')}</label>
+      <div className="chips">{[['SMS', '📱 ' + t('Text message')], ['EMAIL', '✉️ ' + t('Email')], ['BOTH', t('Text message and email')]].map(([k, v]) =>
+        <button type="button" key={k} className={'chip' + ((f.notifyChannel || 'SMS') === k ? ' on' : '')} onClick={() => setF({ ...f, notifyChannel: k })}>{v}</button>)}</div>
+      <small className="hint">{t('Each person gets it on the phone number or email address they gave. Staff can also send it again by either way from the case.')}</small>
+      <div className={'banner' + (f.emailMode === 'smtp' ? '' : ' warn')} style={{ marginTop: 12 }}>
+        {f.emailMode === 'smtp' ? '✅ ' + t('Emails are sent through the mail server.') : '⚠️ ' + t('Emails are not sent yet: they are only written to the server log. Ask the developer to set up the mail server (MAIL_MODE=smtp) in the server settings.')}
+      </div>
       <div className={'banner' + (f.smsMode === 'http' ? '' : ' warn')} style={{ marginTop: 12 }}>
         {f.smsMode === 'http' ? '✅ ' + t('Text messages are sent through the SMS provider.') : '⚠️ ' + t('Text messages are not sent yet: they are only written to the server log. Ask the developer to switch on the SMS provider (Ethio Telecom) in the server settings.')}
       </div>

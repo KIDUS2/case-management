@@ -9,7 +9,7 @@ import { previewFile } from '../preview.js'
 import { personName, titleOptions, splitName, initial, fmtCode, CATEGORY, catOptions, workingOptions, addDays, todayStr, fmtSize, fmtId } from '../ui.js'
 
 const blankIssue = () => ({ category: 'HR', description: '', departmentId: '', returnOn: addDays(todayStr(), 7) })
-const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', title: '', firstName: '', lastName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, workingStatus: status, sebekaGubayeNo: '' })
+const blankParty = (status = 'ACTIVE_EMPLOYEE') => ({ employeeId: '', fullName: '', title: '', firstName: '', lastName: '', churchName: '', phone: '', email: '', extraPhones: [], phoneExempt: false, workingStatus: status, sebekaGubayeNo: '' })
 
 function Chips({ options, value, onChange }) {
   return <div className="chips">{Object.entries(options).map(([k, v]) =>
@@ -142,6 +142,8 @@ function PartyEditor({ pk, title, party, onChange, onRemove, churches, autoFocus
         <div><label>{t('Phone number')}{!party.phoneExempt && <span className="req"> *</span>}</label>
           <input data-f="phone" value={party.phone} onChange={e => set({ phone: e.target.value })} inputMode="tel" maxLength={40} required={!party.phoneExempt} placeholder="09…" /></div>
       </div>
+      <div className="grid"><div><label>{t('Email (optional)')}</label>
+        <input type="email" data-f="email" value={party.email || ''} onChange={e => set({ email: e.target.value })} maxLength={120} placeholder="name@example.com" autoComplete="off" /></div></div>
       {(party.extraPhones || []).map((ph, k) => (
         <div className="phrow" key={k}>
           <input value={ph} onChange={e => set({ extraPhones: party.extraPhones.map((x, j) => (j === k ? e.target.value : x)) })} inputMode="tel" maxLength={40} placeholder={t('Another phone number (optional)')} aria-label={t('Another phone number (optional)')} />
@@ -208,7 +210,7 @@ export default function NewCase({ me, onCreated, onQueued, goChurches }) {
     if (!p.phoneExempt && !p.phone.trim()) throw new Problem(t('{x}: please enter a phone number.', { x: label }), at('phone'))
     if (!p.fromSheet && !p.lastName.trim()) throw new Problem(t('{x}: please enter the last name.', { x: label }), at('last'))
     const named = p.fromSheet ? {} : { title: p.title || null, firstName: p.firstName.trim(), lastName: p.lastName.trim() }
-    return { ...named, fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.workingStatus === 'CHURCH_MEMBER' ? null : p.employeeId.trim() || null, sebekaGubayeNo: p.workingStatus === 'CHURCH_MEMBER' ? (p.sebekaGubayeNo || '').trim() || null : null }
+    return { ...named, fullName: p.fullName.trim(), churchId: church.id, phone: p.phone.trim(), email: (p.email || '').trim() || null, extraPhones: (p.extraPhones || []).map(x => x.trim()).filter(Boolean), phoneExempt: !!p.phoneExempt, workingStatus: p.workingStatus, employeeId: p.workingStatus === 'CHURCH_MEMBER' ? null : p.employeeId.trim() || null, sebekaGubayeNo: p.workingStatus === 'CHURCH_MEMBER' ? (p.sebekaGubayeNo || '').trim() || null : null }
   }
 
   const submit = async e => {

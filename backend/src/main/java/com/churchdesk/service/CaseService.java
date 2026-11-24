@@ -211,6 +211,7 @@ public class CaseService {
         person.setChurch(church);
         person.setWorkingStatus(options.requireWorkingStatus(in.workingStatus()));
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
+        if (in.email() != null && !in.email().isBlank()) person.setEmail(in.email().trim());
         if (in.extraPhones() != null) person.setExtraPhoneList(in.extraPhones());
         // the phone number is mandatory; only the administrator can allow a person to have none
         if (in.phoneExempt() != null && actor.getRole() == Role.ADMIN) person.setPhoneExempt(in.phoneExempt());

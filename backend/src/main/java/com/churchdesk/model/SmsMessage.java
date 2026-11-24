@@ -12,12 +12,17 @@ public class SmsMessage {
     @Column(nullable = false, length = 1000) private String body;
     @Column(nullable = false) private String status;
     private String error;
+    @Column(nullable = false, length = 8) private String channel = "SMS";
     @Column(name = "created_at", nullable = false) private Instant createdAt = Instant.now();
 
     protected SmsMessage() {}
     public SmsMessage(Long caseId, String phone, String body, String status, String error) {
         this.caseId = caseId; this.phone = phone; this.body = body; this.status = status; this.error = error;
     }
+    public SmsMessage(Long caseId, String channel, String to, String body, String status, String error) {
+        this(caseId, to, body, status, error); this.channel = channel;
+    }
+    public String getChannel() { return channel; }
     public Long getId() { return id; }
     public Long getCaseId() { return caseId; }
     public String getPhone() { return phone; }

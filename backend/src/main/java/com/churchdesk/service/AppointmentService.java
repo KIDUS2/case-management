@@ -32,6 +32,7 @@ public class AppointmentService {
     static final String CAPACITY = "appointment.capacity";
     static final String OPEN_DAYS = "appointment.open_days";
     static final String SMS_LANGUAGE = "sms.language";
+    static final String NOTIFY_CHANNEL = "notify.channel";
     private static final List<String> WEEK = List.of("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN");
 
     private final AppointmentRepository repo;
@@ -73,10 +74,10 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public AppointmentSettingsDto currentSettings(String smsMode) {
+    public AppointmentSettingsDto currentSettings(String smsMode, String emailMode) {
         Set<String> open = openDays();
         return new AppointmentSettingsDto(capacity(), WEEK.stream().filter(open::contains).toList(),
-                settings.get(SMS_LANGUAGE, "BOTH"), smsMode);
+                settings.get(SMS_LANGUAGE, "BOTH"), smsMode, settings.get(NOTIFY_CHANNEL, "SMS"), emailMode);
     }
 
     @Transactional
@@ -86,6 +87,7 @@ public class AppointmentService {
         settings.put(CAPACITY, String.valueOf(r.capacity()));
         settings.put(OPEN_DAYS, String.join(",", days));
         if (r.smsLanguage() != null) settings.put(SMS_LANGUAGE, r.smsLanguage());
+        if (r.notifyChannel() != null) settings.put(NOTIFY_CHANNEL, r.notifyChannel());
     }
 
     // ---- booking ----
