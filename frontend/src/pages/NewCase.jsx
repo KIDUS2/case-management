@@ -109,12 +109,12 @@ function PartyEditor({ pk, title, party, onChange, onRemove, churches, autoFocus
         <input data-f="id" value={party.sebekaGubayeNo || ''} onChange={e => set({ sebekaGubayeNo: e.target.value })} maxLength={40} required={!!needId} placeholder={t('Number on the Sebeka Gubaye card')} />
         <small className="muted">{t('Asked for people who are not employees.')}</small></>
       : sub ? <>
-        <label>{t('Employee ID')}{needId && <span className="req"> *</span>}</label>
-        <input data-f="id" value={party.employeeId} onChange={e => set({ employeeId: e.target.value })} maxLength={40} required={!!needId} placeholder="0000 0000 0000" autoCapitalize="characters" /></>
-      : <><label>{t('Employee ID (12 digits) or the church’s own number')}{needId && <span className="req"> *</span>}</label>
+        <label>{t('Employee ID')}</label>
+        <input data-f="id" value={party.employeeId} onChange={e => set({ employeeId: e.target.value })} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" /></>
+      : <><label>{t('Employee ID (12 digits) or the church’s own number')}</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <input data-f="id" value={party.employeeId} onChange={e => { setFound(null); setIdMsg(''); set({ employeeId: e.target.value }) }} onBlur={() => !found && findById()}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" required={!!needId} />
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); findById() } }} maxLength={40} placeholder="0000 0000 0000" autoCapitalize="characters" />
         <button type="button" className="btn ghost sm" style={{ margin: 0 }} onClick={findById} disabled={!party.employeeId.trim()}>🔎 Find</button>
       </div></>}
       {found && <div className="banner"><b>✅ {t('Employee found')} 🪪 {fmtId(found.employeeId)}</b> {t('{a} · {b} · in {c} cases ({d} still active)', { a: personName(found), b: found.churchName, c: found.totalCases, d: found.openCases })}
@@ -204,7 +204,7 @@ export default function NewCase({ me, onCreated, onQueued, goChurches }) {
   const toPayload = (p, label, needId, pk) => {
     const at = f => `[data-pk="${pk}"] [data-f="${f}"]`
     if (needId && p.workingStatus === 'CHURCH_MEMBER' && !(p.sebekaGubayeNo || '').trim()) throw new Problem(t('{x}: please enter the Sebeka Gubaye number.', { x: label }), at('id'))
-    if (needId && p.workingStatus !== 'CHURCH_MEMBER' && !p.employeeId.trim()) throw new Problem(t('{x}: please enter the Employee ID.', { x: label }), at('id'))
+    // the Employee ID is optional for now; a new one is created when the person has none
     const church = findChurch(p.churchName)
     if (!church) throw new Problem(t('{x}: please choose the church from the list (start typing its name).', { x: label }), at('church'))
     if (!p.phoneExempt && !p.phone.trim()) throw new Problem(t('{x}: please enter a phone number.', { x: label }), at('phone'))

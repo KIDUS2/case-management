@@ -243,9 +243,8 @@ public class CaseService {
         if (WorkingStatus.CHURCH_MEMBER.equals(in.workingStatus())) {
             if (person.getSebekaGubayeNo() == null)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the Sebeka Gubaye number of " + name + ".");
-        } else if (typedEmployeeId == null && person.getEmployeeId() == null && person.getChurchRef() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the Employee ID of " + name + ".");
         }
+        // The Employee ID is optional for now (until every employee has one): a new ID is created when the person has none.
     }
 
     private String newCode() {
