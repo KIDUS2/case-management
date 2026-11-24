@@ -15,4 +15,6 @@ public record PartyIn(@NotBlank @Size(max = 160) String fullName,
                       @Size(max = 40) String employeeId,
                       @Size(max = 5) List<@Size(max = 40) String> extraPhones,
                       Boolean phoneExempt,
-                      @Size(max = 40) String sebekaGubayeNo) {}
+                      @Size(max = 40) String sebekaGubayeNo,
+                      /** Optional title code (Ato, Kesis ...) and the name split the way the form collects it. */
+                      @Size(max = 40) String title, @Size(max = 80) String firstName, @Size(max = 80) String lastName) {}

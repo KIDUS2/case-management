@@ -122,6 +122,8 @@ export default function Settings() {
             list={lists.issueTypes} onChange={load} setErr={setErr} setOk={setOk} />
           <ListEditor kind="SUB_CITY" title={t('Sub-cities')} hint={t('Churches are grouped by these. Renaming one moves its churches along.')}
             list={lists.subCities} onChange={load} setErr={setErr} setOk={setOk} />
+          <ListEditor kind="TITLE" title={t('Titles before a name')} hint={t('Ato, Kesis, Deacon… shown before the name. Add your own, rename or switch one off.')}
+            list={lists.titles || []} onChange={load} setErr={setErr} setOk={setOk} />
           <ListEditor kind="WORKING_STATUS" title={t('This person is')} hint={t('The choices shown when registering a person. Add your own, rename or switch one off. Built-in ones keep their special rules.')}
             list={lists.workingStatuses || []} onChange={load} setErr={setErr} setOk={setOk} />
         </div>

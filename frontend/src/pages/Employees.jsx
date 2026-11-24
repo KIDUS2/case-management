@@ -3,14 +3,14 @@ import { previewFile, kindOf } from '../preview.js'
 import { useEffect, useState } from 'react'
 import { api, upload, blob, downloadPath } from '../api.js'
 import { t, locale } from '../i18n.js'
-import { fmtDayFull, WORKING, workingOptions, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
+import { personName, titleOptions, fmtDayFull, WORKING, workingOptions, STATUS, initial, fmtId, fmtSize, fmtCode, fmtDate } from '../ui.js'
 import { printIdCard, SPIRITUAL_RANK } from '../idcard.js'
 import { askConfirm, notify } from '../dialog.js'
 import { readSheetFile, gridFromText, downloadCsv, SHEET_ACCEPT } from '../sheet.js'
 
 const fmtDay = fmtDayFull
 const DOC_KINDS = ['Appointment letter', 'Certificate', 'ID copy', 'Contract', 'Recommendation', 'Medical', 'Other']
-const blank = { churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, salary: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
+const blank = { title: '', churchRef: '', firstName: '', middleName: '', lastName: '', motherName: '', churchName: '', phone: '', extraPhones: [], phoneExempt: false, salary: '', email: '', profession: '', position: '', gender: '', birthDate: '', hireDate: '', address: '', notes: '', christianName: '', fatherConfessor: '', spiritualRank: '', ordainedOn: '', idExpiresOn: '', workingStatus: 'ACTIVE_EMPLOYEE' }
 const COLS = ['churchRef', 'firstName', 'middleName', 'lastName', 'motherName', 'church', 'phone', 'email', 'profession', 'position', 'gender', 'birthDate', 'hireDate', 'address', 'christianName', 'fatherConfessor']
 
 /** Turns rows of cells (first row = column names, any order) into employee records. */
@@ -322,7 +322,7 @@ function Profile({ churches, e0, canWrite, canDocs, onBack, onEdit, onChanged, o
           {canWrite && <label className="btn ghost sm" style={{ margin: '8px 0 0' }}>📷 {e.hasPhoto ? 'Change photo' : 'Add photo'}<input type="file" hidden accept=".jpg,.jpeg,.png,.webp" onChange={setPhoto} /></label>}
         </div>
         <div className="dhead">
-          <h1 style={{ margin: 0 }}>{e.fullName}</h1>
+          <h1 style={{ margin: 0 }}>{personName(e)}</h1>
           <div className="muted">{[e.profession, e.position].filter(Boolean).join(' · ') || WORKING[e.workingStatus]}</div>
           {e.employeeId ? <>
             <div className="idnum">🪪 {fmtId(e.employeeId)}</div>
@@ -426,7 +426,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
     } catch (x) { setErr(x.message) }
   }
   const edit = e => {
-    setForm({ id: e.id, churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', extraPhones: e.extraPhones || [], phoneExempt: !!e.phoneExempt, salary: e.salary ?? '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
+    setForm({ id: e.id, title: e.title || '', churchRef: e.churchRef || '', firstName: e.firstName || '', middleName: e.middleName || '', lastName: e.lastName || '', motherName: e.motherName || '', churchName: e.churchName, phone: e.phone || '', extraPhones: e.extraPhones || [], phoneExempt: !!e.phoneExempt, salary: e.salary ?? '', email: e.email || '', profession: e.profession || '', position: e.position || '', gender: e.gender || '', birthDate: e.birthDate || '', hireDate: e.hireDate || '', address: e.address || '', notes: e.notes || '', christianName: e.christianName || '', fatherConfessor: e.fatherConfessor || '', spiritualRank: e.spiritualRank || '', ordainedOn: e.ordainedOn || '', idExpiresOn: e.idExpiresOn || '', workingStatus: e.workingStatus, employeeId: e.employeeId })
     setPhoto(null); setView(null); window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const pickFile = async ev => {
@@ -502,6 +502,8 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
           )}
           {(form.id || step === 0) && <>
           <h3 className="sect">Identity</h3>
+          {titleOptions().length > 0 && <div style={{ marginBottom: 10 }}><label>{t('Title')} ({t('optional')})</label>
+            <select value={form.title} onChange={f('title')}><option value="">—</option>{titleOptions().map(([k, v]) => <option key={k} value={k}>{t(v)}</option>)}</select></div>}
           <div className="grid3">
             <div><label>First name</label><input value={form.firstName} onChange={f('firstName')} required maxLength={80} autoFocus /></div>
             <div><label>Middle name (father’s name)</label><input value={form.middleName} onChange={f('middleName')} required maxLength={80} /></div>
@@ -567,7 +569,7 @@ export default function Employees({ me, focus, onFocusDone, onSeeCases, onOpenCa
             {data.items.map(e => (
               <tr key={e.id} onClick={() => { setErr(''); setView(e) }} tabIndex={0} onKeyDown={ev => { if (ev.key === 'Enter') setView(e) }}>
                 <td><div className="emp-who"><div className="avatar">{initial(e.fullName)}</div>
-                  <div><b>{e.fullName}</b><small>{e.employeeId ? fmtId(e.employeeId) : t('No employee ID')}{e.idExpired && <span className="badge s-court" style={{ marginLeft: 8 }}>{t('Expired')}</span>}</small></div></div></td>
+                  <div><b>{personName(e)}</b><small>{e.employeeId ? fmtId(e.employeeId) : t('No employee ID')}{e.idExpired && <span className="badge s-court" style={{ marginLeft: 8 }}>{t('Expired')}</span>}</small></div></div></td>
                 <td>{e.churchName}</td>
                 <td>{e.position || e.profession || '—'}</td>
                 <td><span className={'ws ws-' + e.workingStatus}>{t(WORKING[e.workingStatus])}</span></td>

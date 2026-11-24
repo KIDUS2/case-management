@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 import com.churchdesk.enums.WorkingStatus;
 
-public record EmployeeRequest(@Size(max = 40) String churchRef, @Size(max = 80) String firstName, @Size(max = 80) String middleName,
+public record EmployeeRequest(@Size(max = 40) String churchRef, @Size(max = 40) String title, @Size(max = 80) String firstName, @Size(max = 80) String middleName,
                               @Size(max = 80) String lastName, @Size(max = 160) String motherName, @NotNull Long churchId,
                               @Size(max = 40) String phone, @Size(max = 120) String email, @Size(max = 120) String profession,
                               @Size(max = 120) String position, @Size(max = 10) String gender, LocalDate birthDate, LocalDate hireDate,

@@ -205,7 +205,9 @@ public class CaseService {
         if (sebeka != null) person.setSebekaGubayeNo(sebeka);
         if (role == PartyRole.COMPLAINANT) requireIdNumber(person, in, typed, name);
         person.setFullName(name);
-        if (person.getFirstName() == null) person.splitFullName();
+        String fn = blankToNull(in.firstName()), ln = blankToNull(in.lastName());
+        if (fn != null && ln != null) { person.setFirstName(fn); person.setLastName(ln); } else if (person.getFirstName() == null) person.splitFullName();
+        if (in.title() != null) person.setTitle(options.optionalTitle(in.title()));
         person.setChurch(church);
         person.setWorkingStatus(options.requireWorkingStatus(in.workingStatus()));
         if (in.phone() != null && !in.phone().isBlank()) person.setPhone(in.phone().trim());
@@ -428,7 +430,7 @@ public class CaseService {
     private PersonInfo toPerson(Person p, String involvement) {
         return new PersonInfo(p.getId(), p.getFullName(), p.getPhone(), p.getChurch().getId(), p.getChurch().getName(),
                 p.getWorkingStatus(), partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), ACTIVE),
-                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId(), p.getProfession(), p.getPosition(), p.getExtraPhoneList(), p.isPhoneExempt());
+                partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), involvement, p.getEmployeeId(), p.getProfession(), p.getPosition(), p.getExtraPhoneList(), p.isPhoneExempt(), p.getTitle());
     }
 
     /** Calls another person into a case that is already open (a witness, the accountant, another employee...). */

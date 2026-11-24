@@ -1,6 +1,6 @@
 import QRCode from 'qrcode'
 import { blob } from './api.js'
-import { fmtId } from './ui.js'
+import { fmtId, personName } from './ui.js'
 import { isEC, ecText } from './ethcal.js'
 
 const RANKS = { LAYPERSON: 'Layperson', DEACON: 'Deacon', PRIEST: 'Priest', MONK: 'Monk', NUN: 'Nun', CHANTER: 'Chanter', TEACHER: 'Teacher', OTHER: 'Other' }
@@ -60,7 +60,7 @@ export async function printIdCard(e) {
     <div class="body">
       <div class="photo">${photo ? `<img src="${photo}" alt="">` : '👤'}</div>
       <div class="f">
-        <div class="lbl">Full name · ሙሉ ስም</div><div class="v name">${esc(e.fullName)}</div>
+        <div class="lbl">Full name · ሙሉ ስም</div><div class="v name">${esc(personName(e))}</div>
         <div class="lbl">Mother’s name · የእናት ስም</div><div class="v">${esc(e.motherName || '—')}</div>
         <div class="lbl">Sex · ፆታ &nbsp;|&nbsp; Date of birth · የትውልድ ቀን</div><div class="v">${esc(sex)} &nbsp;|&nbsp; ${esc(day(e.birthDate))}</div>
         <div class="lbl">Church · ቤተ ክርስቲያን</div><div class="v">${esc(e.churchName)}</div>

@@ -169,6 +169,7 @@ public class EmployeeController {
         if (strict && middle == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the middle name (father's name)");
         if (strict && last == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the last name (grandfather's name)");
         if (strict && mother == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter the mother's name");
+        p.setTitle(options.optionalTitle(r.title()));
         p.setFirstName(first); p.setMiddleName(middle); p.setLastName(last); p.setMotherName(mother);
         p.setFullName(String.join(" ", Stream.of(first, middle, last).filter(x -> x != null).toList()));
         String ref = blank(r.churchRef());
@@ -231,7 +232,7 @@ public class EmployeeController {
                 p.getMotherName(), p.getChurch().getId(), p.getChurch().getName(), p.getPhone(), p.getEmail(), p.getProfession(), p.getPosition(),
                 p.getGender(), p.getBirthDate(), p.getHireDate(), p.getAddress(), p.getNotes(),
                 p.getChristianName(), p.getFatherConfessor(), p.getSpiritualRank(), p.getOrdainedOn(),
-                p.getWorkingStatus(), p.getPhotoFile() != null, p.getIdIssuedOn(), exp, exp != null && exp.isBefore(Times.today()),
+                p.getTitle(), p.getWorkingStatus(), p.getPhotoFile() != null, p.getIdIssuedOn(), exp, exp != null && exp.isBefore(Times.today()),
                 partyRepo.countCases(p.getId()), partyRepo.countCasesWithStatus(p.getId(), java.util.List.of(CaseStatus.OPEN, CaseStatus.REFERRED, CaseStatus.COURT)),
                 partyRepo.countCasesAs(p.getId(), PartyRole.SUBJECT), docs.countByPersonId(p.getId()),
                 p.getExtraPhoneList(), p.isPhoneExempt(), adminNow() ? p.getSalary() : null);

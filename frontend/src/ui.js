@@ -33,6 +33,15 @@ export const WORKING = {
 }
 const workingOn = new Set(Object.keys(WORKING))
 export const workingOptions = () => Object.entries(WORKING).filter(([k]) => workingOn.has(k))
+/** Titles before a name (Ato, Kesis, Deacon ...), filled from Settings: code -> name, and the codes that can be picked now. */
+export const TITLES = {}
+const titlesOn = new Set()
+export const titleOptions = () => Object.entries(TITLES).filter(([k]) => titlesOn.has(k))
+export const titleName = code => (code && TITLES[code] ? t(TITLES[code]) : '')
+/** How a person is written: title, then name. "Kesis Eyasu Teweold" */
+export const personName = p => (p ? [titleName(p.title), p.fullName].filter(Boolean).join(' ') : '')
+/** "Eyasu Teweold Gebre" -> { firstName: 'Eyasu', lastName: 'Teweold Gebre' } for people saved before the name was split. */
+export const splitName = full => { const [first = '', ...rest] = (full || '').trim().split(/\s+/); return { firstName: first, lastName: rest.join(' ') } }
 export const ROLES = { ADMIN: 'Administrator', OFFICER: 'Case officer', RECEPTION: 'Reception (door)', DEPARTMENT: 'Department staff', SUBCITY: 'Sub-city office', SERA_ASKIYAJIE: 'Sera Askiyajie (manager)', PAPAS: 'Papas (head · final decision)' }
 export const REVIEW = { PENDING: 'Awaiting review', ACCEPTED: 'Accepted', RETURNED: 'Returned' }
 export const EVENT_ICON = { CREATED: '🆕', REFERRED: '➡️', RESOLVED: '✅', COURT: '⚖️', COURT_ACK: '🖊️', ARRIVED: '🚪', NOTE: '📝', LETTER: '✉️', FILE: '📎', APPOINTMENT: '📅', SMS: '📱', HOLD: '⏸️', ESCALATED: '⬆️', INVESTIGATION: '🔎', SUBCITY_REFERRAL: '🏙️' }
@@ -86,7 +95,7 @@ export const fmtId = id => (id && /^\d{12}$/.test(id) ? id.replace(/(\d{4})(?=\d
 /** The sub-city (sub-cities) that can be chosen right now; filled from Settings. */
 export const SUB_CITIES = ['Addis Ketema', 'Akaki Kaliti', 'Arada', 'Bole', 'Gullele', 'Kirkos', 'Kolfe Keranio', 'Lideta', 'Lemi Kura', 'Nifas Silk-Lafto', 'Yeka']
 /** The full lists as the server has them (with ids, both languages and use counts), for the Settings page. */
-export const OPTION_LISTS = { issueTypes: [], subCities: [], workingStatuses: [] }
+export const OPTION_LISTS = { issueTypes: [], subCities: [], workingStatuses: [], titles: [] }
 
 /** Put the lists from /api/options in place. Names show in Amharic when that language is on and an Amharic name exists. */
 export function applyOptions(o) {
@@ -99,6 +108,10 @@ export function applyOptions(o) {
   if (o.workingStatuses?.length) {
     Object.keys(WORKING).forEach(k => delete WORKING[k]); workingOn.clear()
     o.workingStatuses.forEach(x => { WORKING[x.code] = name(x); if (x.active) workingOn.add(x.code) })
+  }
+  if (o.titles) {
+    Object.keys(TITLES).forEach(k => delete TITLES[k]); titlesOn.clear()
+    o.titles.forEach(x => { TITLES[x.code] = name(x); if (x.active) titlesOn.add(x.code) })
   }
   OPTION_LISTS.workingStatuses = o.workingStatuses || []
   OPTION_LISTS.issueTypes = o.issueTypes

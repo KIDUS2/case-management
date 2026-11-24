@@ -11,7 +11,7 @@ import IssueFlags from '../components/IssueFlags.jsx'
 import AppointmentPicker from '../components/AppointmentPicker.jsx'
 import { InvestigationCard, SubcityCard } from '../components/Collaboration.jsx'
 import { previewFile, kindOf } from '../preview.js'
-import { REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, workingOptions, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
+import { personName, REVIEW, STATUS, ISSUE_STATUS, CATEGORY, catOptions, WORKING, workingOptions, EVENT_ICON, fmtDate, fmtDay, fmtSize, ago, dayDiff, todayStr, addDays, initial, fmtCode, names, copyText, isStaff, isDiocese, fmtId } from '../ui.js'
 
 export default function Cases({ me, openId, setOpenId, goNew, fresh, initialQuery }) {
   if (openId) return <CaseDetail me={me} id={openId} fresh={fresh} onBack={() => setOpenId(null)} onOpen={setOpenId} />
@@ -181,7 +181,7 @@ function PersonRow({ p }) {
     <div className="prow">
       <div className="avatar">{initial(p.fullName)}</div>
       <div className="grow">
-        <b>{p.fullName}</b>
+        <b>{personName(p)}</b>
         <small>{p.employeeId ? '🪪 ' + fmtId(p.employeeId) + ' · ' : ''}⛪ {p.churchName} · {WORKING[p.workingStatus]}{p.phone ? ' · ' + p.phone : ''}</small>
         {p.involvement && <small className="about">📌 {p.involvement}</small>}
         {p.complaintsAgainst > 1 && <small className="warn">⚠️ {t('{n} cases are about this person', { n: p.complaintsAgainst })}</small>}
@@ -630,7 +630,7 @@ function CaseDetail({ me, id, fresh, onBack, onOpen }) {
         <div className="grow">
           <small className="onhero">Case code</small>
           <div className="bigcode">{fmtCode(c.code)}</div>
-          <div className="onhero">{names(c.complainants.map(p => p.fullName))}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</div>
+          <div className="onhero">{names(c.complainants.map(p => personName(p)))}{c.complainants.length > 1 ? ' · ' + t('group of {n}', { n: c.complainants.length }) : ''}</div>
           {c.expectedPeople && <div className={'onhero expectline' + (c.complainants.length < c.expectedPeople ? ' short' : '')}>👥 {t('{a} of {b} expected people listed', { a: c.complainants.length, b: c.expectedPeople })}{c.complainants.length < c.expectedPeople && desk ? ' · ' + t('Add the others in People and access') : ''}</div>}
           <div className="onhero" style={{ marginTop: 6 }}>{t('{a} of {b} issues resolved', { a: resolved, b: c.issues.length })}</div>
           <div className="progress"><i style={{ width: (c.issues.length ? (resolved / c.issues.length) * 100 : 0) + '%' }} /></div>

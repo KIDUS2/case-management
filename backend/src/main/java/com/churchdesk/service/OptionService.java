@@ -31,7 +31,7 @@ public class OptionService {
 
     @Transactional(readOnly = true)
     public OptionLists lists() {
-        return new OptionLists(dtos(OptionItem.ISSUE_TYPE), dtos(OptionItem.SUB_CITY), dtos(OptionItem.WORKING_STATUS));
+        return new OptionLists(dtos(OptionItem.ISSUE_TYPE), dtos(OptionItem.SUB_CITY), dtos(OptionItem.WORKING_STATUS), dtos(OptionItem.TITLE));
     }
 
     private List<OptionDto> dtos(String key) {
@@ -45,6 +45,8 @@ public class OptionService {
         if (OptionItem.ISSUE_TYPE.equals(o.getListKey()))
             return count("select count(i) from CaseIssue i where i.category = :c", o.getCode())
                     + count("select count(d) from Department d where d.handlesCategory = :c", o.getCode());
+        if (OptionItem.TITLE.equals(o.getListKey()))
+            return count("select count(p) from Person p where p.title = :c", o.getCode());
         if (OptionItem.WORKING_STATUS.equals(o.getListKey()))
             return count("select count(p) from Person p where p.workingStatus = :c", o.getCode());
         return count("select count(c) from Church c where c.subCity = :c", o.getCode());
@@ -81,6 +83,15 @@ public class OptionService {
         return o.getCode();
     }
 
+    /** A title is optional. Blank gives null; anything else must be a title that is switched on. */
+    @Transactional(readOnly = true)
+    public String optionalTitle(String code) {
+        if (code == null || code.isBlank()) return null;
+        OptionItem o = repo.findByListKeyAndCode(OptionItem.TITLE, code.trim()).orElse(null);
+        if (o == null || !o.isActive()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That title is not available. Pick one from the list.");
+        return o.getCode();
+    }
+
     /** Throws 400 unless the status exists and is switched on. Returns its code. */
     @Transactional(readOnly = true)
     public String requireWorkingStatus(String code) {
@@ -113,7 +124,7 @@ public class OptionService {
 
     @Transactional
     public OptionDto add(String listKey, OptionEdit e) {
-        if (!OptionItem.ISSUE_TYPE.equals(listKey) && !OptionItem.SUB_CITY.equals(listKey) && !OptionItem.WORKING_STATUS.equals(listKey))
+        if (!OptionItem.ISSUE_TYPE.equals(listKey) && !OptionItem.SUB_CITY.equals(listKey) && !OptionItem.WORKING_STATUS.equals(listKey) && !OptionItem.TITLE.equals(listKey))
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unknown list");
         String label = clean(e.label());
         if (label == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please enter a name");

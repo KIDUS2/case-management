@@ -14,6 +14,9 @@ public class Person {
     private String phone;
     @Column(name = "extra_phones", columnDefinition = "text") private String extraPhones;
     @Column(name = "phone_exempt", nullable = false) private boolean phoneExempt;
+    @Column(name = "title", length = 40) private String title;
+    public String getTitle() { return title; }
+    public void setTitle(String v) { title = v; }
     @Column(name = "first_name") private String firstName;
     @Column(name = "middle_name") private String middleName;
     @Column(name = "last_name") private String lastName;

@@ -1124,3 +1124,11 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;
 .synchead small,.syncrow small{display:block;color:var(--mute)}
 .syncrow{display:flex;align-items:center;gap:10px;padding:8px 0 2px;border-top:1px solid var(--line);margin-top:8px}
 .syncerr{color:var(--bad)!important;font-weight:600}
+
+/* name block: title, first / last name, and how it will read */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.opt{font-weight:500;color:var(--mute)}
+.namecard{display:flex;align-items:center;gap:12px;margin:10px 0 2px;padding:10px 14px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--ok) 45%,var(--line));background:color-mix(in srgb,var(--ok) 8%,transparent)}
+.namecard small{display:block;color:var(--mute)}
+.namecard b{font-size:1.15rem;letter-spacing:.01em}
