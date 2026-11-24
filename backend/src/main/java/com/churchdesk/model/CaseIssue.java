@@ -34,6 +34,10 @@ public class CaseIssue {
     @Column(name = "court_ack_by") private String courtAckBy;
     @Column(name = "court_ack_at") private Instant courtAckAt;
 
+    @Column(nullable = false) private int weight = 1;
+    public int getWeight() { return weight; }
+    public void setWeight(int v) { weight = v; }
+
     public Long getId() { return id; }
     public ChurchCase getChurchCase() { return churchCase; }
     public void setChurchCase(ChurchCase v) { churchCase = v; }

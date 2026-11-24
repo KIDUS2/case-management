@@ -107,6 +107,33 @@ function AppointmentSettings({ setErr, setOk }) {
   )
 }
 
+/** How much time each type of case takes (1 light … 10 very heavy). Heavier cases are served first in a department. */
+function WeightSettings({ setErr, setOk }) {
+  const [rows, setRows] = useState(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { api('/settings/weights').then(setRows).catch(e => setErr(e.message)) }, [])
+  if (!rows) return null
+  const save = async e => {
+    e.preventDefault(); setErr(''); setOk(''); setBusy(true)
+    try { setRows(await api('/settings/weights', { method: 'PUT', body: Object.fromEntries(rows.map(r => [r.code, Number(r.weight)])) })); setOk(t('Saved')) }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
+  return (
+    <form className="card apset" onSubmit={save}>
+      <h2>⚖️ {t('Weight of each type of case')}</h2>
+      <p className="hint">{t('The weight says how much time a case takes: 1 is light, 10 is very heavy. In a department, heavier cases are served first, then the rest in the order they arrived. You can change the weight of one case on the case itself.')}</p>
+      <div className="weights">
+        {rows.map((r, k) => (
+          <label className="wrow" key={r.code}><span>{r.label}</span>
+            <input type="number" min={1} max={10} value={r.weight} onChange={e => setRows(rows.map((x, j) => (j === k ? { ...x, weight: e.target.value } : x)))} required />
+          </label>
+        ))}
+      </div>
+      <div className="iact"><button className="btn" disabled={busy}>{busy ? t('Saving…') : t('Save')}</button></div>
+    </form>
+  )
+}
+
 /** The dropdown lists used across the app. A change here shows up in every form and report. */
 export default function Settings() {
   const [lists, setLists] = useState(null)
@@ -122,6 +149,7 @@ export default function Settings() {
       <p className="muted">{t('These lists fill the dropdowns in the whole app. Add a new entry here and it appears in every form, filter and report.')}</p>
       {err && <div className="err">{err}</div>}{ok && <div className="okmsg">{ok}</div>}
       <AppointmentSettings setErr={setErr} setOk={setOk} />
+      <WeightSettings setErr={setErr} setOk={setOk} />
       <BackupCard setErr={setErr} />
       {lists && (
         <div className="cols">

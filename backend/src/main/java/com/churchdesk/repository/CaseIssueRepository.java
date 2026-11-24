@@ -19,15 +19,15 @@ public interface CaseIssueRepository extends JpaRepository<CaseIssue, Long> {
     @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses and coalesce(i.resolvedAt, i.referredAt) >= :from and coalesce(i.resolvedAt, i.referredAt) < :to order by i.referredAt desc, i.id desc")
     Page<CaseIssue> findForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to, Pageable pageable);
 
-    /** What a department still has to do, in the order it must be served: urgent first, then first come first served. */
-    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses and i.referredAt >= :from and i.referredAt < :to order by case when i.held = true then 1 else 0 end, case when i.priority = 'URGENT' then 0 else 1 end, i.referredAt asc, i.id asc")
+    /** What a department still has to do, in the order it must be served: urgent first, then the heavier (more time-consuming) ones, then first come first served. */
+    @Query("select i from CaseIssue i where i.department.id = :did and i.status in :statuses and i.referredAt >= :from and i.referredAt < :to order by case when i.held = true then 1 else 0 end, case when i.priority = 'URGENT' then 0 else 1 end, i.weight desc, i.referredAt asc, i.id asc")
     Page<CaseIssue> findQueueForDepartment(@Param("did") Long departmentId, @Param("statuses") Collection<IssueStatus> statuses, @Param("from") java.time.Instant from, @Param("to") java.time.Instant to, Pageable pageable);
 
     /** How many referred issues of the same department must be served before this one. */
     @Query("select count(i) from CaseIssue i where i.department.id = :did and i.status = :ref and i.id <> :id and "
-            + "i.held = false and ((:mine = 'NORMAL' and i.priority = 'URGENT') or (i.priority = :mine and (i.referredAt < :at or (i.referredAt = :at and i.id < :id))))")
+            + "i.held = false and ((:mine = 'NORMAL' and i.priority = 'URGENT') or (i.priority = :mine and (i.weight > :w or (i.weight = :w and (i.referredAt < :at or (i.referredAt = :at and i.id < :id))))))")
     long countAhead(@Param("did") Long departmentId, @Param("ref") IssueStatus referred, @Param("id") Long id,
-                    @Param("mine") String priority, @Param("at") java.time.Instant referredAt);
+                    @Param("mine") String priority, @Param("w") int weight, @Param("at") java.time.Instant referredAt);
 
     @Query("select i from CaseIssue i join fetch i.churchCase c where i.status = :s and i.department is not null")
     List<CaseIssue> findAllInDepartments(@Param("s") IssueStatus status);

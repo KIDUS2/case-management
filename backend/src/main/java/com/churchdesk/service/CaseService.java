@@ -85,12 +85,14 @@ public class CaseService {
     private final com.churchdesk.service.OptionService options;
     private final CaseLinkRepository linkRepo;
     private final SmsService sms;
+    private final WeightService weights;
     private final AppointmentService appointments;
     private final SecureRandom random = new SecureRandom();
 
     public CaseService(ChurchCaseRepository cases, CasePartyRepository partyRepo, PersonRepository persons, ChurchRepository churches,
                        DepartmentRepository departments, CaseIssueRepository issueRepo, CaseEventRepository eventRepo,
-                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo, com.churchdesk.service.OptionService options, SmsService sms, AppointmentService appointments) {
+                       CaseFileRepository fileRepo, CaseFlowService flow, AccessService access, CaseLinkRepository linkRepo, com.churchdesk.service.OptionService options, SmsService sms, AppointmentService appointments, WeightService weights) {
+        this.weights = weights;
         this.sms = sms; this.appointments = appointments;
         this.options = options;
         this.linkRepo = linkRepo;
@@ -175,6 +177,7 @@ public class CaseService {
             i.setChurchCase(c);
             // a charity request is not an issue: it always has the charity type
             i.setCategory(options.requireIssueType(charity ? "CHARITY" : in.category()));
+            i.setWeight(weights.forCategory(i.getCategory()));
             i.setDescription(blankToNull(in.description()));
             i.setSortOrder(issueOrder++);
             c.getIssues().add(i);
@@ -332,7 +335,7 @@ public class CaseService {
     /** 1 = next to be served in the department; 0 = not waiting in a queue. */
     private int queuePosition(CaseIssue i) {
         if (i.getStatus() != IssueStatus.REFERRED || i.isHeld() || i.getDepartment() == null || i.getReferredAt() == null) return 0;
-        return 1 + (int) issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
+        return 1 + (int) issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getWeight(), i.getReferredAt());
     }
 
     /** What a department has received (pending) or already finished (resolved). */
@@ -355,7 +358,7 @@ public class CaseService {
                 peopleIn(c, PartyRole.SUBJECT).stream().map(Person::getFullName).toList(),
                 who.isEmpty() ? "" : who.get(0).getChurch().getName(), i.getResolvedAt(), i.getResolvedBy(), i.getResolutionNote(),
                 i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, today), i.getEscalationLevel(), queuePosition(i),
-                who.isEmpty() ? null : who.get(0).getChurch().getSubCity(), i.isHeld(), i.getHandlerLevel());
+                who.isEmpty() ? null : who.get(0).getChurch().getSubCity(), i.isHeld(), i.getHandlerLevel(), i.getWeight());
     }
 
     /** Issues a department passed up: Sera Askiyajie sees level 1, Papas level 2, the administrator both. */
@@ -462,6 +465,7 @@ public class CaseService {
         CaseIssue i = new CaseIssue();
         i.setChurchCase(c);
         i.setCategory(options.requireIssueType(in.category()));
+        i.setWeight(weights.forCategory(i.getCategory()));
         i.setDescription(blankToNull(in.description()));
         i.setSortOrder(c.getIssues().size());
         c.getIssues().add(i);
@@ -533,7 +537,7 @@ public class CaseService {
                 i.getReferredAt(), i.getReturnOn(), i.getResolutionNote(), i.getResolvedBy(), i.getResolvedAt(),
                 i.getCourtAt(), i.getCourtAckBy(), i.getCourtAckAt(),
                 i.getPriority(), Escalation.dueOn(i), Escalation.daysLate(i, Times.today()), i.getEscalationLevel(), queuePosition(i),
-                i.isHeld(), i.getHoldReason(), i.getHandlerLevel())).toList();
+                i.isHeld(), i.getHoldReason(), i.getHandlerLevel(), i.getWeight())).toList();
         List<EventDto> events = eventRepo.findByCaseIdOrderByCreatedAtDescIdDesc(c.getId()).stream()
                 .map(e -> new EventDto(e.getId(), e.getIssueId(), e.getType(), e.getMessage(), e.getActor(), e.getCreatedAt())).toList();
         List<CaseFileDto> files = fileRepo.findByCaseIdOrderByUploadedAtDesc(c.getId()).stream()

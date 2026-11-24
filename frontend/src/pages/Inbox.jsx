@@ -76,7 +76,7 @@ export default function Inbox({ me, onOpen }) {
   return (
     <>
       <div className="head"><div><h1>{isBoss ? (me.role === 'PAPAS' ? t('Waiting for your final decision') : t('Passed up to you')) : deptName ? t('{x} inbox', { x: deptName }) : t('Department inbox')}</h1>
-        <p className="muted">{isBoss ? t('Issues a department could not finish. You can see everything below you and give the decision.') : t('Issues sent to {x}. Finishing one tells the desk straight away.', { x: isDept ? 'your department' : 'this department' })}{tab === 'pending' ? ' ' + t('They are listed in the order they must be served: urgent first, then first come, first served.') : ''}</p></div>
+        <p className="muted">{isBoss ? t('Issues a department could not finish. You can see everything below you and give the decision.') : t('Issues sent to {x}. Finishing one tells the desk straight away.', { x: isDept ? 'your department' : 'this department' })}{tab === 'pending' ? ' ' + t('They are listed in the order they must be served: urgent first, then heavier cases, then first come, first served.') : ''}</p></div>
         {!isDept && !isBoss && departments.length > 0 && (
           <select style={{ width: 'auto', minWidth: 200 }} value={deptId} onChange={e => setDeptId(e.target.value)}>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}

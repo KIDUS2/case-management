@@ -9,4 +9,4 @@ public record IssueDto(Long id, String category, String description, IssueStatus
                        String resolutionNote, String resolvedBy, Instant resolvedAt,
                        Instant courtAt, String courtAckBy, Instant courtAckAt,
                        String priority, LocalDate dueOn, long daysLate, int escalationLevel, int queuePosition,
-                       boolean held, String holdReason, int handlerLevel) {}
+                       boolean held, String holdReason, int handlerLevel, int weight) {}

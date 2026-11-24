@@ -228,6 +228,11 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
     try { onChange(await api(`/cases/${c.id}/issues/${i.id}/urgent`, { method: 'PUT', body: { urgent: i.priority !== 'URGENT' } })) }
     catch (x) { setErr(x.message) } finally { setBusy(false) }
   }
+  const changeWeight = async w => {
+    setBusy(true); setErr('')
+    try { onChange(await api(`/cases/${c.id}/issues/${i.id}/weight`, { method: 'PUT', body: { weight: Number(w) } })) }
+    catch (x) { setErr(x.message) } finally { setBusy(false) }
+  }
   const open = p => { setPanel(panel === p ? null : p); setNote(''); setPicked([]) }
 
   const send = async list => {
@@ -292,6 +297,8 @@ function IssueCard({ i, k, c, me, departments, onChange, setErr }) {
           {canPassUp && <button className="btn ghost sm" onClick={() => open('passup')}>⬆️ {upTo === 2 ? t('Pass up to Papas') : t('Pass up to Sera Askiyajie')}</button>}
           {canCourt && <button className="btn court sm" onClick={() => open('court')}>⚖️ Take to court</button>}
           {me.role === 'ADMIN' && !done && i.departmentId && i.status === 'REFERRED' && <button className="btn ghost sm" disabled={busy} onClick={toggleUrgent}>{i.priority === 'URGENT' ? '↩ ' + t('Remove urgent') : '🔥 ' + t('Mark urgent')}</button>}
+          {me.role === 'ADMIN' && !done && <label className="wtpick" title={t('How much time this case takes. Heavier cases are served first.')}>⚖️ {t('Weight')}
+            <select value={i.weight || 1} disabled={busy} onChange={e => changeWeight(e.target.value)}>{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
           {(desk || me.role === 'DEPARTMENT') && <label className="btn ghost sm" style={{ margin: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>📎 Attach file<input type="file" multiple hidden disabled={busy} accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt" onChange={attach} /></label>}
         </div>
         {panel === 'hold' && (

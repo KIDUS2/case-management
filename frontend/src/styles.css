@@ -1132,3 +1132,10 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--bad)!important;
 .namecard{display:flex;align-items:center;gap:12px;margin:10px 0 2px;padding:10px 14px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--ok) 45%,var(--line));background:color-mix(in srgb,var(--ok) 8%,transparent)}
 .namecard small{display:block;color:var(--mute)}
 .namecard b{font-size:1.15rem;letter-spacing:.01em}
+
+.flag.wt{background:#efe9fb;color:#3a2a5c}
+.weights{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px 18px;margin:8px 0}
+.weights .wrow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;font-weight:500}
+.weights .wrow input{width:70px;margin:0}
+.wtpick{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:.85rem}
+.wtpick select{width:auto;margin:0;padding:4px 8px}

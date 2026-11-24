@@ -142,6 +142,13 @@ public class CaseController {
         return service.get(id, u);
     }
 
+    @PutMapping("/cases/{id}/issues/{issueId}/weight") @PreAuthorize("hasRole('ADMIN')")
+    public CaseDetail weight(@PathVariable Long id, @PathVariable Long issueId, @RequestBody com.churchdesk.dto.request.WeightRequest r, Authentication auth) {
+        AppUser u = current.get(auth);
+        flow.setWeight(id, issueId, r.weight(), u);
+        return service.get(id, u);
+    }
+
     @PostMapping("/cases/{id}/issues/{issueId}/court") @PreAuthorize("hasAnyRole('ADMIN','OFFICER')")
     public CaseDetail court(@PathVariable Long id, @PathVariable Long issueId, @Valid @RequestBody(required = false) NoteRequest r, Authentication auth) {
         AppUser u = current.get(auth);

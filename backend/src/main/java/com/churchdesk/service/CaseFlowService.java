@@ -150,9 +150,9 @@ public class CaseFlowService {
         if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
         // departments serve in order; only the administrator or an officer may jump the queue (or mark an issue urgent)
         if (actor.getRole() == Role.DEPARTMENT && i.getDepartment() != null && i.getStatus() == IssueStatus.REFERRED && !i.isHeld()) {
-            long ahead = issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getReferredAt());
+            long ahead = issueRepo.countAhead(i.getDepartment().getId(), IssueStatus.REFERRED, i.getId(), i.getPriority(), i.getWeight(), i.getReferredAt());
             if (ahead > 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Serve the cases in order. " + ahead + (ahead == 1 ? " case is" : " cases are")
-                    + " ahead of this one in your queue. If this one cannot wait, ask the administrator to mark it urgent.");
+                    + " ahead of this one in your queue. If this one cannot wait, ask the administrator to give it more weight or mark it urgent.");
         }
         i.setStatus(IssueStatus.RESOLVED);
         i.setResolvedAt(Instant.now());
@@ -268,6 +268,19 @@ public class CaseFlowService {
         if (urgent && i.getDepartment() != null)
             notifier.send(users.findByDepartmentIdAndActiveTrue(i.getDepartment().getId()), "URGENT", "Urgent · case " + code(c),
                     "The administrator marked this " + label(i.getCategory()) + " issue urgent. Serve it first.", c.getId(), c.getCode(), actor.getUsername());
+    }
+
+    /** Only the administrator decides how much time an issue takes; heavier issues are served first. */
+    @Transactional
+    public void setWeight(Long caseId, Long issueId, int weight, AppUser actor) {
+        if (actor.getRole() != Role.ADMIN) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the administrator can change the weight of an issue");
+        if (weight < WeightService.MIN || weight > WeightService.MAX) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The weight must be between " + WeightService.MIN + " and " + WeightService.MAX);
+        ChurchCase c = load(caseId);
+        CaseIssue i = issue(c, issueId);
+        if (i.getStatus() == IssueStatus.RESOLVED) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "That issue is already resolved");
+        if (i.getWeight() == weight) return;
+        events.save(new CaseEvent(c.getId(), i.getId(), EventType.NOTE, "Weight changed from " + i.getWeight() + " to " + weight + " by the administrator", actor.getUsername()));
+        i.setWeight(weight);
     }
 
     @Transactional
